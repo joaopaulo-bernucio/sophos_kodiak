@@ -1,4 +1,4 @@
-# Miscellaneous
+# Ignorar arquivos e pastas comuns
 *.class
 *.log
 *.pyc
@@ -18,31 +18,49 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code
 #.vscode/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
+# Flutter/Dart/Pub relacionados (mobile)
+mobile/**/doc/api/
+mobile/**/ios/Flutter/.last_build_id
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
 
-# Symbolication related
-app.*.symbols
+# Symbolication related (mobile)
+mobile/app.*.symbols
 
-# Obfuscation related
-app.*.map.json
+# Obfuscation related (mobile)
+mobile/app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android Studio build artifacts (mobile)
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
 
-# My personal files
+# Arquivos pessoais
 backend/.env
+
+# Python cache e build (backend)
+backend/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.coverage
+backend/.venv/
+backend/venv/
+backend/build/
+backend/dist/
+
+# Testes e relatórios (backend)
+backend/.tox/
+backend/.pytest_cache/
+backend/htmlcov/
+
+# Outros arquivos temporários
+*.tmp
+*.bak

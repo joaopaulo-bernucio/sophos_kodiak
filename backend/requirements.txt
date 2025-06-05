@@ -1,0 +1,22 @@
+# Dependências principais
+Flask==2.3.3
+psycopg2-binary==2.9.7
+python-dotenv==1.0.0
+spacy==3.6.1
+requests==2.31.0
+
+# Dependências de teste
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.11.1
+pytest-flask==1.2.0
+pytest-asyncio==0.21.1
+factory-boy==3.3.0
+faker==19.6.2
+responses==0.23.3
+requests-mock==1.11.0
+
+# Dependências de desenvolvimento
+black==23.7.0
+flake8==6.0.0
+isort==5.12.0

@@ -93,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
   /// Navega para a tela principal
   void _goToMainScreen(String userName) {
     // Navega para a tela principal usando rota nomeada
-    Navigator.of(context).pushReplacementNamed('/chatbot');
+    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   /// Exibe diálogo de erro

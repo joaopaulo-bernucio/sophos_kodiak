@@ -5,15 +5,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:sophos_kodiak/pages/chatbot_page.dart';
 import 'package:sophos_kodiak/constants/app_constants.dart';
 
 // Gerando mocks automaticamente
-@GenerateMocks([http.Client])
-import 'chatbot_page_test.mocks.dart';
 
 void main() {
   group('ChatbotPage Widget Tests', () {

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sophos_kodiak/pages/menu_page.dart';
+import 'package:sophos_kodiak/pages/home_page.dart';
 
 void main() {
-  testWidgets('Debug simples - verificar cards renderizados', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+  testWidgets('Debug simples - verificar cards renderizados', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
     await tester.pumpAndSettle();
 
     // Debug: Listar todos os elementos encontrados

@@ -1,17 +1,17 @@
-// Testes para a página de menu do Sophos Kodiak
+// Testes para a página de HomePage do Sophos Kodiak
 //
-// Este arquivo testa todos os componentes e funcionalidades da tela de menu,
+// Este arquivo testa todos os componentes e funcionalidades da tela de HomePage,
 // incluindo navegação, interações e layout do grid de opções.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sophos_kodiak/pages/menu_page.dart';
+import 'package:sophos_kodiak/pages/home_page.dart';
 import 'package:sophos_kodiak/pages/chatbot_page.dart';
 import 'package:sophos_kodiak/pages/charts_page.dart';
 import 'package:sophos_kodiak/constants/app_constants.dart';
 
 void main() {
-  group('MenuPage Widget Tests', () {
+  group('HomePage Widget Tests', () {
     testWidgets('Deve exibir todos os elementos da interface de menu', (
       WidgetTester tester,
     ) async {
@@ -19,7 +19,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar elementos principais
@@ -40,7 +40,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar opções do menu
@@ -61,7 +61,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar ícones
@@ -75,7 +75,7 @@ void main() {
       WidgetTester tester,
     ) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar cores
@@ -89,14 +89,14 @@ void main() {
     });
   });
 
-  group('MenuPage Navigation Tests', () {
+  group('HomePage Navigation Tests', () {
     testWidgets('Deve navegar para o chatbot ao clicar na opção', (
       WidgetTester tester,
     ) async {
       // Arrange
       await tester.pumpWidget(
         MaterialApp(
-          home: const MenuPage(),
+          home: const HomePage(),
           routes: {'/chatbot': (context) => const ChatbotPage()},
         ),
       );
@@ -116,7 +116,7 @@ void main() {
       // Arrange
       await tester.pumpWidget(
         MaterialApp(
-          home: const MenuPage(),
+          home: const HomePage(),
           routes: {'/charts': (context) => const ChartsPage()},
         ),
       );
@@ -137,7 +137,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: const Scaffold(body: Text('Tela Anterior')),
-          routes: {'/menu': (context) => const MenuPage()},
+          routes: {'/menu': (context) => const HomePage()},
         ),
       );
 
@@ -157,7 +157,7 @@ void main() {
     });
   });
 
-  group('MenuPage Dialog Tests', () {
+  group('HomePage Dialog Tests', () {
     testWidgets('Deve exibir diálogo ao clicar em Configurações', (
       WidgetTester tester,
     ) async {
@@ -165,7 +165,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Act - Clicar na opção Configurações
@@ -191,7 +191,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Act - Clicar na opção Ajuda
@@ -217,7 +217,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Act - Abrir diálogo
@@ -236,7 +236,7 @@ void main() {
     });
   });
 
-  group('MenuPage Interaction Tests', () {
+  group('HomePage Interaction Tests', () {
     testWidgets('Deve responder ao toque em todos os cards do menu', (
       WidgetTester tester,
     ) async {
@@ -246,7 +246,7 @@ void main() {
       // Arrange
       await tester.pumpWidget(
         MaterialApp(
-          home: const MenuPage(),
+          home: const HomePage(),
           routes: {
             '/chatbot': (context) => const Scaffold(body: Text('Chatbot')),
             '/charts': (context) => const Scaffold(body: Text('Charts')),
@@ -281,7 +281,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar o grid
@@ -298,13 +298,13 @@ void main() {
     });
   });
 
-  group('MenuPage Layout Tests', () {
+  group('HomePage Layout Tests', () {
     testWidgets('Deve ter layout adequado em diferentes tamanhos de tela', (
       WidgetTester tester,
     ) async {
       // Arrange - Testar com tamanho pequeno
       await tester.binding.setSurfaceSize(const Size(350, 600));
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se a página carrega corretamente
@@ -313,7 +313,7 @@ void main() {
 
       // Arrange - Testar com tamanho maior
       await tester.binding.setSurfaceSize(const Size(800, 1200));
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se mantém a estrutura
@@ -328,7 +328,7 @@ void main() {
       WidgetTester tester,
     ) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se há SizedBox para espaçamento
@@ -341,13 +341,13 @@ void main() {
     });
   });
 
-  group('MenuPage Performance Tests', () {
+  group('HomePage Performance Tests', () {
     testWidgets('Deve carregar rapidamente', (WidgetTester tester) async {
       // Arrange
       final stopwatch = Stopwatch()..start();
 
       // Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert
@@ -365,7 +365,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       final stopwatch = Stopwatch()..start();
@@ -380,13 +380,13 @@ void main() {
     });
   });
 
-  group('MenuPage Accessibility Tests', () {
+  group('HomePage Accessibility Tests', () {
     testWidgets('Deve ter elementos acessíveis', (WidgetTester tester) async {
       // Configurar tela maior para evitar problemas de layout
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se os botões são acessíveis
@@ -402,7 +402,7 @@ void main() {
 
     testWidgets('Deve ter contraste adequado', (WidgetTester tester) async {
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se usa cores com contraste adequado
@@ -412,7 +412,7 @@ void main() {
     });
   });
 
-  group('MenuPage Error Handling Tests', () {
+  group('HomePage Error Handling Tests', () {
     testWidgets('Deve lidar graciosamente com estados de carregamento', (
       WidgetTester tester,
     ) async {
@@ -420,11 +420,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange & Act
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Assert - Verificar se a página carrega sem erros
-      expect(find.byType(MenuPage), findsOneWidget);
+      expect(find.byType(HomePage), findsOneWidget);
       expect(find.text('Menu Principal'), findsOneWidget);
     });
 
@@ -435,7 +435,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
       // Arrange
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Act - Simular várias operações

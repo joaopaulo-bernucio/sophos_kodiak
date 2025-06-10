@@ -208,7 +208,6 @@ void main() {
       final theme = ThemeData(
         colorScheme: ColorScheme.dark(
           primary: AppColors.primary,
-          background: AppColors.background,
           surface: AppColors.surface,
         ),
       );

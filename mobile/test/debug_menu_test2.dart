@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/pages/menu_page.dart';
-import '../lib/constants/app_constants.dart';
+import 'package:sophos_kodiak/pages/home_page.dart';
 
 void main() {
-  group('Debug MenuPage Tests', () {
+  group('Debug HomePage Tests', () {
     testWidgets('Debug - Configuração exata do teste original', (
       WidgetTester tester,
     ) async {
       // Mesma configuração do teste original
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       // Debug - imprimir informações detalhadas
@@ -77,7 +76,7 @@ void main() {
     ) async {
       // Configurar tela grande
       await tester.binding.setSurfaceSize(const Size(800, 1200));
-      await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+      await tester.pumpWidget(const MaterialApp(home: HomePage()));
       await tester.pumpAndSettle();
 
       final cards = find.byType(Card);

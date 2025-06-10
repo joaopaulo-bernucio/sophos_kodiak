@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sophos_kodiak/pages/menu_page.dart';
+import 'package:sophos_kodiak/pages/home_page.dart';
 
 void main() {
   testWidgets('Debug - Investigar diferença nos testes', (
@@ -10,7 +10,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1080, 1920));
 
     // Arrange & Act
-    await tester.pumpWidget(const MaterialApp(home: MenuPage()));
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
     await tester.pumpAndSettle();
 
     // Debug - Procurar por todos os tipos de widget

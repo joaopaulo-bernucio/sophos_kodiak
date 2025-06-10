@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/pages/menu_page.dart';
-import '../lib/constants/app_constants.dart';
+import 'package:sophos_kodiak/pages/home_page.dart';
 
 void main() {
-  group('Debug MenuPage Tests', () {
+  group('Debug HomePage Tests', () {
     testWidgets('Debug - Verificar quantos cards são renderizados', (
       WidgetTester tester,
     ) async {
       // Arranjar com tamanho específico de tela
       await tester.binding.setSurfaceSize(const Size(400, 800));
       await tester.pumpWidget(
-        MaterialApp(theme: ThemeData.dark(), home: const MenuPage()),
+        MaterialApp(theme: ThemeData.dark(), home: const HomePage()),
       );
       await tester.pumpAndSettle();
 
@@ -45,7 +44,7 @@ void main() {
       // Arranjar com tamanho maior de tela
       await tester.binding.setSurfaceSize(const Size(600, 1000));
       await tester.pumpWidget(
-        MaterialApp(theme: ThemeData.dark(), home: const MenuPage()),
+        MaterialApp(theme: ThemeData.dark(), home: const HomePage()),
       );
       await tester.pumpAndSettle();
 

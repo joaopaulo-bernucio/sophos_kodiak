@@ -493,5 +493,5 @@ if __name__ == '__main__':
     # Verifica banco antes de iniciar o servidor
     verificar_banco()
     # Inicia o Flask para responder via HTTP
-    #app.run(host='0.0.0.0', port=5000)
-    main()
+    app.run(host='0.0.0.0', port=5000)
+    # main()

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 import '../constants/app_constants.dart';
+import '../services/api_service.dart';
 
 class ChatbotPage extends StatefulWidget {
   final String? userName;
@@ -18,6 +17,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
+
+  // Instância do serviço de API
+  late final ApiService _apiService;
 
   // Estado da UI
   bool _isDropdownVisible = false;
@@ -46,6 +48,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void initState() {
     super.initState();
+    _apiService = ApiService();
     _addWelcomeMessage();
     _focusNode.addListener(_onFocusChange);
   }
@@ -55,6 +58,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _messageController.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
+    _apiService.dispose();
     super.dispose();
   }
 
@@ -82,21 +86,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
     }
   }
 
-  /// Faz requisição para a API Flask
+  /// Faz requisição para a API usando o ApiService
   Future<String> _getResponseFromApi(String message) async {
     try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/pergunta'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'pergunta': message}),
-      );
-
-      if (response.statusCode == 200) {
-        final decodedResponse = utf8.decode(response.bodyBytes);
-        final Map<String, dynamic> data = jsonDecode(decodedResponse);
-        return _formatResponse(data['resposta'] as String);
-      }
-      return 'Erro na comunicação com o servidor. Tente novamente.';
+      final response = await _apiService.enviarPergunta(message);
+      return _formatResponse(response.resposta);
+    } on ApiException catch (e) {
+      return 'Erro: ${e.message}';
     } catch (e) {
       return 'Não foi possível conectar ao servidor. Verifique sua conexão.';
     }

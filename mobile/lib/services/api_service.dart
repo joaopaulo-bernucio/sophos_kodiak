@@ -57,7 +57,7 @@ class ChartData {
 
 /// Serviço para comunicação com a API do backend
 class ApiService {
-  static const String _baseUrl = 'http://127.0.0.1:5000';
+  static const String _baseUrl = 'http://10.0.2.2:5000';
   static const Duration _timeout = Duration(seconds: 30);
 
   final http.Client _client;

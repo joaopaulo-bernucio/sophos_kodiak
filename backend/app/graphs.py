@@ -24,6 +24,13 @@ def get_db_connection():
         logging.error(f"Erro ao conectar ao banco: {e}")
         return None
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Endpoint de verificação de saúde da API
+    """
+    return jsonify({"status": "healthy", "message": "API está funcionando"})
+
 @app.route('/api/query/total_vendas_por_mes', methods=['GET'])
 def total_vendas_por_mes():
     """

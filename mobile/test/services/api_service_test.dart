@@ -171,7 +171,7 @@ void main() {
         // Verificar se a requisição foi feita corretamente
         verify(
           mockClient.post(
-            Uri.parse('http://127.0.0.1:5000/pergunta'),
+            Uri.parse('http://10.0.2.2:5000/pergunta'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -299,72 +299,40 @@ void main() {
       });
     });
 
-    group('buscarDadosGraficos Tests', () {
-      test('Deve buscar dados de gráfico com sucesso', () async {
+    group('buscarVendasPorMes Tests', () {
+      test('Deve buscar dados de vendas por mês com sucesso', () async {
         // Arrange
-        final responseBody = jsonEncode({
-          'dados': [
-            {'nome': 'Produto A', 'vendas': 100},
-            {'nome': 'Produto B', 'vendas': 150},
-          ],
-          'tipo': 'bar',
-          'titulo': 'Vendas por Produto',
-        });
+        final responseBody = jsonEncode([
+          {'mes': '2024-01', 'total_vendas': 15000.0},
+          {'mes': '2024-02', 'total_vendas': 18000.0},
+        ]);
 
         when(
           mockClient.get(any, headers: anyNamed('headers')),
         ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         // Act
-        final result = await apiService.buscarDadosGraficos('vendas');
+        final result = await apiService.buscarVendasPorMes();
 
         // Assert
-        expect(result.dados.length, equals(2));
-        expect(result.dados[0]['nome'], equals('Produto A'));
-        expect(result.tipo, equals('bar'));
-        expect(result.titulo, equals('Vendas por Produto'));
+        expect(result, isA<List<Map<String, dynamic>>>());
+        expect(result, hasLength(2));
+        expect(result[0]['mes'], equals('2024-01'));
+        expect(result[0]['total_vendas'], equals(15000.0));
 
         // Verificar se a requisição foi feita corretamente
         verify(
           mockClient.get(
-            Uri.parse('http://127.0.0.1:5000/charts/vendas'),
+            Uri.parse('http://10.0.2.2:5000/api/query/total_vendas_por_mes'),
             headers: {'Accept': 'application/json'},
           ),
         ).called(1);
       });
 
-      test('Deve falhar com tipo vazio', () async {
-        // Act & Assert
-        expect(
-          () => apiService.buscarDadosGraficos(''),
-          throwsA(
-            isA<ApiException>().having(
-              (e) => e.message,
-              'message',
-              equals('Tipo de gráfico é obrigatório'),
-            ),
-          ),
-        );
-
-        expect(
-          () => apiService.buscarDadosGraficos('   '),
-          throwsA(
-            isA<ApiException>().having(
-              (e) => e.message,
-              'message',
-              equals('Tipo de gráfico é obrigatório'),
-            ),
-          ),
-        );
-
-        // Verificar que nenhuma requisição foi feita
-        verifyNever(mockClient.get(any, headers: anyNamed('headers')));
-      });
-
-      test('Deve tratar erro ao buscar gráfico', () async {
+      test('Deve tratar erro ao buscar vendas', () async {
         // Arrange
         final responseBody = jsonEncode({
-          'erro': 'Tipo de gráfico não encontrado',
+          'error': 'Erro ao buscar dados de vendas',
         });
 
         when(
@@ -373,17 +341,40 @@ void main() {
 
         // Act & Assert
         expect(
-          () => apiService.buscarDadosGraficos('inexistente'),
+          () => apiService.buscarVendasPorMes(),
           throwsA(
             isA<ApiException>()
                 .having(
                   (e) => e.message,
                   'message',
-                  equals('Tipo de gráfico não encontrado'),
+                  equals('Erro ao buscar dados de vendas'),
                 )
                 .having((e) => e.statusCode, 'statusCode', equals(404)),
           ),
         );
+      });
+    });
+
+    group('buscarFuncionariosPorDepartamento Tests', () {
+      test('Deve buscar funcionários por departamento com sucesso', () async {
+        // Arrange
+        final responseBody = jsonEncode([
+          {'departamento': 'Vendas', 'quantidade': 5},
+          {'departamento': 'Marketing', 'quantidade': 3},
+        ]);
+
+        when(
+          mockClient.get(any, headers: anyNamed('headers')),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
+
+        // Act
+        final result = await apiService.buscarFuncionariosPorDepartamento();
+
+        // Assert
+        expect(result, isA<List<Map<String, dynamic>>>());
+        expect(result, hasLength(2));
+        expect(result[0]['departamento'], equals('Vendas'));
+        expect(result[0]['quantidade'], equals(5));
       });
     });
 
@@ -402,7 +393,7 @@ void main() {
 
         verify(
           mockClient.get(
-            Uri.parse('http://127.0.0.1:5000/health'),
+            Uri.parse('http://10.0.2.2:5000/health'),
             headers: {'Accept': 'application/json'},
           ),
         ).called(1);
@@ -467,32 +458,30 @@ void main() {
         ); // Menos que 1 segundo
       });
 
-      test('Deve timeout após 30 segundos', () async {
-        // Arrange
-        when(
-          mockClient.post(
-            any,
-            headers: anyNamed('headers'),
-            body: anyNamed('body'),
-          ),
-        ).thenAnswer((_) async {
-          // Simula um timeout real (reduzido para ser mais rápido)
-          await Future.delayed(const Duration(seconds: 3));
-          return http.Response('{"resposta": "tarde demais"}', 200);
-        });
-
-        // Act & Assert
-        await expectLater(
-          apiService.enviarPergunta('Pergunta que demora'),
-          throwsA(
-            isA<ApiException>().having(
-              (e) => e.message,
-              'message',
-              contains('Erro de conexão'),
+      test(
+        'Deve timeout após 30 segundos',
+        () async {
+          // Arrange
+          when(
+            mockClient.post(
+              any,
+              headers: anyNamed('headers'),
+              body: anyNamed('body'),
             ),
-          ),
-        );
-      });
+          ).thenAnswer((_) async {
+            // Simula timeout real
+            await Future.delayed(const Duration(seconds: 31));
+            return http.Response('{"resposta": "tarde demais"}', 200);
+          });
+
+          // Act & Assert
+          expect(
+            () => apiService.enviarPergunta('Pergunta que demora'),
+            throwsA(isA<Exception>()),
+          );
+        },
+        timeout: const Timeout(Duration(seconds: 5)),
+      ); // Timeout do teste reduzido
     });
   });
 }

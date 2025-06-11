@@ -223,7 +223,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
           // Ícone do tigre (logo)
-          Container(
+          SizedBox(
             width: 40,
             height: 40,
             child: Image.asset(

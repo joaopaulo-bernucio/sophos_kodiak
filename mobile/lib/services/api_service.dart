@@ -98,27 +98,97 @@ class ApiService {
     }
   }
 
-  /// Busca dados para gráficos
-  Future<ChartData> buscarDadosGraficos(String tipo) async {
-    if (tipo.trim().isEmpty) {
-      throw const ApiException('Tipo de gráfico é obrigatório');
-    }
-
+  /// Busca dados de vendas por mês
+  Future<List<Map<String, dynamic>>> buscarVendasPorMes() async {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/charts/$tipo'),
+            Uri.parse('$_baseUrl/api/query/total_vendas_por_mes'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);
 
-      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      } else {
+        final data = jsonDecode(response.body);
+        throw ApiException(
+          data['error'] ?? 'Erro ao buscar dados de vendas',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Erro de conexão: ${e.toString()}');
+    }
+  }
+
+  /// Busca dados de funcionários por departamento
+  Future<List<Map<String, dynamic>>> buscarFuncionariosPorDepartamento() async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$_baseUrl/api/query/funcionarios_por_departamento'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200) {
-        return ChartData.fromJson(data);
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       } else {
+        final data = jsonDecode(response.body);
         throw ApiException(
-          data['erro'] ?? 'Erro ao buscar dados do gráfico',
+          data['error'] ?? 'Erro ao buscar dados de funcionários',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Erro de conexão: ${e.toString()}');
+    }
+  }
+
+  /// Busca dados de projetos por status
+  Future<List<Map<String, dynamic>>> buscarProjetosPorStatus() async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$_baseUrl/api/query/projetos_por_status'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      } else {
+        final data = jsonDecode(response.body);
+        throw ApiException(
+          data['error'] ?? 'Erro ao buscar dados de projetos',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Erro de conexão: ${e.toString()}');
+    }
+  }
+
+  /// Busca dados de receita por cliente
+  Future<List<Map<String, dynamic>>> buscarReceitaPorCliente() async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$_baseUrl/api/query/receita_por_cliente'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      } else {
+        final data = jsonDecode(response.body);
+        throw ApiException(
+          data['error'] ?? 'Erro ao buscar dados de receita',
           statusCode: response.statusCode,
         );
       }

@@ -1,36 +1,31 @@
 import 'package:flutter/material.dart';
 
-/// Constantes de cores do aplicativo Sophos Kodiak
 class AppColors {
   // Cores primárias
-  static const Color primary = Color(0xFFF6790F); // Laranja
-  static const Color primaryDark = Color(0xFF3B1D00); // Laranja escuro
+  static const Color primary = Color(0xFFF6790F);
+  static const Color primaryDark = Color(0xFF3B1D00);
 
   // Cores de fundo
-  static const Color background = Color(
-    0xFF171717,
-  ); // Cinza escuro (atualizado)
-  static const Color surface = Color(0xFF171717); // Cinza escuro
-  static const Color surfaceLight = Color(0xFF454545); // Cinza médio
+  static const Color background = Color(0xFF171717);
+  static const Color surface = Color(0xFF171717);
+  static const Color surfaceLight = Color(0xFF454545);
 
   // Cores de texto
-  static const Color textPrimary = Color(0xFFE6E6E6); // Branco acinzentado
-  static const Color textSecondary = Color(0xFFA1A1A1); // Cinza médio
-  static const Color textHint = Color(0xFFB8B8B8); // Cinza claro
+  static const Color textPrimary = Color(0xFFE6E6E6);
+  static const Color textSecondary = Color(0xFFA1A1A1);
+  static const Color textHint = Color(0xFFB8B8B8);
 
   // Cores específicas para botões
   static const Color buttonSendBackground = Color(
     0xFFE6E6E6,
   ); // Botão enviar ativo
-  static const Color buttonSendIcon = Color(0xFF2E2E2E); // Ícone seta enviar
+  static const Color buttonSendIcon = Color(0xFF2E2E2E);
   static const Color buttonSendDisabled = Color(
     0xFF5C5C5C,
   ); // Botão enviar desabilitado
-  static const Color buttonAttachBackground = Color(0xFF5C5C5C); // Botão anexar
-  static const Color buttonAttachIcon = Color(0xFFCECECE); // Ícone anexar
-  static const Color suggestionCardBackground = Color(
-    0xFF2E2E2E,
-  ); // Cards de sugestão
+  static const Color buttonAttachBackground = Color(0xFF5C5C5C);
+  static const Color buttonAttachIcon = Color(0xFFCECECE);
+  static const Color suggestionCardBackground = Color(0xFF2E2E2E);
 
   // Cores de feedback
   static const Color error = Color(0xFFFF5722);

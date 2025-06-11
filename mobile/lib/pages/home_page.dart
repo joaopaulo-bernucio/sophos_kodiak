@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import 'chatbot_page.dart';
 
 /// Página de menu principal do aplicativo Sophos Kodiak
 ///
 /// Esta página exibe as principais opções de navegação do sistema,
 /// mantendo o tema escuro consistente com o resto do aplicativo.
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final String? userName;
+
+  const HomePage({super.key, this.userName});
 
   @override
   Widget build(BuildContext context) {
+    // Recebe o nome do usuário passado como argumento
+    final String? userNameFromArgs =
+        ModalRoute.of(context)?.settings.arguments as String?;
+    final String? finalUserName = userName ?? userNameFromArgs;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -22,14 +30,16 @@ class HomePage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: const _MenuContent(),
+      body: _MenuContent(userName: finalUserName),
     );
   }
 }
 
 /// Widget que contém o conteúdo principal da página principal
 class _MenuContent extends StatelessWidget {
-  const _MenuContent();
+  final String? userName;
+
+  const _MenuContent({this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +59,7 @@ class _MenuContent extends StatelessWidget {
           children: [
             const _WelcomeSection(),
             const SizedBox(height: AppDimensions.paddingExtraLarge),
-            Expanded(child: _MenuGrid()),
+            Expanded(child: _MenuGrid(userName: userName)),
           ],
         ),
       ),
@@ -85,6 +95,10 @@ class _WelcomeSection extends StatelessWidget {
 
 /// Grid com as opções da página principal
 class _MenuGrid extends StatelessWidget {
+  final String? userName;
+
+  const _MenuGrid({this.userName});
+
   @override
   Widget build(BuildContext context) {
     return GridView.count(
@@ -97,7 +111,12 @@ class _MenuGrid extends StatelessWidget {
           icon: Icons.smart_toy,
           title: 'Chatbot IA',
           subtitle: 'Assistente inteligente',
-          onTap: () => Navigator.pushNamed(context, '/chatbot'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatbotPage(userName: userName),
+            ),
+          ),
         ),
         _MenuCard(
           icon: Icons.bar_chart,

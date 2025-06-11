@@ -36,7 +36,7 @@ void main() {
       expect(find.text('Mensagem'), findsOneWidget);
 
       // Verificar botões de ação
-      expect(find.byIcon(Icons.send), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
       expect(find.byIcon(Icons.mic_none), findsOneWidget);
     });
 
@@ -84,7 +84,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act - Digitar e enviar mensagem
       await tester.enterText(textField, 'Como funciona o sistema?');
@@ -161,7 +161,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act - Digitar, enviar e verificar limpeza
       await tester.enterText(textField, 'Teste de mensagem');
@@ -202,7 +202,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act - Enviar mensagem do usuário
       await tester.enterText(textField, 'Minha pergunta');
@@ -223,7 +223,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act - Enviar várias mensagens
       for (int i = 0; i < 5; i++) {
@@ -265,7 +265,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act
       await tester.enterText(textField, 'Teste de performance');
@@ -288,7 +288,7 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: ChatbotPage()));
       await tester.pumpAndSettle();
 
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
       final initialMessageCount = tester
           .widgetList(
             find.text(
@@ -321,7 +321,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final textField = find.byType(TextField);
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.arrow_upward);
 
       // Act - Enviar mensagem com caracteres especiais
       const specialMessage = 'Teste com ação: @#\$%^&*()';

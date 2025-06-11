@@ -92,8 +92,8 @@ class _LoginPageState extends State<LoginPage> {
 
   /// Navega para a tela principal
   void _goToMainScreen(String userName) {
-    // Navega para a tela principal usando rota nomeada
-    Navigator.of(context).pushReplacementNamed('/home');
+    // Navega para a tela principal usando rota nomeada e passando o nome do usuário
+    Navigator.of(context).pushReplacementNamed('/home', arguments: userName);
   }
 
   /// Exibe diálogo de erro

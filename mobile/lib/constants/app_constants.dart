@@ -7,7 +7,9 @@ class AppColors {
   static const Color primaryDark = Color(0xFF3B1D00); // Laranja escuro
 
   // Cores de fundo
-  static const Color background = Color(0xFF000000); // Preto
+  static const Color background = Color(
+    0xFF171717,
+  ); // Cinza escuro (atualizado)
   static const Color surface = Color(0xFF171717); // Cinza escuro
   static const Color surfaceLight = Color(0xFF454545); // Cinza médio
 
@@ -15,6 +17,20 @@ class AppColors {
   static const Color textPrimary = Color(0xFFE6E6E6); // Branco acinzentado
   static const Color textSecondary = Color(0xFFA1A1A1); // Cinza médio
   static const Color textHint = Color(0xFFB8B8B8); // Cinza claro
+
+  // Cores específicas para botões
+  static const Color buttonSendBackground = Color(
+    0xFFE6E6E6,
+  ); // Botão enviar ativo
+  static const Color buttonSendIcon = Color(0xFF2E2E2E); // Ícone seta enviar
+  static const Color buttonSendDisabled = Color(
+    0xFF5C5C5C,
+  ); // Botão enviar desabilitado
+  static const Color buttonAttachBackground = Color(0xFF5C5C5C); // Botão anexar
+  static const Color buttonAttachIcon = Color(0xFFCECECE); // Ícone anexar
+  static const Color suggestionCardBackground = Color(
+    0xFF2E2E2E,
+  ); // Cards de sugestão
 
   // Cores de feedback
   static const Color error = Color(0xFFFF5722);
@@ -56,9 +72,7 @@ class AppTextStyles {
   );
 
   // Campos de entrada
-  static const TextStyle inputText = TextStyle(
-    color: Colors.white,
-  );
+  static const TextStyle inputText = TextStyle(color: Colors.white);
 
   static const TextStyle inputHint = TextStyle(
     fontFamily: 'Roboto',

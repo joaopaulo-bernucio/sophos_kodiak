@@ -4,13 +4,10 @@ import 'dart:convert';
 import 'dart:async';
 import '../constants/app_constants.dart';
 
-/// Página do Chatbot com IA integrada ao Google Gemini
-///
-/// Esta página oferece uma interface de chat para interação com o
-/// assistente inteligente do sistema Kodiak ERP, seguindo o design
-/// do Figma com sugestões, animações e integração real com a API.
 class ChatbotPage extends StatefulWidget {
-  const ChatbotPage({super.key});
+  final String? userName;
+
+  const ChatbotPage({super.key, this.userName});
 
   @override
   State<ChatbotPage> createState() => _ChatbotPageState();
@@ -22,7 +19,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
 
-  // Sugestões de perguntas
+  // Estado da UI
+  bool _isDropdownVisible = false;
+  bool _isVoiceInputActive = false;
+  bool _isWaitingResponse = false;
+
+  // Sugestões de perguntas predefinidas
   final List<Map<String, String>> _suggestions = [
     {
       'title': 'Preveja quais clientes estão',
@@ -33,11 +35,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
       'title': 'Qual é a previsão de vendas',
       'subtitle': 'para os próximos três meses?',
     },
+    {
+      'title': 'Identifique oportunidades',
+      'subtitle': 'de cross-selling e upselling',
+    },
+    {'title': 'Analise o desempenho', 'subtitle': 'da equipe de vendas'},
+    {'title': 'Mostre as tendências', 'subtitle': 'do mercado atual'},
   ];
-
-  bool _isDropdownVisible = false;
-  bool _isVoiceInputActive = false;
-  bool _isWaitingResponse = false;
 
   @override
   void initState() {
@@ -54,12 +58,16 @@ class _ChatbotPageState extends State<ChatbotPage> {
     super.dispose();
   }
 
-  /// Adiciona mensagem de boas-vindas inicial
+  /// Adiciona mensagem de boas-vindas personalizada
   void _addWelcomeMessage() {
+    final userName = widget.userName;
+    final welcomeMessage = userName != null
+        ? 'Olá, $userName! Como posso ajudá-lo hoje?'
+        : 'Olá! Sou o Sophos, assistente inteligente do Kodiak ERP. Como posso ajudá-lo hoje?';
+
     _messages.add(
       ChatMessage(
-        text:
-            'Olá! Sou o Sophos, assistente inteligente do Kodiak ERP. Como posso ajudá-lo hoje?',
+        text: welcomeMessage,
         isUser: false,
         timestamp: DateTime.now(),
         isAnimating: false,
@@ -67,7 +75,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Controla a visibilidade do dropdown quando o campo ganha foco
+  /// Controla a visibilidade do dropdown quando o campo ganha/perde foco
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       setState(() => _isDropdownVisible = false);
@@ -171,28 +179,19 @@ class _ChatbotPageState extends State<ChatbotPage> {
       body: GestureDetector(
         onTap: () => setState(() => _isDropdownVisible = false),
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              _buildHeader(),
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  reverse: false,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingMedium,
-                    vertical: AppDimensions.paddingSmall,
-                  ),
-                  itemCount: _messages.length + (_isWaitingResponse ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index >= _messages.length && _isWaitingResponse) {
-                      return _buildTypingIndicator();
-                    }
-                    return _MessageBubble(message: _messages[index]);
-                  },
-                ),
+              // Interface principal
+              Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(child: _buildMessagesList()),
+                  _buildSuggestionsCarousel(),
+                  _buildInputArea(),
+                ],
               ),
-              _buildSuggestionsCarousel(),
-              _buildInputArea(),
+              // Menu dropdown flutuante
+              if (_isDropdownVisible) _buildFloatingDropdownMenu(),
             ],
           ),
         ),
@@ -200,8 +199,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói o header da página
+  /// Constrói o cabeçalho da página com menu dropdown
   Widget _buildHeader() {
+    final userName = widget.userName ?? 'Conttrotech';
+
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: const BoxDecoration(
@@ -212,44 +213,195 @@ class _ChatbotPageState extends State<ChatbotPage> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.smart_toy,
-              color: AppColors.primaryDark,
-              size: 24,
+          // Seta de volta
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Color(0xFFE6E6E6),
+                size: 24,
+              ),
             ),
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
-          const Text(
-            'Sophos IA',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          // Ícone do tigre (logo)
+          Container(
+            width: 40,
+            height: 40,
+            child: Image.asset(
+              'assets/images/sophos_kodiak_logo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.smart_toy,
+                  color: AppColors.primaryDark,
+                  size: 24,
+                );
+              },
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: AppDimensions.paddingSmall),
+          // Saudação personalizada ou padrão
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.userName != null ? 'Olá, $userName' : 'Sophos IA',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  widget.userName != null ? 'Sophos IA' : '',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Ícone do usuário com dropdown
           GestureDetector(
             onTap: () =>
                 setState(() => _isDropdownVisible = !_isDropdownVisible),
-            child: const Icon(
-              Icons.more_vert,
-              color: AppColors.textSecondary,
-              size: 24,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surfaceLight,
+              ),
+              child: const Icon(
+                Icons.person,
+                color: AppColors.textPrimary,
+                size: 24,
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Constrói o menu dropdown flutuante do usuário
+  Widget _buildFloatingDropdownMenu() {
+    return Positioned(
+      top: 65, // Posição logo abaixo do header
+      right: AppDimensions.paddingMedium,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        color: AppColors.surfaceLight,
+        child: Container(
+          width: 180,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDropdownItem(
+                icon: Icons.person,
+                text: 'Conta',
+                onTap: () {
+                  setState(() => _isDropdownVisible = false);
+                  Navigator.pushNamed(
+                    context,
+                    '/settings',
+                    arguments: {
+                      'cnpj': '12.345.678/0001-90',
+                      'password': 'password123',
+                      'userName': widget.userName ?? 'Usuário',
+                    },
+                  );
+                },
+              ),
+              _buildDropdownItem(
+                icon: Icons.history,
+                text: 'Histórico',
+                onTap: () {
+                  setState(() => _isDropdownVisible = false);
+                  // TODO: Implementar histórico
+                },
+              ),
+              _buildDropdownItem(
+                icon: Icons.notifications,
+                text: 'Notificações',
+                onTap: () {
+                  setState(() => _isDropdownVisible = false);
+                  // TODO: Implementar notificações
+                },
+              ),
+              const Divider(color: AppColors.surface, height: 1),
+              _buildDropdownItem(
+                icon: Icons.logout,
+                text: 'Sair',
+                textColor: AppColors.error,
+                onTap: () {
+                  setState(() => _isDropdownVisible = false);
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Item individual do menu dropdown
+  Widget _buildDropdownItem({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    Color? textColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingMedium,
+          vertical: 12,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: textColor ?? AppColors.textPrimary, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              text,
+              style: TextStyle(
+                color: textColor ?? AppColors.textPrimary,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Lista de mensagens do chat
+  Widget _buildMessagesList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingMedium,
+        vertical: AppDimensions.paddingSmall,
+      ),
+      itemCount: _messages.length + (_isWaitingResponse ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _messages.length && _isWaitingResponse) {
+          return _buildTypingIndicator();
+        }
+        return _MessageBubble(message: _messages[index]);
+      },
     );
   }
 
@@ -286,7 +438,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     if (_messages.length > 1) return const SizedBox.shrink();
 
     return Container(
-      height: 80,
+      height: 50,
       margin: const EdgeInsets.symmetric(vertical: AppDimensions.paddingSmall),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -297,46 +449,40 @@ class _ChatbotPageState extends State<ChatbotPage> {
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
           return Container(
-            width: 200,
             margin: const EdgeInsets.only(right: AppDimensions.paddingSmall),
-            child: Card(
-              color: AppColors.surfaceLight,
+            child: Material(
+              elevation: 2,
+              borderRadius: BorderRadius.circular(20),
+              color: AppColors.suggestionCardBackground,
               child: InkWell(
                 onTap: () => _sendMessage(
                   '${suggestion['title']} ${suggestion['subtitle']}',
                 ),
-                borderRadius: BorderRadius.circular(
-                  AppDimensions.borderRadiusLarge,
-                ),
+                borderRadius: BorderRadius.circular(20),
                 child: Padding(
-                  padding: const EdgeInsets.all(AppDimensions.paddingSmall),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingSmall,
+                    vertical: 8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Flexible(
-                        child: Text(
-                          suggestion['title']!,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                      Text(
+                        suggestion['title']!,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Flexible(
-                        child: Text(
-                          suggestion['subtitle']!,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                      const SizedBox(height: 1),
+                      Text(
+                        suggestion['subtitle']!,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
                         ),
                       ),
                     ],
@@ -350,8 +496,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói a área de entrada de mensagem
+  /// Área de entrada de mensagem
   Widget _buildInputArea() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: const BoxDecoration(
@@ -362,16 +510,33 @@ class _ChatbotPageState extends State<ChatbotPage> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () {
-              // TODO: Implementar anexo de arquivos
-            },
-            icon: const Icon(
-              Icons.attach_file,
-              color: AppColors.textSecondary,
-              size: 24,
+          // Botão de anexar arquivo em círculo
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: AppColors.buttonAttachBackground,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: () {
+                // TODO: Implementar anexo de arquivos
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Funcionalidade de anexo em desenvolvimento'),
+                    backgroundColor: AppColors.warning,
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.attach_file,
+                color: AppColors.buttonAttachIcon,
+                size: 20,
+              ),
             ),
           ),
+          const SizedBox(width: AppDimensions.paddingSmall),
+          // Campo de texto expandido
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -397,13 +562,17 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: AppDimensions.paddingMedium,
+                          vertical: 12,
                         ),
                       ),
                       minLines: 1,
                       maxLines: 3,
-                      onSubmitted: (_) => _sendMessage(),
+                      onChanged: (value) =>
+                          setState(() {}), // Atualiza o estado para o botão
+                      onSubmitted: (_) => hasText ? _sendMessage() : null,
                     ),
                   ),
+                  // Botão de voz
                   IconButton(
                     icon: Icon(
                       _isVoiceInputActive ? Icons.mic : Icons.mic_none,
@@ -416,6 +585,14 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         () => _isVoiceInputActive = !_isVoiceInputActive,
                       );
                       // TODO: Implementar entrada de voz
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Funcionalidade de voz em desenvolvimento',
+                          ),
+                          backgroundColor: AppColors.warning,
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -423,14 +600,25 @@ class _ChatbotPageState extends State<ChatbotPage> {
             ),
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
+          // Botão de enviar com estado dinâmico
           Container(
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: hasText
+                  ? AppColors.buttonSendBackground
+                  : AppColors.buttonSendDisabled,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              onPressed: _sendMessage,
-              icon: const Icon(Icons.send, color: AppColors.primaryDark),
+              onPressed: hasText ? _sendMessage : null,
+              icon: Icon(
+                Icons.arrow_upward,
+                color: hasText
+                    ? AppColors.buttonSendIcon
+                    : AppColors.textSecondary,
+                size: 20,
+              ),
             ),
           ),
         ],

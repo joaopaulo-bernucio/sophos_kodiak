@@ -65,6 +65,16 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text = savedUser.senha;
         _rememberMe = true;
       });
+
+      // Se o usuário já tem um nome preferido, navega diretamente para a tela principal
+      if (savedUser.nomePreferido != null &&
+          savedUser.nomePreferido!.isNotEmpty) {
+        // Atualiza o último login
+        await UserStorageService.updateLastLogin();
+
+        // Navega para a tela principal sem mostrar o diálogo
+        _goToMainScreen(savedUser.nomePreferido!);
+      }
     }
   }
 
@@ -86,10 +96,14 @@ class _LoginPageState extends State<LoginPage> {
 
     // Credenciais temporárias para desenvolvimento
     if (cnpj == '12.345.678/0001-90' && password == 'password123') {
-      // Cria o objeto User
+      // Verifica se já existe um usuário salvo para pegar o nome preferido
+      final existingUser = await UserStorageService.getUser();
+
+      // Cria o objeto User mantendo o nome preferido existente se houver
       final user = User(
         cnpj: cnpj,
         senha: password,
+        nomePreferido: existingUser?.nomePreferido,
         ultimoLogin: DateTime.now(),
       );
 
@@ -108,6 +122,11 @@ class _LoginPageState extends State<LoginPage> {
   void _askPreferredName(User user) {
     final nameController = TextEditingController();
 
+    // Pré-preenche o campo se o usuário já tem um nome preferido salvo
+    if (user.nomePreferido != null && user.nomePreferido!.isNotEmpty) {
+      nameController.text = user.nomePreferido!;
+    }
+
     showDialog(
       context: context,
       builder: (context) => _PreferredNameDialog(
@@ -117,11 +136,15 @@ class _LoginPageState extends State<LoginPage> {
 
           // Atualiza o nome preferido do usuário
           final userName = nameController.text.trim();
+
+          // Se o nome foi informado e o usuário escolheu lembrar, salva no storage
           if (userName.isNotEmpty && _rememberMe) {
             await UserStorageService.updatePreferredName(userName);
           }
 
-          _goToMainScreen(userName);
+          // Usa o nome informado ou um padrão se estiver vazio
+          final displayName = userName.isNotEmpty ? userName : 'Usuário';
+          _goToMainScreen(displayName);
         },
       ),
     );

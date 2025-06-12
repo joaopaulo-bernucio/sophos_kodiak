@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../constants/app_constants.dart';
 import '../services/api_service.dart';
+import '../services/user_storage_service.dart';
+import '../services/auth_service.dart';
 
 class ChatbotPage extends StatefulWidget {
   final String? userName;
@@ -166,6 +168,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
         );
       }
     });
+  }
+
+  /// Realiza o logout limpando todos os dados do usuário
+  Future<void> _performLogout() async {
+    try {
+      // Limpa os dados usando UserStorageService
+      await UserStorageService.clearUserData();
+
+      // Limpa os dados usando AuthService (para compatibilidade)
+      final authService = AuthService();
+      await authService.logout();
+
+      // Navega para a tela de login
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    } catch (e) {
+      // Em caso de erro, ainda tenta navegar para o login
+      print('Erro ao fazer logout: $e');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    }
   }
 
   @override
@@ -339,9 +364,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 icon: Icons.logout,
                 text: 'Sair',
                 textColor: AppColors.error,
-                onTap: () {
+                onTap: () async {
                   setState(() => _isDropdownVisible = false);
-                  Navigator.pushReplacementNamed(context, '/login');
+
+                  // Limpa os dados do usuário antes de sair
+                  await _performLogout();
                 },
               ),
             ],

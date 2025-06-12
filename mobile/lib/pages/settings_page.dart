@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sophos_kodiak/constants/app_constants.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
 import 'package:sophos_kodiak/services/auth_service.dart';
+import 'package:sophos_kodiak/services/user_storage_service.dart';
 
 /// Tela de configurações do usuário
 ///
@@ -93,15 +94,34 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (shouldLogout == true && mounted) {
-      _performLogout();
+      await _performLogout();
     }
   }
 
-  /// Realiza o logout navegando para a tela de login
-  void _performLogout() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
+  /// Realiza o logout limpando todos os dados do usuário
+  Future<void> _performLogout() async {
+    try {
+      // Limpa os dados usando UserStorageService
+      await UserStorageService.clearUserData();
+
+      // Limpa os dados usando AuthService (para compatibilidade)
+      await _authService.logout();
+
+      // Navega para a tela de login
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+    } catch (e) {
+      // Em caso de erro, ainda tenta navegar para o login
+      print('Erro ao fazer logout: $e');
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+    }
   }
 
   @override

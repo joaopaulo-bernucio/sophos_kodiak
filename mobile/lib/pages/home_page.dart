@@ -18,6 +18,9 @@ class HomePage extends StatelessWidget {
         ModalRoute.of(context)?.settings.arguments as String?;
     final String? finalUserName = userName ?? userNameFromArgs;
 
+    // Verifica se há página anterior no histórico de navegação
+    final bool canPop = Navigator.canPop(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -25,10 +28,18 @@ class HomePage extends StatelessWidget {
         elevation: 0,
         title: const Text('Página Principal', style: AppTextStyles.subtitle),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // Só exibe o botão de voltar se houver página anterior
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        // Desabilita o botão de voltar automático do Flutter quando não há histórico
+        automaticallyImplyLeading: canPop,
       ),
       body: _MenuContent(userName: finalUserName),
     );

@@ -154,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
     final screenHeight = mediaQuery.size.height;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
@@ -253,7 +253,7 @@ class _BackgroundContainer extends StatelessWidget {
         child: Container(
           height: screenHeight / 1.7 + mediaQuery.padding.bottom,
           decoration: const BoxDecoration(
-            color: AppColors.surface,
+            color: Color(0xFF171717),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(AppDimensions.borderRadiusExtraLarge),
               topRight: Radius.circular(AppDimensions.borderRadiusExtraLarge),

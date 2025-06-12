@@ -31,6 +31,10 @@ void main() {
       // Verificar botão de login
       expect(find.text('ENTRAR'), findsOneWidget);
       expect(find.text('Esqueci minha senha'), findsOneWidget);
+
+      // Verificar checkbox "Lembrar-me"
+      expect(find.text('Lembrar-me'), findsOneWidget);
+      expect(find.byType(Checkbox), findsOneWidget);
     });
 
     testWidgets('Deve aplicar cores e estilos do design system', (
@@ -196,6 +200,38 @@ void main() {
       // Assert
       stopwatch.stop();
       expect(stopwatch.elapsedMilliseconds, lessThan(200)); // Menos que 200ms
+    });
+
+    testWidgets('Deve permitir marcar/desmarcar checkbox Lembrar-me', (
+      WidgetTester tester,
+    ) async {
+      // Arrange
+      await tester.pumpWidget(const MaterialApp(home: LoginPage()));
+      await tester.pumpAndSettle();
+
+      // Encontrar o checkbox
+      final checkbox = find.byType(Checkbox);
+      expect(checkbox, findsOneWidget);
+
+      // Verificar estado inicial (desmarcado)
+      Checkbox checkboxWidget = tester.widget<Checkbox>(checkbox);
+      expect(checkboxWidget.value, equals(false));
+
+      // Act - Marcar checkbox
+      await tester.tap(checkbox);
+      await tester.pump();
+
+      // Assert - Verificar se foi marcado
+      checkboxWidget = tester.widget<Checkbox>(checkbox);
+      expect(checkboxWidget.value, equals(true));
+
+      // Act - Desmarcar checkbox
+      await tester.tap(checkbox);
+      await tester.pump();
+
+      // Assert - Verificar se foi desmarcado
+      checkboxWidget = tester.widget<Checkbox>(checkbox);
+      expect(checkboxWidget.value, equals(false));
     });
   });
 }

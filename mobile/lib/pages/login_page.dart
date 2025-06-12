@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import '../models/user.dart';
+import '../services/user_storage_service.dart';
 
 /// Tela de login do aplicativo Sophos Kodiak
 class LoginPage extends StatefulWidget {
@@ -16,6 +18,9 @@ class _LoginPageState extends State<LoginPage> {
 
   // Estado para visibilidade da senha
   bool _isPasswordVisible = false;
+
+  // Estado para "Lembrar-me"
+  bool _rememberMe = false;
 
   /// Formata o CNPJ enquanto o usuário digita
   String _formatCnpj(String value) {
@@ -50,8 +55,21 @@ class _LoginPageState extends State<LoginPage> {
     return password.length >= 8;
   }
 
+  /// Carrega dados salvos do usuário quando a tela é iniciada
+  Future<void> _loadSavedUserData() async {
+    final savedUser = await UserStorageService.getUser();
+
+    if (savedUser != null) {
+      setState(() {
+        _cnpjController.text = savedUser.cnpj;
+        _passwordController.text = savedUser.senha;
+        _rememberMe = true;
+      });
+    }
+  }
+
   /// Gerencia o processo de login
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     final cnpj = _cnpjController.text;
     final password = _passwordController.text;
 
@@ -68,23 +86,42 @@ class _LoginPageState extends State<LoginPage> {
 
     // Credenciais temporárias para desenvolvimento
     if (cnpj == '12.345.678/0001-90' && password == 'password123') {
-      _askPreferredName();
+      // Cria o objeto User
+      final user = User(
+        cnpj: cnpj,
+        senha: password,
+        ultimoLogin: DateTime.now(),
+      );
+
+      // Salva os dados se o usuário escolheu "lembrar-me"
+      if (_rememberMe) {
+        await UserStorageService.saveUser(user, rememberMe: true);
+      }
+
+      _askPreferredName(user);
     } else {
       _showErrorDialog('CNPJ ou senha incorretos');
     }
   }
 
   /// Exibe diálogo para nome preferido
-  void _askPreferredName() {
+  void _askPreferredName(User user) {
     final nameController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => _PreferredNameDialog(
         nameController: nameController,
-        onConfirm: () {
+        onConfirm: () async {
           Navigator.of(context).pop();
-          _goToMainScreen(nameController.text);
+
+          // Atualiza o nome preferido do usuário
+          final userName = nameController.text.trim();
+          if (userName.isNotEmpty && _rememberMe) {
+            await UserStorageService.updatePreferredName(userName);
+          }
+
+          _goToMainScreen(userName);
         },
       ),
     );
@@ -102,6 +139,13 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (context) => _ErrorDialog(message: message),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Carrega dados salvos quando a tela é criada
+    _loadSavedUserData();
   }
 
   @override
@@ -137,11 +181,13 @@ class _LoginPageState extends State<LoginPage> {
                       cnpjController: _cnpjController,
                       passwordController: _passwordController,
                       isPasswordVisible: _isPasswordVisible,
+                      rememberMe: _rememberMe,
                       onCnpjChanged: _onCnpjChanged,
                       onPasswordVisibilityToggle: _togglePasswordVisibility,
+                      onRememberMeChanged: _toggleRememberMe,
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 10),
 
                     // Botão de login e link de recuperação
                     _ActionSection(onLogin: _handleLogin),
@@ -170,6 +216,13 @@ class _LoginPageState extends State<LoginPage> {
   void _togglePasswordVisibility() {
     setState(() {
       _isPasswordVisible = !_isPasswordVisible;
+    });
+  }
+
+  /// Alterna o estado do checkbox "Lembrar-me"
+  void _toggleRememberMe(bool? value) {
+    setState(() {
+      _rememberMe = value ?? false;
     });
   }
 
@@ -240,15 +293,19 @@ class _InputSection extends StatelessWidget {
     required this.cnpjController,
     required this.passwordController,
     required this.isPasswordVisible,
+    required this.rememberMe,
     required this.onCnpjChanged,
     required this.onPasswordVisibilityToggle,
+    required this.onRememberMeChanged,
   });
 
   final TextEditingController cnpjController;
   final TextEditingController passwordController;
   final bool isPasswordVisible;
+  final bool rememberMe;
   final ValueChanged<String> onCnpjChanged;
   final VoidCallback onPasswordVisibilityToggle;
+  final ValueChanged<bool?> onRememberMeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +335,23 @@ class _InputSection extends StatelessWidget {
             ),
             onPressed: onPasswordVisibilityToggle,
           ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Checkbox "Lembrar-me"
+        Row(
+          children: [
+            Checkbox(
+              value: rememberMe,
+              onChanged: onRememberMeChanged,
+              activeColor: AppColors.primary,
+            ),
+            const Text(
+              'Continuar conectado',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+          ],
         ),
       ],
     );

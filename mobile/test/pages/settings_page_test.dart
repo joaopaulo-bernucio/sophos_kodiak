@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/pages/settings_page.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
 import 'package:sophos_kodiak/services/auth_service.dart';
+import 'package:sophos_kodiak/models/user.dart';
 
 void main() {
   group('SettingsPage Widget Tests', () {
@@ -115,8 +116,9 @@ void main() {
     ) async {
       // Arrange - Criar um usuário no SharedPreferences para poder atualizá-lo
       final authService = AuthService();
-      final usuario = Usuario(
+      final usuario = User(
         cnpj: '12.345.678/0001-90',
+        senha: 'password123',
         nomePreferido: 'João Silva',
         ultimoLogin: DateTime.now(),
       );

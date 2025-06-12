@@ -24,7 +24,6 @@ class App extends StatelessWidget {
         '/charts': (context) => const ChartsPage(),
       },
       onGenerateRoute: (settings) {
-        // Lida com rotas que precisam de argumentos
         if (settings.name == '/settings') {
           final args = settings.arguments as Map<String, dynamic>?;
           return MaterialPageRoute(

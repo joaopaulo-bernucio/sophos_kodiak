@@ -163,7 +163,6 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: widget.cnpj,
           iconColor: AppColors.textPrimary,
         ),
-
         _SettingsListTile(
           icon: Icons.vpn_key_rounded,
           title: 'Senha',
@@ -171,7 +170,6 @@ class _SettingsPageState extends State<SettingsPage> {
           iconColor: AppColors.textPrimary,
           onTap: _togglePasswordVisibility,
         ),
-
         _SettingsListTile(
           icon: Icons.person_rounded,
           title: 'Nome',
@@ -192,14 +190,12 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: 'Sistema (Padrão)',
           iconColor: AppColors.textPrimary,
         ),
-
         _SettingsListTile(
           icon: Icons.language_rounded,
           title: 'Idioma',
           subtitle: 'Padrão do sistema',
           iconColor: AppColors.textPrimary,
         ),
-
         _SettingsListTile(
           icon: Icons.mic_rounded,
           title: 'Idioma de entrada',
@@ -224,8 +220,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _SettingsListTile(
           icon: Icons.logout_rounded,
           title: 'Sair',
-          iconColor: AppColors.destructive,
-          titleColor: AppColors.destructive,
+          iconColor: AppColors.error,
+          titleColor: AppColors.error,
           onTap: _showLogoutConfirmation,
         ),
       ],
@@ -256,12 +252,10 @@ class _SettingsListTile extends StatelessWidget {
       leading: Icon(icon, color: iconColor, size: 24.0),
       title: _buildTitleContent(),
       onTap: onTap,
-
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
         vertical: 4.0,
       ),
-
       hoverColor: Colors.white.withValues(alpha: 0.05),
       splashColor: Colors.white.withValues(alpha: 0.1),
     );
@@ -368,7 +362,6 @@ class _EditNameDialogState extends State<_EditNameDialog> {
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16.0),
           ),
         ),
-
         TextButton(
           onPressed: () {
             final newName = nameController.text.trim();
@@ -418,13 +411,12 @@ class _LogoutConfirmationDialog extends StatelessWidget {
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16.0),
           ),
         ),
-
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text(
             'Sair',
             style: TextStyle(
-              color: AppColors.destructive,
+              color: AppColors.error,
               fontSize: 16.0,
               fontWeight: FontWeight.w600,
             ),

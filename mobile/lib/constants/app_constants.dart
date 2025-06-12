@@ -15,15 +15,14 @@ class AppColors {
 
   static const Color buttonSendBackground = Color(0xFFE6E6E6);
   static const Color buttonSendIcon = Color(0xFF2E2E2E);
-  static const Color buttonSendDisabled = Color(0xFF5C5C5C);
-  static const Color buttonAttachBackground = Color(0xFF5C5C5C);
+  static const Color buttonSendDisabled = Color(0xFF454545);
+  static const Color buttonAttachBackground = Color(0xFF454545);
   static const Color buttonAttachIcon = Color(0xFFCECECE);
   static const Color suggestionCardBackground = Color(0xFF2E2E2E);
 
-  static const Color error = Color(0xFFFF5722);
+  static const Color error = Color(0xFFFF3333);
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);
-  static const Color destructive = Color(0xFFFF3333);
 }
 
 class AppTextStyles {
@@ -56,13 +55,17 @@ class AppTextStyles {
     letterSpacing: 0.5,
   );
 
-  static const TextStyle inputText = TextStyle(color: Colors.white);
+  static const TextStyle inputText = TextStyle(
+    fontFamily: 'Roboto',
+    color: AppColors.textPrimary,
+    fontSize: 16,
+  );
 
   static const TextStyle inputHint = TextStyle(
     fontFamily: 'Roboto',
     fontWeight: FontWeight.normal,
     color: AppColors.textHint,
-    fontSize: 18,
+    fontSize: 16,
   );
 
   static const TextStyle button = TextStyle(
@@ -88,10 +91,7 @@ class AppDimensions {
   static const double paddingLarge = 24.0;
   static const double paddingExtraLarge = 32.0;
 
-  static const double borderRadiusSmall = 8.0;
-  static const double borderRadiusMedium = 10.0;
-  static const double borderRadiusLarge = 12.0;
-  static const double borderRadiusExtraLarge = 35.0;
+  static const double borderRadius = 12.0;
 
   static const double buttonHeight = 48.0;
   static const double inputHeight = 56.0;

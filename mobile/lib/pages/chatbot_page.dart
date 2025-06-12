@@ -20,15 +20,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
 
-  // Instância do serviço de API
   late final ApiService _apiService;
 
-  // Estado da UI
   bool _isDropdownVisible = false;
   bool _isVoiceInputActive = false;
   bool _isWaitingResponse = false;
 
-  // Sugestões de perguntas predefinidas
   final List<Map<String, String>> _suggestions = [
     {
       'title': 'Preveja quais clientes estão',
@@ -58,18 +55,18 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void dispose() {
     _messageController.dispose();
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     _scrollController.dispose();
     _apiService.dispose();
     super.dispose();
   }
 
-  /// Adiciona mensagem de boas-vindas personalizada
   void _addWelcomeMessage() {
     final userName = widget.userName;
     final welcomeMessage = userName != null
         ? 'Olá, $userName! Como posso ajudá-lo hoje?'
-        : 'Olá! Sou o Sophos, assistente inteligente do Kodiak ERP. Como posso ajudá-lo hoje?';
+        : 'Olá! Como posso ajudá-lo hoje?';
 
     _messages.add(
       ChatMessage(
@@ -81,36 +78,34 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Controla a visibilidade do dropdown quando o campo ganha/perde foco
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       setState(() => _isDropdownVisible = false);
+      _scrollToBottom();
     }
   }
 
-  /// Faz requisição para a API usando o ApiService
   Future<String> _getResponseFromApi(String message) async {
     try {
       final response = await _apiService.enviarPergunta(message);
-      return _formatResponse(response.resposta);
+
+      if (response.sucesso) {
+        return response.resposta;
+      } else {
+        return response.erro ?? 'Erro desconheido na resposta da API';
+      }
     } on ApiException catch (e) {
+      debugPrint('Erro na API: ${e.message}');
       return 'Erro: ${e.message}';
     } catch (e) {
+      debugPrint('Erro de conexão: $e');
       return 'Não foi possível conectar ao servidor. Verifique sua conexão.';
     }
   }
 
-  /// Formata a resposta da API para melhor legibilidade
-  String _formatResponse(String response) {
-    return response
-        .replaceAllMapped(RegExp(r'(.{60,}\s)'), (m) => '${m.group(0)}\n')
-        .trim();
-  }
-
-  /// Envia uma nova mensagem
   void _sendMessage([String? suggestionText]) async {
     final text = suggestionText ?? _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isWaitingResponse) return;
 
     setState(() {
       _messages.add(
@@ -129,35 +124,38 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     try {
       final response = await _getResponseFromApi(text);
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: response,
-            isUser: false,
-            timestamp: DateTime.now(),
-            isAnimating: true,
-          ),
-        );
-        _isWaitingResponse = false;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: response,
+              isUser: false,
+              timestamp: DateTime.now(),
+              isAnimating: true,
+            ),
+          );
+          _isWaitingResponse = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: 'Desculpe, ocorreu um erro. Tente novamente.',
-            isUser: false,
-            timestamp: DateTime.now(),
-            isAnimating: false,
-          ),
-        );
-        _isWaitingResponse = false;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: 'Desculpe, ocorreu um erro. Tente novamente.',
+              isUser: false,
+              timestamp: DateTime.now(),
+              isAnimating: false,
+            ),
+          );
+          _isWaitingResponse = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
 
-  /// Rola para o final da conversa
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -170,24 +168,25 @@ class _ChatbotPageState extends State<ChatbotPage> {
     });
   }
 
-  /// Realiza o logout limpando todos os dados do usuário
   Future<void> _performLogout() async {
     try {
-      // Limpa os dados usando UserStorageService
       await UserStorageService.clearUserData();
 
-      // Limpa os dados usando AuthService (para compatibilidade)
       final authService = AuthService();
       await authService.logout();
 
-      // Navega para a tela de login
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/login');
       }
     } catch (e) {
-      // Em caso de erro, ainda tenta navegar para o login
-      print('Erro ao fazer logout: $e');
+      debugPrint('Erro ao fazer logout: $e');
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao fazer logout, mas você foi desconectado'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
         Navigator.of(context).pushReplacementNamed('/login');
       }
     }
@@ -197,21 +196,50 @@ class _ChatbotPageState extends State<ChatbotPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
+      resizeToAvoidBottomInset: true,
       body: GestureDetector(
-        onTap: () => setState(() => _isDropdownVisible = false),
+        onTap: () {
+          if (_isDropdownVisible) {
+            setState(() => _isDropdownVisible = false);
+          }
+          FocusScope.of(context).unfocus();
+        },
         child: SafeArea(
           child: Stack(
             children: [
-              // Interface principal
               Column(
                 children: [
-                  _buildHeader(),
-                  Expanded(child: _buildMessagesList()),
-                  _buildSuggestionsCarousel(),
-                  _buildInputArea(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _buildHeader(),
+                        Expanded(child: _buildMessagesList()),
+                        _buildSuggestionsCarousel(),
+                      ],
+                    ),
+                  ),
+
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.only(
+                      top: 8,
+                      left: AppDimensions.paddingMedium,
+                      right: AppDimensions.paddingMedium,
+                      bottom: AppDimensions.paddingSmall,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(AppDimensions.borderRadius),
+                        topRight: Radius.circular(AppDimensions.borderRadius),
+                      ),
+                    ),
+                    child: _buildInputArea(),
+                  ),
                 ],
               ),
-              // Menu dropdown flutuante
+
+              // Menu dropdown sobreposto quando visível
               if (_isDropdownVisible) _buildFloatingDropdownMenu(),
             ],
           ),
@@ -220,28 +248,23 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói o cabeçalho da página com menu dropdown
   Widget _buildHeader() {
-    final userName = widget.userName ?? 'Conttrotech';
+    final userName = widget.userName ?? 'Usuário';
 
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.surfaceLight, width: 1),
-        ),
+      padding: const EdgeInsets.only(
+        left: AppDimensions.paddingMedium,
+        right: AppDimensions.paddingMedium,
       ),
       child: Row(
         children: [
-          // Seta de volta
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
               padding: const EdgeInsets.all(8),
               child: const Icon(
                 Icons.arrow_back,
-                color: Color(0xFFE6E6E6),
+                color: AppColors.textPrimary,
                 size: 24,
               ),
             ),
@@ -257,12 +280,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
               height: 32,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
+                debugPrint('Erro ao carregar logo: $error');
                 return const Icon(
                   Icons.smart_toy,
                   color: AppColors.primaryDark,
                   size: 24,
                 );
               },
+              cacheWidth: 64, // Cacheamento otimizado
+              cacheHeight: 64,
             ),
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
@@ -271,20 +297,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.userName != null ? 'Olá, $userName' : 'Sophos IA',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Olá, ',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 18,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      TextSpan(
+                        text: widget.userName != null ? userName : 'Sophos IA',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Text(
                   widget.userName != null ? 'Sophos IA' : '',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
+                  style: AppTextStyles.inputHint.copyWith(fontSize: 14),
                 ),
               ],
             ),
@@ -314,12 +349,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   /// Constrói o menu dropdown flutuante do usuário
   Widget _buildFloatingDropdownMenu() {
+    // Posicionamento relativo ao Stack dentro do Expanded
     return Positioned(
       top: 65, // Posição logo abaixo do header
       right: AppDimensions.paddingMedium,
       child: Material(
         elevation: 8,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         color: AppColors.surfaceLight,
         child: Container(
           width: 180,
@@ -399,9 +435,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
             const SizedBox(width: 12),
             Text(
               text,
-              style: TextStyle(
+              style: AppTextStyles.inputText.copyWith(
                 color: textColor ?? AppColors.textPrimary,
-                fontSize: 16,
               ),
             ),
           ],
@@ -428,7 +463,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói o indicador de "digitando"
   Widget _buildTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -445,9 +479,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
             ),
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(
-                AppDimensions.borderRadiusLarge,
-              ),
+              borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
             ),
             child: const TypingIndicator(),
           ),
@@ -456,7 +488,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói o carrossel de sugestões
   Widget _buildSuggestionsCarousel() {
     if (_messages.length > 1) return const SizedBox.shrink();
 
@@ -471,17 +502,19 @@ class _ChatbotPageState extends State<ChatbotPage> {
         itemCount: _suggestions.length,
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
+          const borderRadius = BorderRadius.all(Radius.circular(20));
+
           return Container(
             margin: const EdgeInsets.only(right: AppDimensions.paddingSmall),
             child: Material(
               elevation: 2,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: borderRadius,
               color: AppColors.suggestionCardBackground,
               child: InkWell(
                 onTap: () => _sendMessage(
                   '${suggestion['title']} ${suggestion['subtitle']}',
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: borderRadius,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.paddingSmall,
@@ -494,8 +527,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     children: [
                       Text(
                         suggestion['title']!,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: AppTextStyles.description.copyWith(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -503,7 +535,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       const SizedBox(height: 1),
                       Text(
                         suggestion['subtitle']!,
-                        style: const TextStyle(
+                        style: AppTextStyles.description.copyWith(
                           color: AppColors.textSecondary,
                           fontSize: 10,
                         ),
@@ -519,138 +551,117 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Área de entrada de mensagem
   Widget _buildInputArea() {
     final hasText = _messageController.text.trim().isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: AppColors.surfaceLight, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Botão de anexar arquivo em círculo
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.buttonAttachBackground,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: () {
-                // TODO: Implementar anexo de arquivos
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidade de anexo em desenvolvimento'),
-                    backgroundColor: AppColors.warning,
-                  ),
-                );
-              },
-              icon: const Icon(
-                Icons.attach_file,
-                color: AppColors.buttonAttachIcon,
-                size: 20,
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+              // Mantém uma borda fixa mesmo quando transparente para evitar o deslocamento
+              border: Border.all(
+                color: _focusNode.hasFocus
+                    ? AppColors.primary
+                    : Colors.transparent,
+                width: 2,
               ),
             ),
-          ),
-          const SizedBox(width: AppDimensions.paddingSmall),
-          // Campo de texto expandido
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(35),
-                border: Border.all(
-                  color: _focusNode.hasFocus
-                      ? AppColors.primary
-                      : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _focusNode,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(
-                        hintText: 'Mensagem',
-                        hintStyle: TextStyle(color: AppColors.textSecondary),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: AppDimensions.paddingMedium,
-                          vertical: 12,
-                        ),
+            // Padding fixo para garantir consistência visual quando o estado muda
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: Row(
+              children: [
+                // Campo de texto expansível
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    focusNode: _focusNode,
+                    style: AppTextStyles.inputText,
+                    decoration: const InputDecoration(
+                      hintText: 'Pergunte qualquer coisa',
+                      hintStyle: AppTextStyles.inputHint,
+                      border: InputBorder.none,
+                      isCollapsed: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
                       ),
-                      minLines: 1,
-                      maxLines: 3,
-                      onChanged: (value) =>
-                          setState(() {}), // Atualiza o estado para o botão
-                      onSubmitted: (_) => hasText ? _sendMessage() : null,
                     ),
+                    minLines: 1,
+                    maxLines: 6,
+                    textAlignVertical: TextAlignVertical
+                        .center, // Centraliza o texto verticalmente
+                    keyboardType: TextInputType
+                        .multiline, // Garante que o teclado permita múltiplas linhas
+                    onChanged: (value) => setState(() {}),
+                    onTap:
+                        _scrollToBottom, // Rola para o final quando o campo é tocado
+                    onSubmitted: (_) =>
+                        _messageController.text.trim().isNotEmpty
+                        ? _sendMessage()
+                        : null,
                   ),
-                  // Botão de voz
-                  IconButton(
-                    icon: Icon(
+                ),
+                // Espaço para evitar colisão do texto com os botões
+                const SizedBox(width: 4),
+                // Ícone de voz
+                InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () {
+                    setState(() => _isVoiceInputActive = !_isVoiceInputActive);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Funcionalidade de voz em desenvolvimento',
+                        ),
+                        backgroundColor: AppColors.warning,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(
                       _isVoiceInputActive ? Icons.mic : Icons.mic_none,
                       color: _isVoiceInputActive
                           ? AppColors.primary
                           : AppColors.textSecondary,
+                      size: 24,
                     ),
-                    onPressed: () {
-                      setState(
-                        () => _isVoiceInputActive = !_isVoiceInputActive,
-                      );
-                      // TODO: Implementar entrada de voz
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Funcionalidade de voz em desenvolvimento',
-                          ),
-                          backgroundColor: AppColors.warning,
-                        ),
-                      );
-                    },
                   ),
-                ],
-              ),
+                ),
+                // Espaço entre ícones
+                const SizedBox(width: 4),
+                // Botão de envio dentro de uma esfera
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: hasText
+                        ? AppColors.buttonSendBackground
+                        : AppColors.buttonSendDisabled,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: hasText ? _sendMessage : null,
+                    icon: Icon(
+                      Icons.arrow_upward_rounded,
+                      color: hasText
+                          ? AppColors.buttonSendIcon
+                          : AppColors.textSecondary,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: AppDimensions.paddingSmall),
-          // Botão de enviar com estado dinâmico
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: hasText
-                  ? AppColors.buttonSendBackground
-                  : AppColors.buttonSendDisabled,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: hasText ? _sendMessage : null,
-              icon: Icon(
-                Icons.arrow_upward,
-                color: hasText
-                    ? AppColors.buttonSendIcon
-                    : AppColors.textSecondary,
-                size: 20,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Widget para uma bolha de mensagem individual
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
 
@@ -676,20 +687,18 @@ class _MessageBubble extends StatelessWidget {
         child: message.isAnimating
             ? TypewriterText(
                 text: message.text,
-                style: TextStyle(
+                style: AppTextStyles.inputText.copyWith(
                   color: message.isUser
                       ? AppColors.primaryDark
                       : AppColors.textPrimary,
-                  fontSize: 16,
                 ),
               )
             : Text(
                 message.text,
-                style: TextStyle(
+                style: AppTextStyles.inputText.copyWith(
                   color: message.isUser
                       ? AppColors.primaryDark
                       : AppColors.textPrimary,
-                  fontSize: 16,
                 ),
               ),
       ),
@@ -697,7 +706,6 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-/// Widget para animação de texto máquina de escrever
 class TypewriterText extends StatefulWidget {
   final String text;
   final TextStyle style;
@@ -706,7 +714,7 @@ class TypewriterText extends StatefulWidget {
   const TypewriterText({
     super.key,
     required this.text,
-    this.style = const TextStyle(color: AppColors.textPrimary),
+    this.style = AppTextStyles.description,
     this.speed = const Duration(milliseconds: 30),
   });
 
@@ -716,7 +724,7 @@ class TypewriterText extends StatefulWidget {
 
 class _TypewriterTextState extends State<TypewriterText> {
   late String _displayText;
-  late Timer _timer;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -729,7 +737,10 @@ class _TypewriterTextState extends State<TypewriterText> {
     int index = 0;
     _timer = Timer.periodic(widget.speed, (timer) {
       if (index < widget.text.length) {
-        setState(() => _displayText += widget.text[index++]);
+        if (mounted) {
+          // Verifica se o widget ainda está montado
+          setState(() => _displayText += widget.text[index++]);
+        }
       } else {
         timer.cancel();
       }
@@ -738,7 +749,7 @@ class _TypewriterTextState extends State<TypewriterText> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -748,7 +759,6 @@ class _TypewriterTextState extends State<TypewriterText> {
   }
 }
 
-/// Widget para indicação de "digitando"
 class TypingIndicator extends StatefulWidget {
   const TypingIndicator({super.key});
 
@@ -782,14 +792,15 @@ class _TypingIndicatorState extends State<TypingIndicator>
       builder: (context, child) {
         return Text(
           'Digitando${''.padRight((3 * _controller.value).ceil(), '.')}',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: AppTextStyles.description.copyWith(
+            color: AppColors.textSecondary,
+          ),
         );
       },
     );
   }
 }
 
-/// Modelo de dados para mensagens do chat
 class ChatMessage {
   final String text;
   final bool isUser;

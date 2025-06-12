@@ -121,10 +121,7 @@ void main() {
 
     test('Deve ter border radius definidos corretamente', () {
       // Assert - Verificar border radius
-      expect(AppDimensions.borderRadiusSmall, equals(8.0));
-      expect(AppDimensions.borderRadiusMedium, equals(10.0));
-      expect(AppDimensions.borderRadiusLarge, equals(12.0));
-      expect(AppDimensions.borderRadiusExtraLarge, equals(35.0));
+      expect(AppDimensions.borderRadius, equals(12.0));
     });
 
     test('Deve ter tamanhos de elementos definidos corretamente', () {
@@ -143,18 +140,7 @@ void main() {
         lessThan(AppDimensions.paddingExtraLarge),
       );
 
-      expect(
-        AppDimensions.borderRadiusSmall,
-        lessThan(AppDimensions.borderRadiusMedium),
-      );
-      expect(
-        AppDimensions.borderRadiusMedium,
-        lessThan(AppDimensions.borderRadiusLarge),
-      );
-      expect(
-        AppDimensions.borderRadiusLarge,
-        lessThan(AppDimensions.borderRadiusExtraLarge),
-      );
+      expect(AppDimensions.borderRadius, equals(12.0));
     });
   });
 

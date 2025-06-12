@@ -156,7 +156,7 @@ class _TabSelector extends StatelessWidget {
       margin: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Row(
         children: [
@@ -210,9 +210,7 @@ class _TabButton extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(
-              AppDimensions.borderRadiusLarge,
-            ),
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
           ),
           child: Column(
             children: [
@@ -426,7 +424,7 @@ class _MetricCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Row(
         children: [
@@ -434,9 +432,7 @@ class _MetricCard extends StatelessWidget {
             padding: const EdgeInsets.all(AppDimensions.paddingMedium),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(
-                AppDimensions.borderRadiusLarge,
-              ),
+              borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
             ),
             child: Icon(icon, color: AppColors.primary, size: 32),
           ),
@@ -491,7 +487,7 @@ class _ChartContainer extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

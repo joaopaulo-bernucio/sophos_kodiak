@@ -365,7 +365,11 @@ def responder_pergunta():
     pergunta = data.get('pergunta', '').strip()
 
     if not pergunta:
-        return jsonify({'erro': 'Campo "pergunta" está vazio.'}), 400
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Campo "pergunta" está vazio.'
+        }), 400
 
     # Armazenar pergunta no histórico
     historico_conversa.append(f"Usuário: {pergunta}")
@@ -413,7 +417,9 @@ def responder_pergunta():
 
     return jsonify({
         'resposta': resposta,
-        'sucesso_sql': sucesso_sql,
+        'sucesso': True,  # Sempre True se chegou até aqui sem erro
+        'erro': None,     # Adiciona campo erro como None para sucesso
+        'sucesso_sql': sucesso_sql,  # Mantém para informação adicional
         'sqls_usadas': sql_concat
     })
 

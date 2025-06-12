@@ -18,19 +18,14 @@ class AuthService {
     if (cnpj.trim().isEmpty) {
       throw const AuthException('CNPJ é obrigatório');
     }
-
     if (senha.trim().isEmpty) {
       throw const AuthException('Senha é obrigatória');
     }
-
     await Future.delayed(const Duration(milliseconds: 500));
-
     if (cnpj != _cnpjValido || senha != _senhaValida) {
       throw const AuthException('CNPJ ou senha incorretos');
     }
-
     final existingUser = await UserStorageService.getUser();
-
     return User(
       cnpj: cnpj,
       senha: senha,

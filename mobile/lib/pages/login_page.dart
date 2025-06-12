@@ -3,7 +3,6 @@ import '../constants/app_constants.dart';
 import '../models/user.dart';
 import '../services/user_storage_service.dart';
 
-/// Tela de login do aplicativo Sophos Kodiak
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -12,25 +11,13 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // Controllers para os campos de entrada
   final _cnpjController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Estado para visibilidade da senha
   bool _isPasswordVisible = false;
-
-  // Estado para "Lembrar-me"
   bool _rememberMe = false;
-
-  /// Formata o CNPJ enquanto o usuário digita
   String _formatCnpj(String value) {
-    // Remove todos os caracteres não numéricos
     value = value.replaceAll(RegExp(r'\D'), '');
-
-    // Limita a 14 dígitos
     if (value.length > 14) value = value.substring(0, 14);
-
-    // Aplica a formatação progressiva
     if (value.length > 12) {
       return '${value.substring(0, 2)}.${value.substring(2, 5)}.${value.substring(5, 8)}/${value.substring(8, 12)}-${value.substring(12)}';
     } else if (value.length > 8) {
@@ -40,109 +27,77 @@ class _LoginPageState extends State<LoginPage> {
     } else if (value.length > 2) {
       return '${value.substring(0, 2)}.${value.substring(2)}';
     }
-
     return value;
   }
 
-  /// Valida se o CNPJ está no formato correto
   bool _isValidCnpj(String cnpj) {
     final regex = RegExp(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$');
     return regex.hasMatch(cnpj);
   }
 
-  /// Valida se a senha atende aos critérios mínimos
   bool _isValidPassword(String password) {
     return password.length >= 8;
   }
 
-  /// Carrega dados salvos do usuário quando a tela é iniciada
   Future<void> _loadSavedUserData() async {
     final savedUser = await UserStorageService.getUser();
-
     if (savedUser != null) {
       setState(() {
         _cnpjController.text = savedUser.cnpj;
         _passwordController.text = savedUser.senha;
         _rememberMe = true;
       });
-
-      // Se o usuário já tem um nome preferido, navega diretamente para a tela principal
       if (savedUser.nomePreferido != null &&
           savedUser.nomePreferido!.isNotEmpty) {
-        // Atualiza o último login
         await UserStorageService.updateLastLogin();
-
-        // Navega para a tela principal sem mostrar o diálogo
         _goToMainScreen(savedUser.nomePreferido!);
       }
     }
   }
 
-  /// Gerencia o processo de login
   Future<void> _handleLogin() async {
     final cnpj = _cnpjController.text;
     final password = _passwordController.text;
-
-    // Valida os campos
     if (!_isValidCnpj(cnpj)) {
       _showErrorDialog('CNPJ inválido');
       return;
     }
-
     if (!_isValidPassword(password)) {
       _showErrorDialog('Senha deve ter no mínimo 8 caracteres');
       return;
     }
-
-    // Credenciais temporárias para desenvolvimento
     if (cnpj == '12.345.678/0001-90' && password == 'password123') {
-      // Verifica se já existe um usuário salvo para pegar o nome preferido
       final existingUser = await UserStorageService.getUser();
-
-      // Cria o objeto User mantendo o nome preferido existente se houver
       final user = User(
         cnpj: cnpj,
         senha: password,
         nomePreferido: existingUser?.nomePreferido,
         ultimoLogin: DateTime.now(),
       );
-
-      // Salva os dados se o usuário escolheu "lembrar-me"
       if (_rememberMe) {
         await UserStorageService.saveUser(user, rememberMe: true);
       }
-
       _askPreferredName(user);
     } else {
       _showErrorDialog('CNPJ ou senha incorretos');
     }
   }
 
-  /// Exibe diálogo para nome preferido
   void _askPreferredName(User user) {
     final nameController = TextEditingController();
-
-    // Pré-preenche o campo se o usuário já tem um nome preferido salvo
     if (user.nomePreferido != null && user.nomePreferido!.isNotEmpty) {
       nameController.text = user.nomePreferido!;
     }
-
     showDialog(
       context: context,
       builder: (context) => _PreferredNameDialog(
         nameController: nameController,
         onConfirm: () async {
           Navigator.of(context).pop();
-
-          // Atualiza o nome preferido do usuário
           final userName = nameController.text.trim();
-
-          // Se o nome foi informado e o usuário escolheu lembrar, salva no storage
           if (userName.isNotEmpty && _rememberMe) {
             await UserStorageService.updatePreferredName(userName);
           }
-
-          // Usa o nome informado ou um padrão se estiver vazio
           final displayName = userName.isNotEmpty ? userName : 'Usuário';
           _goToMainScreen(displayName);
         },
@@ -150,13 +105,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// Navega para a tela principal
   void _goToMainScreen(String userName) {
-    // Navega para a tela principal usando rota nomeada e passando o nome do usuário
     Navigator.of(context).pushReplacementNamed('/home', arguments: userName);
   }
 
-  /// Exibe diálogo de erro
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -167,7 +119,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    // Carrega dados salvos quando a tela é criada
     _loadSavedUserData();
   }
 
@@ -175,16 +126,12 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenHeight = mediaQuery.size.height;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            // Container de fundo com border radius
             _BackgroundContainer(screenHeight: screenHeight),
-
-            // Conteúdo principal com scroll
             SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -193,13 +140,8 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-
-                    // Header com logo e título
                     const _HeaderSection(),
-
                     const SizedBox(height: 30),
-
-                    // Campos de entrada
                     _InputSection(
                       cnpjController: _cnpjController,
                       passwordController: _passwordController,
@@ -209,10 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                       onPasswordVisibilityToggle: _togglePasswordVisibility,
                       onRememberMeChanged: _toggleRememberMe,
                     ),
-
                     const SizedBox(height: 10),
-
-                    // Botão de login e link de recuperação
                     _ActionSection(onLogin: _handleLogin),
                   ],
                 ),
@@ -224,7 +163,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// Gerencia a formatação do CNPJ ao digitar
   void _onCnpjChanged(String value) {
     final formatted = _formatCnpj(value);
     if (formatted != value) {
@@ -235,14 +173,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  /// Alterna a visibilidade da senha
   void _togglePasswordVisibility() {
     setState(() {
       _isPasswordVisible = !_isPasswordVisible;
     });
   }
 
-  /// Alterna o estado do checkbox "Lembrar-me"
   void _toggleRememberMe(bool? value) {
     setState(() {
       _rememberMe = value ?? false;
@@ -257,29 +193,23 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// MARK: - Widgets Auxiliares
-
-/// Container de fundo com formato arredondado
 class _BackgroundContainer extends StatelessWidget {
   const _BackgroundContainer({required this.screenHeight});
-
   final double screenHeight;
-
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-
     return SizedBox(
       height: screenHeight,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Container(
           height: screenHeight / 1.7 + mediaQuery.padding.bottom,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Color(0xFF171717),
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppDimensions.borderRadiusExtraLarge),
-              topRight: Radius.circular(AppDimensions.borderRadiusExtraLarge),
+              topLeft: Radius.circular(35),
+              topRight: Radius.circular(35),
             ),
           ),
         ),
@@ -288,10 +218,8 @@ class _BackgroundContainer extends StatelessWidget {
   }
 }
 
-/// Seção do cabeçalho com logo e títulos
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection();
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -310,7 +238,6 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-/// Seção com os campos de entrada (CNPJ e Senha)
 class _InputSection extends StatelessWidget {
   const _InputSection({
     required this.cnpjController,
@@ -321,7 +248,6 @@ class _InputSection extends StatelessWidget {
     required this.onPasswordVisibilityToggle,
     required this.onRememberMeChanged,
   });
-
   final TextEditingController cnpjController;
   final TextEditingController passwordController;
   final bool isPasswordVisible;
@@ -329,12 +255,10 @@ class _InputSection extends StatelessWidget {
   final ValueChanged<String> onCnpjChanged;
   final VoidCallback onPasswordVisibilityToggle;
   final ValueChanged<bool?> onRememberMeChanged;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Campo CNPJ
         _CustomTextField(
           label: 'CNPJ',
           controller: cnpjController,
@@ -342,10 +266,7 @@ class _InputSection extends StatelessWidget {
           keyboardType: TextInputType.number,
           onChanged: onCnpjChanged,
         ),
-
         const SizedBox(height: 30),
-
-        // Campo Senha
         _CustomTextField(
           label: 'Senha',
           controller: passwordController,
@@ -359,10 +280,7 @@ class _InputSection extends StatelessWidget {
             onPressed: onPasswordVisibilityToggle,
           ),
         ),
-
         const SizedBox(height: 10),
-
-        // Checkbox "Lembrar-me"
         Row(
           children: [
             Checkbox(
@@ -381,7 +299,6 @@ class _InputSection extends StatelessWidget {
   }
 }
 
-/// Campo de texto customizado
 class _CustomTextField extends StatelessWidget {
   const _CustomTextField({
     required this.label,
@@ -392,7 +309,6 @@ class _CustomTextField extends StatelessWidget {
     this.onChanged,
     this.suffixIcon,
   });
-
   final String label;
   final TextEditingController controller;
   final String hintText;
@@ -400,7 +316,6 @@ class _CustomTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
   final Widget? suffixIcon;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -424,9 +339,7 @@ class _CustomTextField extends StatelessWidget {
               filled: true,
               fillColor: AppColors.surfaceLight,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(
-                  AppDimensions.borderRadiusMedium,
-                ),
+                borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(
@@ -442,17 +355,13 @@ class _CustomTextField extends StatelessWidget {
   }
 }
 
-/// Seção com botão de login e "Esqueci minha senha"
 class _ActionSection extends StatelessWidget {
   const _ActionSection({required this.onLogin});
-
   final VoidCallback onLogin;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Botão de login
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: SizedBox(
@@ -464,7 +373,7 @@ class _ActionSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
-                    AppDimensions.borderRadiusMedium,
+                    AppDimensions.borderRadius,
                   ),
                 ),
               ),
@@ -472,14 +381,9 @@ class _ActionSection extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 10),
-
-        // Link "Esqueci minha senha"
         TextButton(
-          onPressed: () {
-            // TODO: Implementar navegação para recuperação de senha
-          },
+          onPressed: () {},
           child: const Text('Esqueci minha senha', style: AppTextStyles.link),
         ),
       ],
@@ -487,22 +391,19 @@ class _ActionSection extends StatelessWidget {
   }
 }
 
-/// Diálogo para inserir nome preferido
 class _PreferredNameDialog extends StatelessWidget {
   const _PreferredNameDialog({
     required this.nameController,
     required this.onConfirm,
   });
-
   final TextEditingController nameController;
   final VoidCallback onConfirm;
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       title: const Text(
         'Nome Preferido',
@@ -532,18 +433,15 @@ class _PreferredNameDialog extends StatelessWidget {
   }
 }
 
-/// Diálogo de erro
 class _ErrorDialog extends StatelessWidget {
   const _ErrorDialog({required this.message});
-
   final String message;
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       title: const Text('Erro', style: TextStyle(color: AppColors.textPrimary)),
       content: Text(

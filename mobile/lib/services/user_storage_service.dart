@@ -9,13 +9,9 @@ class UserStorageService {
   static Future<bool> saveUser(User user, {bool rememberMe = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
       final userJson = jsonEncode(user.toJson());
-
       final userSaved = await prefs.setString(_userKey, userJson);
-
       final rememberSaved = await prefs.setBool(_rememberMeKey, rememberMe);
-
       return userSaved && rememberSaved;
     } catch (e) {
       print('Erro ao salvar usuário: $e');
@@ -30,15 +26,11 @@ class UserStorageService {
       if (!rememberMe) {
         return null;
       }
-
       final userJsonString = prefs.getString(_userKey);
-
       if (userJsonString == null) {
         return null;
       }
-
       final userJson = jsonDecode(userJsonString) as Map<String, dynamic>;
-
       return User.fromJson(userJson);
     } catch (e) {
       print('Erro ao recuperar usuário: $e');
@@ -49,10 +41,8 @@ class UserStorageService {
   static Future<bool> hasUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
       final hasData = prefs.containsKey(_userKey);
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
-
       return hasData && rememberMe;
     } catch (e) {
       print('Erro ao verificar dados do usuário: $e');
@@ -63,16 +53,12 @@ class UserStorageService {
   static Future<bool> updateLastLogin() async {
     try {
       final currentUser = await getUser();
-
       if (currentUser == null) {
         return false;
       }
-
       final updatedUser = currentUser.copyWith(ultimoLogin: DateTime.now());
-
       final prefs = await SharedPreferences.getInstance();
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
-
       return await saveUser(updatedUser, rememberMe: rememberMe);
     } catch (e) {
       print('Erro ao atualizar último login: $e');
@@ -83,16 +69,12 @@ class UserStorageService {
   static Future<bool> updatePreferredName(String nomePreferido) async {
     try {
       final currentUser = await getUser();
-
       if (currentUser == null) {
         return false;
       }
-
       final updatedUser = currentUser.copyWith(nomePreferido: nomePreferido);
-
       final prefs = await SharedPreferences.getInstance();
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
-
       return await saveUser(updatedUser, rememberMe: rememberMe);
     } catch (e) {
       print('Erro ao atualizar nome preferido: $e');
@@ -103,11 +85,8 @@ class UserStorageService {
   static Future<bool> clearUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
       final userRemoved = await prefs.remove(_userKey);
-
       final rememberRemoved = await prefs.remove(_rememberMeKey);
-
       return userRemoved && rememberRemoved;
     } catch (e) {
       print('Erro ao limpar dados do usuário: $e');

@@ -59,9 +59,7 @@ class _MenuContent extends StatelessWidget {
       margin: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(
-          AppDimensions.borderRadiusExtraLarge,
-        ),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.paddingExtraLarge),
@@ -196,11 +194,11 @@ class _MenuCard extends StatelessWidget {
       color: AppColors.surfaceLight,
       elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         child: Padding(
           padding: const EdgeInsets.all(AppDimensions.paddingSmall),
           child: Column(

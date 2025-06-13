@@ -194,7 +194,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () {
@@ -226,7 +226,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       bottom: AppDimensions.paddingSmall,
                     ),
                     decoration: const BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.background,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(AppDimensions.borderRadius),
                         topRight: Radius.circular(AppDimensions.borderRadius),
@@ -326,7 +326,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
               height: 40,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.surfaceLight,
+                color: AppColors.elementsBackground,
               ),
               child: const Icon(
                 Icons.person,
@@ -347,7 +347,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
       child: Material(
         elevation: 8,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-        color: AppColors.surfaceLight,
+        color: AppColors.elementsBackground,
         child: Container(
           width: 180,
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -386,7 +386,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   // TODO: Implementar notificações
                 },
               ),
-              const Divider(color: AppColors.surface, height: 1),
+              const Divider(color: Color(0xFF8A8A8A), height: 1),
               _buildDropdownItem(
                 icon: Icons.logout,
                 text: 'Sair',
@@ -457,7 +457,14 @@ class _ChatbotPageState extends State<ChatbotPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.smart_toy, color: AppColors.primary),
+          SizedBox(
+            width: 35,
+            height: 35,
+            child: Image.asset(
+              'assets/images/sophos_kodiak_logo.png',
+              fit: BoxFit.contain,
+            ),
+          ),
           const SizedBox(width: AppDimensions.paddingSmall),
           Container(
             padding: const EdgeInsets.symmetric(
@@ -465,7 +472,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
               vertical: AppDimensions.paddingSmall,
             ),
             decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
+              color: AppColors.elementsBackground,
               borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
             ),
             child: const TypingIndicator(),
@@ -498,7 +505,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
             child: Material(
               elevation: 2,
               borderRadius: borderRadius,
-              color: AppColors.suggestionCardBackground,
+              color: AppColors.elementsBackground,
               child: InkWell(
                 onTap: () => _sendMessage(
                   '${suggestion['title']} ${suggestion['subtitle']}',
@@ -550,7 +557,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
+              color: AppColors.elementsBackground,
               borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
               border: Border.all(
                 color: _focusNode.hasFocus
@@ -635,7 +642,9 @@ class _MessageBubble extends StatelessWidget {
           vertical: AppDimensions.paddingSmall,
         ),
         decoration: BoxDecoration(
-          color: message.isUser ? AppColors.primary : AppColors.surfaceLight,
+          color: message.isUser
+              ? AppColors.primary
+              : AppColors.elementsBackground,
           borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         ),
         constraints: BoxConstraints(

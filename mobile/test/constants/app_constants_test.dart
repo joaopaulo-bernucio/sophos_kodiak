@@ -18,8 +18,7 @@ void main() {
     test('Deve ter cores de fundo definidas corretamente', () {
       // Assert - Verificar cores de fundo
       expect(AppColors.background, equals(const Color(0xFF000000)));
-      expect(AppColors.surface, equals(const Color(0xFF171717)));
-      expect(AppColors.surfaceLight, equals(const Color(0xFF454545)));
+      expect(AppColors.elementsBackground, equals(const Color(0xFF2E2E2E)));
     });
 
     test('Deve ter cores de texto definidas corretamente', () {
@@ -116,7 +115,6 @@ void main() {
       expect(AppDimensions.paddingSmall, equals(8.0));
       expect(AppDimensions.paddingMedium, equals(16.0));
       expect(AppDimensions.paddingLarge, equals(24.0));
-      expect(AppDimensions.paddingExtraLarge, equals(32.0));
     });
 
     test('Deve ter border radius definidos corretamente', () {
@@ -124,21 +122,10 @@ void main() {
       expect(AppDimensions.borderRadius, equals(12.0));
     });
 
-    test('Deve ter tamanhos de elementos definidos corretamente', () {
-      // Assert - Verificar tamanhos
-      expect(AppDimensions.buttonHeight, equals(48.0));
-      expect(AppDimensions.inputHeight, equals(56.0));
-      expect(AppDimensions.logoHeight, equals(250.0));
-    });
-
     test('Deve ter progressão lógica de tamanhos', () {
       // Assert - Verificar se os tamanhos seguem uma progressão lógica
       expect(AppDimensions.paddingSmall, lessThan(AppDimensions.paddingMedium));
       expect(AppDimensions.paddingMedium, lessThan(AppDimensions.paddingLarge));
-      expect(
-        AppDimensions.paddingLarge,
-        lessThan(AppDimensions.paddingExtraLarge),
-      );
 
       expect(AppDimensions.borderRadius, equals(12.0));
     });
@@ -194,7 +181,7 @@ void main() {
       final theme = ThemeData(
         colorScheme: ColorScheme.dark(
           primary: AppColors.primary,
-          surface: AppColors.surface,
+          surface: AppColors.background,
         ),
       );
 

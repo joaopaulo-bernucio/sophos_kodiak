@@ -79,7 +79,7 @@ class _ChartsPageState extends State<ChartsPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         elevation: 0,
         title: const Text(
           'Relatórios e Gráficos',
@@ -155,7 +155,7 @@ class _TabSelector extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Row(
@@ -423,7 +423,7 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Row(
@@ -486,7 +486,7 @@ class _ChartContainer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Column(

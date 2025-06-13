@@ -5,8 +5,7 @@ class AppColors {
   static const Color primaryDark = Color(0xFF3B1D00);
 
   static const Color background = Color(0xFF171717);
-  static const Color surface = Color(0xFF171717);
-  static const Color surfaceLight = Color(0xFF454545);
+  static const Color elementsBackground = Color(0xFF2E2E2E);
 
   static const Color textPrimary = Color(0xFFE6E6E6);
   static const Color textSecondary = Color(0xFFA1A1A1);
@@ -18,7 +17,6 @@ class AppColors {
   static const Color buttonSendDisabled = Color(0xFF454545);
   static const Color buttonAttachBackground = Color(0xFF454545);
   static const Color buttonAttachIcon = Color(0xFFCECECE);
-  static const Color suggestionCardBackground = Color(0xFF2E2E2E);
 
   static const Color error = Color(0xFFFF3333);
   static const Color success = Color(0xFF4CAF50);
@@ -89,11 +87,7 @@ class AppDimensions {
   static const double paddingSmall = 8.0;
   static const double paddingMedium = 16.0;
   static const double paddingLarge = 24.0;
-  static const double paddingExtraLarge = 32.0;
 
-  static const double borderRadius = 26.0;
-
-  static const double buttonHeight = 48.0;
-  static const double inputHeight = 56.0;
-  static const double logoHeight = 250.0;
+  static const double borderRadius = 24.0;
+  static const double borderRadiusLogin = 12.0;
 }

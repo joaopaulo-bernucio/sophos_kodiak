@@ -107,7 +107,7 @@ void main() {
       // Assert - Verificar cor de fundo
       final scaffold = find.byType(Scaffold);
       final scaffoldWidget = tester.widget<Scaffold>(scaffold);
-      expect(scaffoldWidget.backgroundColor, equals(AppColors.surface));
+      expect(scaffoldWidget.backgroundColor, equals(AppColors.background));
     });
   });
 

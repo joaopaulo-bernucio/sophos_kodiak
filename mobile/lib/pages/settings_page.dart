@@ -207,11 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildDivider() {
-    return const Divider(
-      color: AppColors.surfaceLight,
-      height: 1.0,
-      thickness: 1.0,
-    );
+    return const Divider(color: Color(0xFF8A8A8A), height: 1.0, thickness: 1.0);
   }
 
   Widget _buildActionsSection() {

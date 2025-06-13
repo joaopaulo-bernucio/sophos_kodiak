@@ -41,7 +41,7 @@ void main() {
 
       final appBar = find.byType(AppBar);
       final appBarWidget = tester.widget<AppBar>(appBar);
-      expect(appBarWidget.backgroundColor, equals(AppColors.surface));
+      expect(appBarWidget.backgroundColor, equals(AppColors.background));
     });
 
     testWidgets('Deve ter botão de voltar funcionando', (

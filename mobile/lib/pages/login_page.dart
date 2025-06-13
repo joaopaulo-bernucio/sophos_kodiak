@@ -225,10 +225,7 @@ class _HeaderSection extends StatelessWidget {
     return Column(
       children: [
         const Text('SOPHOS KODIAK', style: AppTextStyles.title),
-        Image.asset(
-          'assets/images/sophos_kodiak_logo.png',
-          height: AppDimensions.logoHeight,
-        ),
+        Image.asset('assets/images/sophos_kodiak_logo.png', height: 250.0),
         const SizedBox(height: 20),
         const Text('Bem-vindo de volta!', style: AppTextStyles.subtitle),
         const SizedBox(height: 10),
@@ -337,9 +334,11 @@ class _CustomTextField extends StatelessWidget {
               hintText: hintText,
               hintStyle: AppTextStyles.inputHint,
               filled: true,
-              fillColor: AppColors.surfaceLight,
+              fillColor: AppColors.elementsBackground,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+                borderRadius: BorderRadius.circular(
+                  AppDimensions.borderRadiusLogin,
+                ),
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(
@@ -373,7 +372,7 @@ class _ActionSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
-                    AppDimensions.borderRadius,
+                    AppDimensions.borderRadiusLogin,
                   ),
                 ),
               ),
@@ -401,9 +400,9 @@ class _PreferredNameDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLogin),
       ),
       title: const Text(
         'Nome Preferido',
@@ -439,9 +438,9 @@ class _ErrorDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLogin),
       ),
       title: const Text('Erro', style: TextStyle(color: AppColors.textPrimary)),
       content: Text(

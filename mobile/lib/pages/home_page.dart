@@ -24,7 +24,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         elevation: 0,
         title: const Text('Página Principal', style: AppTextStyles.subtitle),
         centerTitle: true,
@@ -58,16 +58,16 @@ class _MenuContent extends StatelessWidget {
       width: double.infinity,
       margin: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.paddingExtraLarge),
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _WelcomeSection(),
-            const SizedBox(height: AppDimensions.paddingExtraLarge),
+            const SizedBox(height: AppDimensions.paddingLarge),
             Expanded(child: _MenuGrid(userName: userName)),
           ],
         ),
@@ -154,7 +154,7 @@ class _MenuGrid extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         title: Text(
           feature,
           style: AppTextStyles.subtitle.copyWith(fontSize: 24),
@@ -191,7 +191,7 @@ class _MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surfaceLight,
+      color: AppColors.elementsBackground,
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),

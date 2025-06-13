@@ -23,7 +23,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
   late final ApiService _apiService;
 
   bool _isDropdownVisible = false;
-  bool _isVoiceInputActive = false;
   bool _isWaitingResponse = false;
 
   final List<Map<String, String>> _suggestions = [
@@ -218,7 +217,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       ],
                     ),
                   ),
-
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.only(
@@ -238,8 +236,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   ),
                 ],
               ),
-
-              // Menu dropdown sobreposto quando visível
               if (_isDropdownVisible) _buildFloatingDropdownMenu(),
             ],
           ),
@@ -270,7 +266,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
             ),
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
-          // Ícone do tigre (logo)
           SizedBox(
             width: 40,
             height: 40,
@@ -287,12 +282,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   size: 24,
                 );
               },
-              cacheWidth: 64, // Cacheamento otimizado
+              cacheWidth: 64,
               cacheHeight: 64,
             ),
           ),
           const SizedBox(width: AppDimensions.paddingSmall),
-          // Saudação personalizada ou padrão
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +318,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
               ],
             ),
           ),
-          // Ícone do usuário com dropdown
           GestureDetector(
             onTap: () =>
                 setState(() => _isDropdownVisible = !_isDropdownVisible),
@@ -347,11 +340,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Constrói o menu dropdown flutuante do usuário
   Widget _buildFloatingDropdownMenu() {
-    // Posicionamento relativo ao Stack dentro do Expanded
     return Positioned(
-      top: 65, // Posição logo abaixo do header
+      top: 53,
       right: AppDimensions.paddingMedium,
       child: Material(
         elevation: 8,
@@ -402,8 +393,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 textColor: AppColors.error,
                 onTap: () async {
                   setState(() => _isDropdownVisible = false);
-
-                  // Limpa os dados do usuário antes de sair
                   await _performLogout();
                 },
               ),
@@ -414,7 +403,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Item individual do menu dropdown
   Widget _buildDropdownItem({
     required IconData icon,
     required String text,
@@ -445,7 +433,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  /// Lista de mensagens do chat
   Widget _buildMessagesList() {
     return ListView.builder(
       controller: _scrollController,
@@ -502,7 +489,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
         itemCount: _suggestions.length,
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
-          const borderRadius = BorderRadius.all(Radius.circular(20));
+          const borderRadius = BorderRadius.all(
+            Radius.circular(AppDimensions.borderRadius),
+          );
 
           return Container(
             margin: const EdgeInsets.only(right: AppDimensions.paddingSmall),
@@ -516,31 +505,34 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 borderRadius: borderRadius,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingSmall,
-                    vertical: 8,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        suggestion['title']!,
-                        style: AppTextStyles.description.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                  padding: const EdgeInsets.only(left: 8, right: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.paddingSmall,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          suggestion['title']!,
+                          style: AppTextStyles.description.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        suggestion['subtitle']!,
-                        style: AppTextStyles.description.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
+                        const SizedBox(height: 1),
+                        Text(
+                          suggestion['subtitle']!,
+                          style: AppTextStyles.description.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 10,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -560,7 +552,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-              // Mantém uma borda fixa mesmo quando transparente para evitar o deslocamento
               border: Border.all(
                 color: _focusNode.hasFocus
                     ? AppColors.primary
@@ -568,11 +559,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 width: 2,
               ),
             ),
-            // Padding fixo para garantir consistência visual quando o estado muda
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             child: Row(
               children: [
-                // Campo de texto expansível
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -589,50 +578,18 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       ),
                     ),
                     minLines: 1,
-                    maxLines: 6,
-                    textAlignVertical: TextAlignVertical
-                        .center, // Centraliza o texto verticalmente
-                    keyboardType: TextInputType
-                        .multiline, // Garante que o teclado permita múltiplas linhas
+                    maxLines: 3,
+                    textAlignVertical: TextAlignVertical.center,
+                    keyboardType: TextInputType.multiline,
                     onChanged: (value) => setState(() {}),
-                    onTap:
-                        _scrollToBottom, // Rola para o final quando o campo é tocado
+                    onTap: _scrollToBottom,
                     onSubmitted: (_) =>
                         _messageController.text.trim().isNotEmpty
                         ? _sendMessage()
                         : null,
                   ),
                 ),
-                // Espaço para evitar colisão do texto com os botões
                 const SizedBox(width: 4),
-                // Ícone de voz
-                InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: () {
-                    setState(() => _isVoiceInputActive = !_isVoiceInputActive);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Funcionalidade de voz em desenvolvimento',
-                        ),
-                        backgroundColor: AppColors.warning,
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: Icon(
-                      _isVoiceInputActive ? Icons.mic : Icons.mic_none,
-                      color: _isVoiceInputActive
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                      size: 24,
-                    ),
-                  ),
-                ),
-                // Espaço entre ícones
-                const SizedBox(width: 4),
-                // Botão de envio dentro de uma esfera
                 Container(
                   width: 40,
                   height: 40,
@@ -679,7 +636,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: message.isUser ? AppColors.primary : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         ),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
@@ -738,7 +695,6 @@ class _TypewriterTextState extends State<TypewriterText> {
     _timer = Timer.periodic(widget.speed, (timer) {
       if (index < widget.text.length) {
         if (mounted) {
-          // Verifica se o widget ainda está montado
           setState(() => _displayText += widget.text[index++]);
         }
       } else {

@@ -294,18 +294,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 RichText(
                   text: TextSpan(
                     children: [
-                      TextSpan(
-                        text: 'Olá, ',
-                        style: AppTextStyles.label.copyWith(
-                          fontSize: 18,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
+                      TextSpan(text: 'Olá, ', style: AppTextStyles.primaryText),
                       TextSpan(
                         text: widget.userName != null ? userName : 'Sophos IA',
-                        style: AppTextStyles.label.copyWith(
-                          fontSize: 18,
+                        style: AppTextStyles.primaryText.copyWith(
                           color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -313,7 +307,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 Text(
                   widget.userName != null ? 'Sophos IA' : '',
-                  style: AppTextStyles.inputHint.copyWith(fontSize: 14),
+                  style: AppTextStyles.inputPlaceholder.copyWith(fontSize: 14),
                 ),
               ],
             ),
@@ -423,7 +417,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
             const SizedBox(width: 12),
             Text(
               text,
-              style: AppTextStyles.inputText.copyWith(
+              style: AppTextStyles.primaryText.copyWith(
                 color: textColor ?? AppColors.textPrimary,
               ),
             ),
@@ -525,7 +519,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       children: [
                         Text(
                           suggestion['title']!,
-                          style: AppTextStyles.description.copyWith(
+                          style: AppTextStyles.largeText.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                           ),
@@ -533,7 +527,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         const SizedBox(height: 1),
                         Text(
                           suggestion['subtitle']!,
-                          style: AppTextStyles.description.copyWith(
+                          style: AppTextStyles.largeText.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 10,
                           ),
@@ -573,10 +567,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   child: TextField(
                     controller: _messageController,
                     focusNode: _focusNode,
-                    style: AppTextStyles.inputText,
+                    style: AppTextStyles.primaryText,
                     decoration: const InputDecoration(
                       hintText: 'Pergunte qualquer coisa',
-                      hintStyle: AppTextStyles.inputHint,
+                      hintStyle: AppTextStyles.inputPlaceholder,
                       border: InputBorder.none,
                       isCollapsed: true,
                       contentPadding: EdgeInsets.symmetric(
@@ -602,7 +596,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: hasText
-                        ? AppColors.buttonSendBackground
+                        ? AppColors.sendButtonBackground
                         : AppColors.elementsBackground,
                     shape: BoxShape.circle,
                   ),
@@ -612,7 +606,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       child: Icon(
                         Icons.arrow_upward_rounded,
                         color: hasText
-                            ? AppColors.buttonSendIcon
+                            ? AppColors.sendButtonIcon
                             : AppColors.textSecondary,
                         size: 28,
                       ),
@@ -655,7 +649,7 @@ class _MessageBubble extends StatelessWidget {
         child: message.isAnimating
             ? TypewriterText(
                 text: message.text,
-                style: AppTextStyles.inputText.copyWith(
+                style: AppTextStyles.primaryText.copyWith(
                   color: message.isUser
                       ? AppColors.primaryDark
                       : AppColors.textPrimary,
@@ -663,7 +657,7 @@ class _MessageBubble extends StatelessWidget {
               )
             : Text(
                 message.text,
-                style: AppTextStyles.inputText.copyWith(
+                style: AppTextStyles.primaryText.copyWith(
                   color: message.isUser
                       ? AppColors.primaryDark
                       : AppColors.textPrimary,
@@ -682,7 +676,7 @@ class TypewriterText extends StatefulWidget {
   const TypewriterText({
     super.key,
     required this.text,
-    this.style = AppTextStyles.description,
+    this.style = AppTextStyles.largeText,
     this.speed = const Duration(milliseconds: 30),
   });
 
@@ -759,7 +753,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
       builder: (context, child) {
         return Text(
           'Digitando${''.padRight((3 * _controller.value).ceil(), '.')}',
-          style: AppTextStyles.description.copyWith(
+          style: AppTextStyles.largeText.copyWith(
             color: AppColors.textSecondary,
           ),
         );

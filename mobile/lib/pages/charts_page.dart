@@ -81,7 +81,7 @@ class _ChartsPageState extends State<ChartsPage> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Relatórios e Gráficos', style: AppTextStyles.header),
+        title: const Text('Relatórios e Gráficos', style: AppTextStyles.title),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
@@ -438,9 +438,9 @@ class _MetricCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.inputHint),
+                Text(title, style: AppTextStyles.inputPlaceholder),
                 const SizedBox(height: 4),
-                Text(value, style: AppTextStyles.header.copyWith(fontSize: 24)),
+                Text(value, style: AppTextStyles.title.copyWith(fontSize: 24)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -486,7 +486,7 @@ class _ChartContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.label.copyWith(fontSize: 18)),
+          Text(title, style: AppTextStyles.primaryText.copyWith(fontSize: 18)),
           const SizedBox(height: AppDimensions.paddingMedium),
           child,
         ],
@@ -517,7 +517,7 @@ class _EmptyChart extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message,
-              style: AppTextStyles.description.copyWith(
+              style: AppTextStyles.largeText.copyWith(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
@@ -846,10 +846,10 @@ class _ReceitaList extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(cliente, style: AppTextStyles.description)),
+              Expanded(child: Text(cliente, style: AppTextStyles.largeText)),
               Text(
                 'R\$ ${receita.toStringAsFixed(2)}',
-                style: AppTextStyles.description.copyWith(
+                style: AppTextStyles.largeText.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),

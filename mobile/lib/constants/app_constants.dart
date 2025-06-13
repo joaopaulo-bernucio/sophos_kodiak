@@ -9,9 +9,10 @@ class AppColors {
 
   static const Color textPrimary = Color(0xFFF5F5F5);
   static const Color textSecondary = Color(0xFFCECECE);
+  static const Color textPlaceholder = Color(0xFFA1A1A1);
 
-  static const Color buttonSendBackground = Color(0xFFE6E6E6);
-  static const Color buttonSendIcon = Color(0xFF2E2E2E);
+  static const Color sendButtonBackground = Color(0xFFE6E6E6);
+  static const Color sendButtonIcon = Color(0xFF2E2E2E);
 
   static const Color error = Color(0xFFFF3333);
   static const Color success = Color(0xFF4CAF50);
@@ -19,46 +20,38 @@ class AppColors {
 }
 
 class AppTextStyles {
-  static const TextStyle sophosKodiak = TextStyle(
+  static const TextStyle logoTitle = TextStyle(
     fontFamily: 'AntonSC',
     color: Colors.white,
     fontSize: 48,
     letterSpacing: 0.5,
   );
 
-  static const TextStyle header = TextStyle(
+  static const TextStyle title = TextStyle(
     fontFamily: 'Roboto',
     color: AppColors.primary,
     fontSize: 32,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.5,
+    fontWeight: FontWeight.bold,
   );
 
-  static const TextStyle description = TextStyle(
+  static const TextStyle primaryText = TextStyle(
     fontFamily: 'Roboto',
     color: AppColors.textPrimary,
-    fontSize: 20,
-  );
-
-  static const TextStyle label = TextStyle(
-    fontFamily: 'Roboto',
-    color: AppColors.textPrimary,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: FontWeight.w500,
-    letterSpacing: 1,
   );
 
-  static const TextStyle inputText = TextStyle(
+  static const TextStyle inputPlaceholder = TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w400,
+    color: AppColors.textPlaceholder,
+    fontSize: 18,
+  );
+
+  static const TextStyle largeText = TextStyle(
     fontFamily: 'Roboto',
     color: AppColors.textPrimary,
-    fontSize: 16,
-  );
-
-  static const TextStyle inputHint = TextStyle(
-    fontFamily: 'Roboto',
-    fontWeight: FontWeight.normal,
-    color: AppColors.textSecondary,
-    fontSize: 16,
+    fontSize: 22,
   );
 
   static const TextStyle button = TextStyle(
@@ -68,14 +61,6 @@ class AppTextStyles {
     color: AppColors.primaryDark,
     letterSpacing: 0.5,
   );
-
-  static const TextStyle link = TextStyle(
-    fontFamily: 'Roboto',
-    fontSize: 18,
-    color: AppColors.textPrimary,
-    decoration: TextDecoration.underline,
-    decorationColor: AppColors.textPrimary,
-  );
 }
 
 class AppDimensions {
@@ -84,5 +69,5 @@ class AppDimensions {
   static const double paddingLarge = 24.0;
 
   static const double borderRadius = 24.0;
-  static const double borderRadiusLogin = 12.0;
+  static const double loginBorderRadius = 12.0;
 }

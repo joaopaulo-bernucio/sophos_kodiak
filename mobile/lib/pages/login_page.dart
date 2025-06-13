@@ -224,12 +224,12 @@ class _HeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text('SOPHOS KODIAK', style: AppTextStyles.sophosKodiak),
+        const Text('SOPHOS KODIAK', style: AppTextStyles.logoTitle),
         Image.asset('assets/images/sophos_kodiak_logo.png', height: 250.0),
         const SizedBox(height: 20),
-        const Text('Bem-vindo de volta!', style: AppTextStyles.header),
+        const Text('Bem-vindo de volta!', style: AppTextStyles.title),
         const SizedBox(height: 10),
-        const Text('Acesse sua conta', style: AppTextStyles.description),
+        const Text('Acesse sua conta', style: AppTextStyles.largeText),
       ],
     );
   }
@@ -285,9 +285,11 @@ class _InputSection extends StatelessWidget {
               onChanged: onRememberMeChanged,
               activeColor: AppColors.primary,
             ),
-            const Text(
+            Text(
               'Continuar conectado',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: AppTextStyles.primaryText.copyWith(
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ],
         ),
@@ -320,24 +322,30 @@ class _CustomTextField extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 10, bottom: 4),
-          child: Text(label, style: AppTextStyles.label),
+          child: Text(
+            label,
+            style: AppTextStyles.largeText.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: TextField(
             controller: controller,
-            style: AppTextStyles.inputText,
+            style: AppTextStyles.primaryText,
             keyboardType: keyboardType,
             obscureText: obscureText,
             onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: AppTextStyles.inputHint,
+              hintStyle: AppTextStyles.inputPlaceholder,
               filled: true,
               fillColor: AppColors.elementsBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(
-                  AppDimensions.borderRadiusLogin,
+                  AppDimensions.loginBorderRadius,
                 ),
                 borderSide: BorderSide.none,
               ),
@@ -372,7 +380,7 @@ class _ActionSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
-                    AppDimensions.borderRadiusLogin,
+                    AppDimensions.loginBorderRadius,
                   ),
                 ),
               ),
@@ -383,7 +391,13 @@ class _ActionSection extends StatelessWidget {
         const SizedBox(height: 10),
         TextButton(
           onPressed: () {},
-          child: const Text('Esqueci minha senha', style: AppTextStyles.link),
+          child: Text(
+            'Esqueci minha senha',
+            style: AppTextStyles.primaryText.copyWith(
+              decoration: TextDecoration.underline,
+              decorationColor: AppColors.textPrimary,
+            ),
+          ),
         ),
       ],
     );
@@ -402,7 +416,7 @@ class _PreferredNameDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLogin),
+        borderRadius: BorderRadius.circular(AppDimensions.loginBorderRadius),
       ),
       title: const Text(
         'Nome Preferido',
@@ -440,7 +454,7 @@ class _ErrorDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLogin),
+        borderRadius: BorderRadius.circular(AppDimensions.loginBorderRadius),
       ),
       title: const Text('Erro', style: TextStyle(color: AppColors.textPrimary)),
       content: Text(

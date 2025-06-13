@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import 'package:logger/logger.dart';
 
 class UserStorageService {
+  static final Logger _logger = Logger();
   static const String _userKey = 'user_data';
   static const String _rememberMeKey = 'remember_me';
 
@@ -14,7 +16,7 @@ class UserStorageService {
       final rememberSaved = await prefs.setBool(_rememberMeKey, rememberMe);
       return userSaved && rememberSaved;
     } catch (e) {
-      print('Erro ao salvar usuário: $e');
+      _logger.e('Erro ao salvar usuário: $e');
       return false;
     }
   }
@@ -33,7 +35,7 @@ class UserStorageService {
       final userJson = jsonDecode(userJsonString) as Map<String, dynamic>;
       return User.fromJson(userJson);
     } catch (e) {
-      print('Erro ao recuperar usuário: $e');
+      _logger.e('Erro ao recuperar usuário: $e');
       return null;
     }
   }
@@ -45,7 +47,7 @@ class UserStorageService {
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
       return hasData && rememberMe;
     } catch (e) {
-      print('Erro ao verificar dados do usuário: $e');
+      _logger.e('Erro ao verificar dados do usuário: $e');
       return false;
     }
   }
@@ -61,7 +63,7 @@ class UserStorageService {
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
       return await saveUser(updatedUser, rememberMe: rememberMe);
     } catch (e) {
-      print('Erro ao atualizar último login: $e');
+      _logger.e('Erro ao atualizar último login: $e');
       return false;
     }
   }
@@ -77,7 +79,7 @@ class UserStorageService {
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
       return await saveUser(updatedUser, rememberMe: rememberMe);
     } catch (e) {
-      print('Erro ao atualizar nome preferido: $e');
+      _logger.e('Erro ao atualizar nome preferido: $e');
       return false;
     }
   }
@@ -89,7 +91,7 @@ class UserStorageService {
       final rememberRemoved = await prefs.remove(_rememberMeKey);
       return userRemoved && rememberRemoved;
     } catch (e) {
-      print('Erro ao limpar dados do usuário: $e');
+      _logger.e('Erro ao limpar dados do usuário: $e');
       return false;
     }
   }
@@ -99,7 +101,7 @@ class UserStorageService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_rememberMeKey) ?? false;
     } catch (e) {
-      print('Erro ao verificar remember me: $e');
+      _logger.e('Erro ao verificar remember me: $e');
       return false;
     }
   }

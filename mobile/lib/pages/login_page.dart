@@ -272,7 +272,7 @@ class _InputSection extends StatelessWidget {
           suffixIcon: IconButton(
             icon: Icon(
               isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-              color: AppColors.textHint,
+              color: AppColors.textSecondary,
             ),
             onPressed: onPasswordVisibilityToggle,
           ),

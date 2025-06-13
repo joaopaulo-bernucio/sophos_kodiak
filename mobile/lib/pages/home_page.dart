@@ -227,7 +227,7 @@ class _MenuCard extends StatelessWidget {
                   subtitle,
                   style: const TextStyle(
                     fontFamily: 'Roboto',
-                    color: AppColors.textHint,
+                    color: AppColors.textSecondary,
                     fontSize: 11,
                   ),
                   textAlign: TextAlign.center,

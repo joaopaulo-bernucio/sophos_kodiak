@@ -603,17 +603,19 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   decoration: BoxDecoration(
                     color: hasText
                         ? AppColors.buttonSendBackground
-                        : AppColors.buttonSendDisabled,
+                        : AppColors.elementsBackground,
                     shape: BoxShape.circle,
                   ),
-                  child: IconButton(
-                    onPressed: hasText ? _sendMessage : null,
-                    icon: Icon(
-                      Icons.arrow_upward_rounded,
-                      color: hasText
-                          ? AppColors.buttonSendIcon
-                          : AppColors.textSecondary,
-                      size: 24,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: hasText ? _sendMessage : null,
+                      child: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: hasText
+                            ? AppColors.buttonSendIcon
+                            : AppColors.textSecondary,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),

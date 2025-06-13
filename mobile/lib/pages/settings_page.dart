@@ -124,7 +124,7 @@ class _SettingsPageState extends State<SettingsPage> {
       title: const Text(
         'Conta',
         style: TextStyle(
-          color: AppColors.textWhite,
+          color: AppColors.textPrimary,
           fontSize: 24,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
@@ -238,7 +238,7 @@ class _SettingsListTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     required this.iconColor,
-    this.titleColor = AppColors.textWhite,
+    this.titleColor = AppColors.textPrimary,
     this.onTap,
   });
 
@@ -326,14 +326,14 @@ class _EditNameDialogState extends State<_EditNameDialog> {
       title: const Text(
         'Modificar Nome',
         style: TextStyle(
-          color: AppColors.textWhite,
+          color: AppColors.textPrimary,
           fontSize: 20.0,
           fontWeight: FontWeight.w600,
         ),
       ),
       content: TextField(
         controller: nameController,
-        style: const TextStyle(color: AppColors.textWhite, fontSize: 16.0),
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16.0),
         decoration: InputDecoration(
           hintText: 'Digite seu nome preferido',
           hintStyle: const TextStyle(
@@ -390,7 +390,7 @@ class _LogoutConfirmationDialog extends StatelessWidget {
       title: const Text(
         'Confirmar Saída',
         style: TextStyle(
-          color: AppColors.textWhite,
+          color: AppColors.textPrimary,
           fontSize: 20.0,
           fontWeight: FontWeight.w600,
         ),

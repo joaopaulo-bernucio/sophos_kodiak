@@ -25,7 +25,6 @@ void main() {
       // Assert - Verificar cores de texto
       expect(AppColors.textPrimary, equals(const Color(0xFFE6E6E6)));
       expect(AppColors.textSecondary, equals(const Color(0xFFA1A1A1)));
-      expect(AppColors.textHint, equals(const Color(0xFFB8B8B8)));
     });
 
     test('Deve ter cores de feedback definidas corretamente', () {
@@ -88,7 +87,6 @@ void main() {
       // Assert - Verificar estilos de entrada
       expect(AppTextStyles.inputText.color, equals(Colors.white));
       expect(AppTextStyles.inputHint.fontFamily, equals('Roboto'));
-      expect(AppTextStyles.inputHint.color, equals(AppColors.textHint));
       expect(AppTextStyles.inputHint.fontSize, equals(18));
     });
 
@@ -137,7 +135,6 @@ void main() {
       expect(AppTextStyles.subtitle.color, equals(AppColors.primary));
       expect(AppTextStyles.description.color, equals(AppColors.textPrimary));
       expect(AppTextStyles.label.color, equals(AppColors.textPrimary));
-      expect(AppTextStyles.inputHint.color, equals(AppColors.textHint));
     });
 
     test('Deve usar fonte Roboto consistentemente', () {

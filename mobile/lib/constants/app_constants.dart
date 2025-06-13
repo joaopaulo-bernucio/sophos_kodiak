@@ -7,16 +7,11 @@ class AppColors {
   static const Color background = Color(0xFF171717);
   static const Color elementsBackground = Color(0xFF2E2E2E);
 
-  static const Color textPrimary = Color(0xFFE6E6E6);
-  static const Color textSecondary = Color(0xFFA1A1A1);
-  static const Color textHint = Color(0xFFB8B8B8);
-  static const Color textWhite = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFFF5F5F5);
+  static const Color textSecondary = Color(0xFFCECECE);
 
   static const Color buttonSendBackground = Color(0xFFE6E6E6);
   static const Color buttonSendIcon = Color(0xFF2E2E2E);
-  static const Color buttonSendDisabled = Color(0xFF454545);
-  static const Color buttonAttachBackground = Color(0xFF454545);
-  static const Color buttonAttachIcon = Color(0xFFCECECE);
 
   static const Color error = Color(0xFFFF3333);
   static const Color success = Color(0xFF4CAF50);
@@ -62,7 +57,7 @@ class AppTextStyles {
   static const TextStyle inputHint = TextStyle(
     fontFamily: 'Roboto',
     fontWeight: FontWeight.normal,
-    color: AppColors.textHint,
+    color: AppColors.textSecondary,
     fontSize: 16,
   );
 

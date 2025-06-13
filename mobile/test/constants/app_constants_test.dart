@@ -54,18 +54,18 @@ void main() {
   group('AppTextStyles Tests', () {
     test('Deve ter estilo de título definido corretamente', () {
       // Assert - Verificar estilo do título
-      expect(AppTextStyles.title.fontFamily, equals('AntonSC'));
-      expect(AppTextStyles.title.color, equals(Colors.white));
-      expect(AppTextStyles.title.fontSize, equals(48));
-      expect(AppTextStyles.title.letterSpacing, equals(0.5));
+      expect(AppTextStyles.sophosKodiak.fontFamily, equals('AntonSC'));
+      expect(AppTextStyles.sophosKodiak.color, equals(Colors.white));
+      expect(AppTextStyles.sophosKodiak.fontSize, equals(48));
+      expect(AppTextStyles.sophosKodiak.letterSpacing, equals(0.5));
     });
 
     test('Deve ter estilo de subtítulo definido corretamente', () {
       // Assert - Verificar estilo do subtítulo
-      expect(AppTextStyles.subtitle.fontFamily, equals('Roboto'));
-      expect(AppTextStyles.subtitle.color, equals(AppColors.primary));
-      expect(AppTextStyles.subtitle.fontSize, equals(32));
-      expect(AppTextStyles.subtitle.fontWeight, equals(FontWeight.w700));
+      expect(AppTextStyles.header.fontFamily, equals('Roboto'));
+      expect(AppTextStyles.header.color, equals(AppColors.primary));
+      expect(AppTextStyles.header.fontSize, equals(32));
+      expect(AppTextStyles.header.fontWeight, equals(FontWeight.w700));
     });
 
     test('Deve ter estilo de descrição definido corretamente', () {
@@ -132,7 +132,7 @@ void main() {
   group('Design System Consistency Tests', () {
     test('Deve usar cores consistentes entre estilos de texto', () {
       // Assert - Verificar consistência de cores
-      expect(AppTextStyles.subtitle.color, equals(AppColors.primary));
+      expect(AppTextStyles.header.color, equals(AppColors.primary));
       expect(AppTextStyles.description.color, equals(AppColors.textPrimary));
       expect(AppTextStyles.label.color, equals(AppColors.textPrimary));
     });
@@ -140,7 +140,7 @@ void main() {
     test('Deve usar fonte Roboto consistentemente', () {
       // Assert - Verificar uso consistente da fonte Roboto
       const robotoStyles = [
-        AppTextStyles.subtitle,
+        AppTextStyles.header,
         AppTextStyles.description,
         AppTextStyles.label,
         AppTextStyles.inputHint,
@@ -156,11 +156,11 @@ void main() {
     test('Deve ter tamanhos de fonte em escala adequada', () {
       // Assert - Verificar escala de tamanhos de fonte
       expect(
-        AppTextStyles.title.fontSize ?? 14.0,
-        greaterThan(AppTextStyles.subtitle.fontSize ?? 12.0),
+        AppTextStyles.sophosKodiak.fontSize ?? 14.0,
+        greaterThan(AppTextStyles.header.fontSize ?? 12.0),
       );
       expect(
-        AppTextStyles.subtitle.fontSize ?? 12.0,
+        AppTextStyles.header.fontSize ?? 12.0,
         greaterThan(AppTextStyles.label.fontSize ?? 10.0),
       );
       expect(
@@ -188,7 +188,7 @@ void main() {
           theme: theme,
           home: Container(
             color: AppColors.background,
-            child: const Text('Test', style: AppTextStyles.title),
+            child: const Text('Test', style: AppTextStyles.sophosKodiak),
           ),
         ),
       );
@@ -210,8 +210,8 @@ void main() {
             padding: const EdgeInsets.all(AppDimensions.paddingLarge),
             child: Column(
               children: [
-                Text('Título', style: AppTextStyles.title),
-                Text('Subtítulo', style: AppTextStyles.subtitle),
+                Text('Título', style: AppTextStyles.sophosKodiak),
+                Text('Subtítulo', style: AppTextStyles.header),
                 Text('Descrição', style: AppTextStyles.description),
               ],
             ),

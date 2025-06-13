@@ -19,14 +19,14 @@ class AppColors {
 }
 
 class AppTextStyles {
-  static const TextStyle title = TextStyle(
+  static const TextStyle sophosKodiak = TextStyle(
     fontFamily: 'AntonSC',
     color: Colors.white,
     fontSize: 48,
     letterSpacing: 0.5,
   );
 
-  static const TextStyle subtitle = TextStyle(
+  static const TextStyle header = TextStyle(
     fontFamily: 'Roboto',
     color: AppColors.primary,
     fontSize: 32,
@@ -44,8 +44,8 @@ class AppTextStyles {
     fontFamily: 'Roboto',
     color: AppColors.textPrimary,
     fontSize: 24,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.5,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 1,
   );
 
   static const TextStyle inputText = TextStyle(

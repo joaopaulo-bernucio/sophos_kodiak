@@ -224,10 +224,10 @@ class _HeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text('SOPHOS KODIAK', style: AppTextStyles.title),
+        const Text('SOPHOS KODIAK', style: AppTextStyles.sophosKodiak),
         Image.asset('assets/images/sophos_kodiak_logo.png', height: 250.0),
         const SizedBox(height: 20),
-        const Text('Bem-vindo de volta!', style: AppTextStyles.subtitle),
+        const Text('Bem-vindo de volta!', style: AppTextStyles.header),
         const SizedBox(height: 10),
         const Text('Acesse sua conta', style: AppTextStyles.description),
       ],

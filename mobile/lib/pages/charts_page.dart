@@ -81,10 +81,7 @@ class _ChartsPageState extends State<ChartsPage> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          'Relatórios e Gráficos',
-          style: AppTextStyles.subtitle,
-        ),
+        title: const Text('Relatórios e Gráficos', style: AppTextStyles.header),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
@@ -443,10 +440,7 @@ class _MetricCard extends StatelessWidget {
               children: [
                 Text(title, style: AppTextStyles.inputHint),
                 const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: AppTextStyles.subtitle.copyWith(fontSize: 24),
-                ),
+                Text(value, style: AppTextStyles.header.copyWith(fontSize: 24)),
                 const SizedBox(height: 4),
                 Row(
                   children: [

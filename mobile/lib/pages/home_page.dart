@@ -26,7 +26,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Página Principal', style: AppTextStyles.subtitle),
+        title: const Text('Página Principal', style: AppTextStyles.header),
         centerTitle: true,
         // Só exibe o botão de voltar se houver página anterior
         leading: canPop
@@ -88,7 +88,7 @@ class _WelcomeSection extends StatelessWidget {
         const SizedBox(height: AppDimensions.paddingMedium),
         Text(
           'Bem-vindo ao Kodiak',
-          style: AppTextStyles.subtitle.copyWith(fontSize: 28),
+          style: AppTextStyles.header.copyWith(fontSize: 28),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppDimensions.paddingSmall),
@@ -157,7 +157,7 @@ class _MenuGrid extends StatelessWidget {
         backgroundColor: AppColors.background,
         title: Text(
           feature,
-          style: AppTextStyles.subtitle.copyWith(fontSize: 24),
+          style: AppTextStyles.header.copyWith(fontSize: 24),
         ),
         content: const Text(
           'Esta funcionalidade está em desenvolvimento e será disponibilizada em breve.',

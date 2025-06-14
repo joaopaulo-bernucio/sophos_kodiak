@@ -110,6 +110,8 @@ jobs:
     - name: Download spaCy model
       run: python -m spacy download pt_core_news_sm
       working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
 
     - name: Lint with flake8
       run: |
@@ -117,6 +119,8 @@ jobs:
         flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
 
     - name: Run backend tests
       run: pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
@@ -124,6 +128,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
+        PYTHONPATH: ${{ github.workspace }}/backend
 
     - name: Upload backend coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -211,6 +216,8 @@ jobs:
     - name: Run performance tests
       run: pytest tests/performance/ -v --benchmark-only
       working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
 
   security-scan:
     name: Security Scan

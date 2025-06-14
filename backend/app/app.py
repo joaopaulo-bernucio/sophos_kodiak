@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 import spacy
 from flask import Flask, request, jsonify
-from query_mapping import query_mappings
+from .query_mapping import query_mappings
 
 # ------------------------------------------------------------
 # Configuração básica de logging

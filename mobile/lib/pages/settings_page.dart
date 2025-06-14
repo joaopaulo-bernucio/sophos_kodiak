@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:sophos_kodiak/constants/app_constants.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
 import 'package:sophos_kodiak/services/user_storage_service.dart';
@@ -20,6 +21,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static final Logger _logger = Logger();
+
   bool _isPasswordVisible = false;
 
   late String _currentUserName;
@@ -68,6 +71,8 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         }
       } catch (e) {
+        _logger.e('Error updating user name', error: e);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -101,7 +106,8 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     } catch (e) {
-      print('Erro ao fazer logout: $e');
+      _logger.e('Error during logout process', error: e);
+
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginPage()),

@@ -59,11 +59,6 @@ flutter:
           weight: 700
         - asset: assets/fonts/Roboto/Roboto-ExtraBold.ttf
           weight: 800
-        - asset: assets/fonts/Roboto/Roboto-Black.ttf
-          weight: 900
-        - asset: assets/fonts/Roboto/Roboto-BlackItalic.ttf
-          weight: 900
-          style: italic
 
 # -----------------------------
 # Ambiente

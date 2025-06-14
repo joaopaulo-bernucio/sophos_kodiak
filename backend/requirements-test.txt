@@ -1,0 +1,13 @@
+# backend/requirements-test.txt
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+pytest-xdist>=3.3.1       # Parallel test execution
+pytest-html>=3.2.0        # HTML reports
+responses>=0.23.3          # HTTP mocking
+factory-boy>=3.3.0         # Test data factories
+freezegun>=1.2.2           # Time mocking
+httpx>=0.24.0             # Modern HTTP client for tests
+faker>=19.0.0             # Generate fake data
+pytest-benchmark>=4.0.0   # Performance testing

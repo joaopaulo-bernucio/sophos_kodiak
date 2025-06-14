@@ -59,7 +59,6 @@ class AppTextStyles {
     fontSize: 22,
     fontWeight: FontWeight.w800,
     color: AppColors.primaryDark,
-    letterSpacing: 0.5,
   );
 }
 

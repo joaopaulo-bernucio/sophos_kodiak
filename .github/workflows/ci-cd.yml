@@ -129,6 +129,12 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
     - name: Upload backend coverage to Codecov
       uses: codecov/codecov-action@v4

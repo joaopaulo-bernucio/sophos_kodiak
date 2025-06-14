@@ -18,7 +18,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'
+        flutter-version: '3.32.1'
         channel: 'stable'
 
     - name: Get Flutter dependencies
@@ -73,7 +73,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.13.3'
 
     - name: Cache pip dependencies
       uses: actions/cache@v3

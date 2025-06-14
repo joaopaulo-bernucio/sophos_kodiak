@@ -47,6 +47,7 @@ jobs:
         file: ./mobile/coverage/lcov.info
         flags: flutter
         name: flutter-coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Run Flutter integration tests
       run: flutter test integration_test/
@@ -118,6 +119,7 @@ jobs:
         file: ./backend/coverage.xml
         flags: backend
         name: backend-coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   build-and-deploy:
     name: Build and Deploy

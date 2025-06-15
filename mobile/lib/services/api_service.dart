@@ -88,7 +88,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/query/total_vendas_por_mes'),
+            Uri.parse('$_baseUrl/api/graphs/total_vendas_por_mes'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);
@@ -117,7 +117,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/query/funcionarios_por_departamento'),
+            Uri.parse('$_baseUrl/api/graphs/funcionarios_por_departamento'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);
@@ -146,7 +146,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/query/projetos_por_status'),
+            Uri.parse('$_baseUrl/api/graphs/projetos_por_status'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);
@@ -175,7 +175,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/query/receita_por_cliente'),
+            Uri.parse('$_baseUrl/api/graphs/receita_por_cliente'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);
@@ -204,7 +204,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/health'),
+            Uri.parse('$_baseUrl/api/graphs/health'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(const Duration(seconds: 10));
@@ -219,7 +219,7 @@ class ApiService {
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/query/metricas_gerais'),
+            Uri.parse('$_baseUrl/api/graphs/metricas_gerais'),
             headers: {'Accept': 'application/json'},
           )
           .timeout(_timeout);

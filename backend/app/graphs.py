@@ -1,17 +1,16 @@
 import os
 import psycopg2
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import jsonify
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
 import decimal
 
+# Importar a instância do app principal
+from app.app import app
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-
-app = Flask(__name__)
-CORS(app)  # Habilita CORS para permitir requisições do Flutter
 
 def get_db_connection():
     """
@@ -37,7 +36,7 @@ def get_db_connection():
         logging.error(f"Erro inesperado ao conectar ao banco: {e}")
         return None
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/graphs/health', methods=['GET'])
 def health_check():
     """
     Endpoint de verificação de saúde da API.
@@ -72,7 +71,7 @@ def health_check():
             "timestamp": datetime.now().isoformat()
         }), 500
 
-@app.route('/api/query/total_vendas_por_mes', methods=['GET'])
+@app.route('/api/graphs/total_vendas_por_mes', methods=['GET'])
 def total_vendas_por_mes():
     """
     Retorna vendas agrupadas por mês com dados dos últimos 12 meses.
@@ -91,7 +90,7 @@ def total_vendas_por_mes():
     """
     return executar_query_e_gerar_json(query, ['mes', 'total_vendas', 'num_vendas'])
 
-@app.route('/api/query/funcionarios_por_departamento', methods=['GET'])
+@app.route('/api/graphs/funcionarios_por_departamento', methods=['GET'])
 def funcionarios_por_departamento():
     """
     Retorna distribuição de funcionários por departamento.
@@ -110,7 +109,7 @@ def funcionarios_por_departamento():
     """
     return executar_query_e_gerar_json(query, ['departamento', 'quantidade', 'orcamento'])
 
-@app.route('/api/query/projetos_por_status', methods=['GET'])
+@app.route('/api/graphs/projetos_por_status', methods=['GET'])
 def projetos_por_status():
     """
     Retorna distribuição de projetos por status com informações adicionais.
@@ -128,7 +127,7 @@ def projetos_por_status():
     """
     return executar_query_e_gerar_json(query, ['status', 'quantidade', 'valor_total'])
 
-@app.route('/api/query/receita_por_cliente', methods=['GET'])
+@app.route('/api/graphs/receita_por_cliente', methods=['GET'])
 def receita_por_cliente():
     """
     Retorna top clientes por receita com análise de performance.
@@ -152,7 +151,7 @@ def receita_por_cliente():
     return executar_query_e_gerar_json(query, ['cliente', 'receita', 'projetos_total', 'projetos_ativos'])
 
 # Endpoint adicional para métricas gerais
-@app.route('/api/query/metricas_gerais', methods=['GET'])
+@app.route('/api/graphs/metricas_gerais', methods=['GET'])
 def metricas_gerais():
     """
     Retorna métricas gerais do sistema para dashboard.
@@ -266,5 +265,5 @@ def internal_error(error):
         "timestamp": datetime.now().isoformat()
     }), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+# As rotas de gráficos foram registradas na instância principal do Flask
+# Este arquivo agora é um módulo que estende a aplicação principal

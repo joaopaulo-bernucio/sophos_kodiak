@@ -2,6 +2,7 @@ import requests
 import logging
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from unittest.mock import Mock
 
 # Importações opcionais para testes
@@ -474,6 +475,7 @@ def enviar_para_gemini(contexto):
 # Inicializar app Flask
 # ------------------------------------------------------------
 app = Flask(__name__)
+CORS(app)  # Habilita CORS para permitir requisições do Flutter
 
 # ------------------------------------------------------------
 # Endpoint Flask: /pergunta
@@ -547,13 +549,13 @@ def responder_pergunta():
 # ------------------------------------------------------------
 
 @app.route('/health', methods=['GET'])
-def health_check():
-    """Endpoint de health check."""
+def health_check_basic():
+    """Endpoint de health check básico."""
     return jsonify({'status': 'ok', 'message': 'API funcionando'}), 200
 
 @app.route('/api/query/total_vendas_por_mes', methods=['GET'])
-def total_vendas_por_mes():
-    """Endpoint para obter total de vendas por mês."""
+def total_vendas_por_mes_legacy():
+    """Endpoint para obter total de vendas por mês (versão legacy)."""
     try:
         query = """
         SELECT
@@ -577,8 +579,8 @@ def total_vendas_por_mes():
         return jsonify({'error': 'Erro interno'}), 500
 
 @app.route('/api/query/funcionarios_por_departamento', methods=['GET'])
-def funcionarios_por_departamento():
-    """Endpoint para obter funcionários por departamento."""
+def funcionarios_por_departamento_legacy():
+    """Endpoint para obter funcionários por departamento (versão legacy)."""
     try:
         query = """
         SELECT
@@ -601,8 +603,8 @@ def funcionarios_por_departamento():
         return jsonify({'error': 'Erro interno'}), 500
 
 @app.route('/api/query/projetos_por_status', methods=['GET'])
-def projetos_por_status():
-    """Endpoint para obter projetos por status."""
+def projetos_por_status_legacy():
+    """Endpoint para obter projetos por status (versão legacy)."""
     try:
         query = """
         SELECT
@@ -624,8 +626,8 @@ def projetos_por_status():
         return jsonify({'error': 'Erro interno'}), 500
 
 @app.route('/api/query/receita_por_cliente', methods=['GET'])
-def receita_por_cliente():
-    """Endpoint para obter receita por cliente."""
+def receita_por_cliente_legacy():
+    """Endpoint para obter receita por cliente (versão legacy)."""
     try:
         query = """
         SELECT
@@ -650,8 +652,8 @@ def receita_por_cliente():
         return jsonify({'error': 'Erro interno'}), 500
 
 @app.route('/api/query/metricas_gerais', methods=['GET'])
-def metricas_gerais():
-    """Endpoint para obter métricas gerais do sistema."""
+def metricas_gerais_legacy():
+    """Endpoint para obter métricas gerais do sistema (versão legacy)."""
     try:
         query = """
         SELECT

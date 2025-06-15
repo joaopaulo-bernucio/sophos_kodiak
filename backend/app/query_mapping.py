@@ -1,7 +1,7 @@
 query_mappings = [
 
     # --- Quantitativos e totais -------------------------------------------------------------------
-    # “Quantos funcionários?”, “Número de funcionários” etc.
+    # "Quantos funcionários?", "Número de funcionários" etc.
     ([
         "quantos funcionários", "quantas funcionárias", "quantos funcionário", "quantas funcionária",
         "número de funcionários", "número funcionários", "número de func", "n° de funcionários", "total funcionários",
@@ -10,7 +10,7 @@ query_mappings = [
      "funcionarios-total",
      "SELECT COUNT(*) AS total_funcionarios FROM funcionarios;"),
 
-    # “Total de projetos”, “Quantos projetos” etc.
+    # "Total de projetos", "Quantos projetos" etc.
     ([
         "total de projetos", "quantos projetos", "quantos projeto", "número de projetos", "número projetos",
         "n° de projetos", "count projetos", "count de projetos", "total projetos"
@@ -18,7 +18,7 @@ query_mappings = [
      "projetos-total",
      "SELECT COUNT(*) AS total_projetos FROM projetos;"),
 
-    # “Total de contratos”, “Quantos contratos” etc.
+    # "Total de contratos", "Quantos contratos" etc.
     ([
         "total de contratos", "quantos contratos", "quantos contrato", "número de contratos", "número contratos",
         "n° de contratos", "count contratos", "contratos total", "total contratos"
@@ -26,7 +26,7 @@ query_mappings = [
      "contratos-total",
      "SELECT COUNT(*) AS total_contratos FROM contratos_marketing;"),
 
-    # “Total de vendas”, “Quantidade de vendas realizadas” etc.
+    # "Total de vendas", "Quantidade de vendas realizadas" etc.
     ([
         "total de vendas", "quantas vendas", "quantas venda", "quantidade de vendas", "quantidade vendas",
         "número de vendas", "número vendas", "n° de vendas", "count vendas", "vendas total"
@@ -34,7 +34,7 @@ query_mappings = [
      "vendas-total",
      "SELECT COUNT(*) AS total_vendas FROM vendas;"),
 
-    # “Total de departamentos”, “Quantos departamentos” etc.
+    # "Total de departamentos", "Quantos departamentos" etc.
     ([
         "total de departamentos", "quantos departamentos", "quantos departamento", "número de departamentos",
         "número departamentos", "n° de departamentos", "count departamentos", "departamentos total"
@@ -42,7 +42,7 @@ query_mappings = [
      "departamentos-total",
      "SELECT COUNT(*) AS total_departamentos FROM departamentos;"),
 
-    # “Total de clientes”, “Quantos clientes” etc.
+    # "Total de clientes", "Quantos clientes" etc.
     ([
         "total de clientes", "quantos clientes", "quantos cliente", "número de clientes", "número clientes",
         "n° de clientes", "count clientes", "clientes total"
@@ -50,7 +50,7 @@ query_mappings = [
      "clientes-total",
      "SELECT COUNT(*) AS total_clientes FROM clientes;"),
 
-    # “Receita de contratos”, “Total de valor contratado” etc.
+    # "Receita de contratos", "Total de valor contratado" etc.
     ([
         "receita de contratos", "receita contratos", "valor contratado", "valor de contratos", "faturamento de contratos",
         "receita contratada", "soma contratos", "total valor contratos", "receita total contratos"
@@ -58,7 +58,7 @@ query_mappings = [
      "contratos-valor-total",
      "SELECT SUM(valor_total) AS total_contratado FROM contratos_marketing;"),
 
-    # “Valor total de vendas”, “Receita total vendas”
+    # "Valor total de vendas", "Receita total vendas"
     ([
         "valor total de vendas", "receita total vendas", "soma valor vendas", "soma vendas", "receita vendas",
         "total valor vendas", "vendas receita total"
@@ -68,7 +68,7 @@ query_mappings = [
 
 
     # --- Listagens completas ----------------------------------------------------------------------
-    # “Listar funcionários”, “Mostrar funcionários” etc.
+    # "Listar funcionários", "Mostrar funcionários" etc.
     ([
         "listar funcionários", "mostrar funcionários", "todos os funcionários",
         "nomes dos funcionários", "lista de funcionários", "ver funcionários", "exibir funcionários",
@@ -77,7 +77,7 @@ query_mappings = [
      "funcionarios-lista",
      "SELECT * FROM funcionarios;"),
 
-    # “Listar clientes”, “Todos os clientes” etc.
+    # "Listar clientes", "Todos os clientes" etc.
     ([
         "listar clientes", "mostrar clientes", "todos os clientes", "nomes dos clientes",
         "lista de clientes", "ver clientes", "exibir clientes", "listar todas as empresas",
@@ -87,7 +87,7 @@ query_mappings = [
      "clientes-lista",
      "SELECT * FROM clientes;"),
 
-    # “Listar projetos”, “Mostrar projetos” etc.
+    # "Listar projetos", "Mostrar projetos" etc.
     ([
         "listar projetos", "mostrar projetos", "todos os projetos", "lista de projetos",
         "ver projetos", "exibir projetos", "lista completa de projetos", "projetos todos"
@@ -95,7 +95,7 @@ query_mappings = [
      "projetos-lista",
      "SELECT * FROM projetos;"),
 
-    # “Listar vendas”, “Mostrar vendas” etc.
+    # "Listar vendas", "Mostrar vendas" etc.
     ([
         "listar vendas", "mostrar vendas", "todas as vendas", "lista de vendas",
         "ver vendas", "exibir vendas", "vendas lista", "vendas todos"
@@ -103,7 +103,7 @@ query_mappings = [
      "vendas-lista",
      "SELECT * FROM vendas;"),
 
-    # “Listar departamentos”, “Mostrar departamentos” etc.
+    # "Listar departamentos", "Mostrar departamentos" etc.
     ([
         "listar departamentos", "mostrar departamentos", "todos os departamentos", "lista de departamentos",
         "ver departamentos", "exibir departamentos", "departamentos lista", "departamentos todos"
@@ -111,7 +111,7 @@ query_mappings = [
      "departamentos-lista",
      "SELECT * FROM departamentos;"),
 
-    # “Listar contratos de marketing”, “Mostrar contratos” etc.
+    # "Listar contratos de marketing", "Mostrar contratos" etc.
     ([
         "listar contratos", "mostrar contratos", "todos os contratos", "contratos de marketing",
         "lista de contratos", "ver contratos", "exibir contratos", "contratos lista", "contratos todos"
@@ -123,7 +123,7 @@ query_mappings = [
 
 
     # --- Últimos registros ------------------------------------------------------------------------
-    # “Último projeto”, “Projeto mais recente”, etc.
+    # "Último projeto", "Projeto mais recente", etc.
     ([
         "último projeto", "projeto mais recente", "última iniciativa", "projeto finalizado mais novo",
         "projeto recente", "projeto mais novo", "projetos recentes", "últimos projetos"
@@ -131,7 +131,7 @@ query_mappings = [
      "projetos-ultimo",
      "SELECT nome FROM projetos ORDER BY data_termino DESC LIMIT 1;"),
 
-    # “Último contrato”, “Contrato mais recente”
+    # "Último contrato", "Contrato mais recente"
     ([
         "último contrato", "contrato mais recente", "contrato finalizado mais novo", "contrato recente",
         "contratos recentes", "últimos contratos"
@@ -139,7 +139,7 @@ query_mappings = [
      "contratos-ultimo",
      "SELECT descricao FROM contratos_marketing ORDER BY data_termino DESC LIMIT 1;"),
 
-    # “Último departamento”, “Departamento mais recente (por ID)”
+    # "Último departamento", "Departamento mais recente (por ID)"
     ([
         "último departamento", "departamento mais recente", "último registro departamento",
         "departamentos recentes", "últimos departamentos"
@@ -147,7 +147,7 @@ query_mappings = [
      "departamentos-ultimo",
      "SELECT nome FROM departamentos ORDER BY id DESC LIMIT 1;"),
 
-    # “Último cliente”, “Cliente mais recente”
+    # "Último cliente", "Cliente mais recente"
     ([
         "último cliente", "cliente mais recente", "cliente finalizado mais novo",
         "clientes recentes", "últimos clientes", "cliente cadastrado mais recente"
@@ -157,7 +157,7 @@ query_mappings = [
 
 
     # --- Detalhes com JOINs ------------------------------------------------------------------------
-    # “Detalhes de vendas”, “Vendas com detalhes” etc.
+    # "Detalhes de vendas", "Vendas com detalhes" etc.
     ([
         "detalhes de vendas", "vendas com detalhes", "vendas detalhadas",
         "informações de vendas", "info vendas", "vendas completas", "vendas detalhe"
@@ -169,7 +169,7 @@ query_mappings = [
      "JOIN projetos p ON v.projeto_id = p.id "
      "JOIN funcionarios f ON v.funcionario_id = f.id;"),
 
-    # “Detalhes de contratos”, “Contratos com detalhes” etc.
+    # "Detalhes de contratos", "Contratos com detalhes" etc.
     ([
         "detalhes de contratos", "contratos com detalhes", "contratos detalhados",
         "informações contratos", "info contratos", "contratos completos", "contratos detalhe"
@@ -180,7 +180,7 @@ query_mappings = [
      "FROM contratos_marketing cm "
      "JOIN clientes c ON cm.cliente_id = c.id;"),
 
-    # “Informações do projeto”, “Detalhes do projeto” etc.
+    # "Informações do projeto", "Detalhes do projeto" etc.
     ([
         "informações do projeto", "detalhes do projeto", "projeto detalhado", "info do projeto",
         "projeto completo", "projeto detalhes", "info projeto"
@@ -192,7 +192,7 @@ query_mappings = [
      "JOIN clientes c ON p.cliente_id = c.id "
      "JOIN funcionarios f ON p.responsavel_id = f.id;"),
 
-    # “Funcionários e departamentos”, “Lista de funcionários com departamento” etc.
+    # "Funcionários e departamentos", "Lista de funcionários com departamento" etc.
     ([
         "funcionários e departamentos", "lista de funcionários com departamento", "funcionarios departamentos",
         "funcionarios com departamento", "lista funcionários departamento", "funcionarios em departamento"
@@ -202,49 +202,8 @@ query_mappings = [
      "FROM funcionarios f "
      "JOIN departamentos d ON f.departamento_id = d.id;"),
 
-    # “Detalhes de departamento”, “Departamento por ID” etc.
-    ([
-        "detalhes departamento", "info departamento", "departamento por id", "departamento detalhes",
-        "buscar departamento id", "procurar departamento id", "ver departamento id"
-     ],
-     "departamento-por-id",
-     "SELECT * FROM departamentos WHERE id = {id};"),
-
-    # “Detalhes de cliente”, “Cliente por ID” etc.
-    ([
-        "detalhes cliente", "info cliente", "cliente por id", "cliente detalhes",
-        "buscar cliente id", "procurar cliente id", "ver cliente id"
-     ],
-     "cliente-por-id",
-     "SELECT * FROM clientes WHERE id = {id};"),
-
-    # “Detalhes de funcionário”, “Funcionário por ID” etc.
-    ([
-        "detalhes funcionário", "info funcionário", "funcionário por id", "funcionario detalhes",
-        "buscar funcionário id", "procurar funcionário id", "ver funcionário id"
-     ],
-     "funcionario-por-id",
-     "SELECT * FROM funcionarios WHERE id = {id};"),
-
-    # “Detalhes de projeto por ID”
-    ([
-        "detalhes projeto", "projeto por id", "info projeto id", "projeto detalhes",
-        "buscar projeto id", "procurar projeto id", "ver projeto id"
-     ],
-     "projeto-por-id",
-     "SELECT * FROM projetos WHERE id = {id};"),
-
-    # “Detalhes de venda por ID”
-    ([
-        "detalhes venda", "venda por id", "info venda id", "venda detalhes",
-        "buscar venda id", "procurar venda id", "ver venda id"
-     ],
-     "venda-por-id",
-     "SELECT * FROM vendas WHERE id = {id};"),
-
-
     # --- Estatísticas de vendas -------------------------------------------------------------------
-    # “Média de valor das vendas”, “Média de vendas” etc.
+    # "Média de valor das vendas", "Média de vendas" etc.
     ([
         "média de vendas", "média de valor", "valor médio de vendas", "media vendas",
         "media valor vendas", "média dos valores de vendas", "media dos valores de vendas"
@@ -252,7 +211,7 @@ query_mappings = [
      "estatisticas-vendas",
      "SELECT AVG(valor) AS media_valor, STDDEV(valor) AS desvio_valor FROM vendas;"),
 
-    # “Vendas por funcionário”, “Quem vendeu mais” etc.
+    # "Vendas por funcionário", "Quem vendeu mais" etc.
     ([
         "vendas por funcionário", "vendas por funcionario", "quem vendeu mais", "quem vendeu maior valor",
         "vendas por vendedor", "vendas por vendedores", "vendas vendedor"
@@ -263,7 +222,7 @@ query_mappings = [
      "LEFT JOIN vendas v ON f.id = v.funcionario_id "
      "GROUP BY f.nome ORDER BY total_vendas DESC;"),
 
-    # “Vendas por projeto”, “Quantas vendas por projeto” etc.
+    # "Vendas por projeto", "Quantas vendas por projeto" etc.
     ([
         "vendas por projeto", "vendas por projetos", "quantas vendas por projeto", "vendas agrupadas por projeto",
         "vendas agrupadas projeto", "quantidade de vendas por projeto"
@@ -274,7 +233,7 @@ query_mappings = [
      "LEFT JOIN vendas v ON p.id = v.projeto_id "
      "GROUP BY p.nome ORDER BY total_vendas DESC;"),
 
-    # “Vendas por status”, “Quantas vendas por status” etc.
+    # "Vendas por status", "Quantas vendas por status" etc.
     ([
         "vendas por status", "quantas vendas por status", "vendas agrupadas por status",
         "quantidade vendas por status", "status de vendas", "vendas status"
@@ -283,7 +242,7 @@ query_mappings = [
      "SELECT status_pagamento, COUNT(*) AS total "
      "FROM vendas GROUP BY status_pagamento;"),
 
-    # “Total de vendas no último mês”, “Vendas último mês” etc.
+    # "Total de vendas no último mês", "Vendas último mês" etc.
     ([
         "vendas no último mês", "vendas ultimo mês", "vendas nos ultimos 30 dias", "vendas últimos 30 dias",
         "vendas últimos 30 dias", "vendas mês passado", "vendas mes passado", "vendas ultimo mes"
@@ -292,17 +251,8 @@ query_mappings = [
      "SELECT COUNT(*) AS total_vendas, SUM(valor) AS total_valor "
      "FROM vendas WHERE data_venda >= NOW() - INTERVAL '1 month';"),
 
-    # “Vendas no período”, “Vendas entre datas” etc.
-    ([
-        "vendas no período", "vendas entre datas", "vendas entre", "vendas periodo", "vendas por periodo",
-        "vendas em período", "vendas em periodo", "vendas entre datas especificadas"
-     ],
-     "vendas-periodo",
-     "SELECT * FROM vendas WHERE data_venda BETWEEN '{start_date}' AND '{end_date}';"),
-
-
     # --- Estatísticas de contratos ----------------------------------------------------------------
-    # “Contratos por cliente”, “Quantidade de contratos por cliente” etc.
+    # "Contratos por cliente", "Quantidade de contratos por cliente" etc.
     ([
         "contratos por cliente", "contratos por clientes", "quantidade de contratos por cliente",
         "quantos contratos por cliente", "contratos agrupados por cliente", "contratos agrupados cliente",
@@ -314,7 +264,7 @@ query_mappings = [
      "JOIN contratos_marketing cm ON cm.cliente_id = c.id "
      "GROUP BY c.nome_empresa ORDER BY total_contratos DESC;"),
 
-    # “Valor de contratos por cliente”, “Receita por cliente” etc.
+    # "Valor de contratos por cliente", "Receita por cliente" etc.
     ([
         "valor contratado por cliente", "receita por cliente", "faturamento por cliente",
         "valor de contratos por cliente", "receita contratos cliente", "faturamento contratos cliente",
@@ -326,7 +276,7 @@ query_mappings = [
      "JOIN contratos_marketing cm ON cm.cliente_id = c.id "
      "GROUP BY c.nome_empresa ORDER BY receita_contratos DESC;"),
 
-    # “Status dos contratos”, “Contratos ativos”, “Contratos concluídos” etc.
+    # "Status dos contratos", "Contratos ativos", "Contratos concluídos" etc.
     ([
         "status de contratos", "contratos ativos", "contratos pendentes", "contratos concluídos",
         "status contratos", "contratos em andamento", "contratos encerrados", "contratos cancelados"
@@ -335,7 +285,7 @@ query_mappings = [
      "SELECT status, COUNT(*) AS total "
      "FROM contratos_marketing GROUP BY status;"),
 
-    # “Contratos no último ano”, “Contratos ano atual” etc.
+    # "Contratos no último ano", "Contratos ano atual" etc.
     ([
         "contratos no último ano", "contratos ultimo ano", "contratos ano atual", "contratos 365 dias",
         "contratos nos ultimos 365 dias", "contratos ano passado", "contratos este ano"
@@ -344,7 +294,7 @@ query_mappings = [
      "SELECT COUNT(*) AS total_contratos, SUM(valor_total) AS total_valor "
      "FROM contratos_marketing WHERE data_inicio >= DATE_TRUNC('year', NOW());"),
 
-    # “Valor de contratos por mês”, “Contratos mensais”, “Receita por mês” etc.
+    # "Valor de contratos por mês", "Contratos mensais", "Receita por mês" etc.
     ([
         "valor de contratos por mês", "contratos mensais", "receita por mês", "receita mensal contratos",
         "contratos por mês", "faturamento mensal contratos", "mensal contratos"
@@ -353,16 +303,7 @@ query_mappings = [
      "SELECT DATE_TRUNC('month', data_inicio) AS mes, SUM(valor_total) AS total_valor "
      "FROM contratos_marketing GROUP BY mes ORDER BY mes;"),
 
-    # “Contratos entre datas” (needs start_date e end_date)
-    ([
-        "contratos entre", "contratos entre datas", "contratos no período", "contratos periodo",
-        "contratos entre datas especificadas", "contratos por periodo", "contratos intervalo"
-     ],
-     "contratos-periodo",
-     "SELECT * FROM contratos_marketing "
-     "WHERE data_inicio >= '{start_date}' AND data_termino <= '{end_date}';"),
-
-    # “Contratos ativos”, “Quantos contratos ativos” etc.
+    # "Contratos ativos", "Quantos contratos ativos" etc.
     ([
         "contratos ativos", "quantos contratos ativos", "total contratos ativos", "contratos em andamento",
         "contar contratos ativos", "quantidade contratos ativos"
@@ -370,7 +311,7 @@ query_mappings = [
      "contratos-ativos",
      "SELECT COUNT(*) AS total_ativos FROM contratos_marketing WHERE status = 'Ativo';"),
 
-    # “Contratos expirando em breve”, “Contratos terminando próximo mês” etc.
+    # "Contratos expirando em breve", "Contratos terminando próximo mês" etc.
     ([
         "contratos expirando em breve", "contratos terminando próximo mês", "contratos vencendo próximo mês",
         "contratos perto de vencer", "contratos próximo mês", "próximos contratos a vencer"
@@ -381,7 +322,7 @@ query_mappings = [
 
 
     # --- Estatísticas de departamentos ----------------------------------------------------------------
-    # “Orçamento total”, “Soma orçamentos”, “Total orçamento departamentos” etc.
+    # "Orçamento total", "Soma orçamentos", "Total orçamento departamentos" etc.
     ([
         "orçamento total", "soma orçamentos", "total orçamento departamentos", "soma orçamento departamentos",
         "orçamentos soma", "orçamento geral", "total orçamentos departamentos"
@@ -389,7 +330,7 @@ query_mappings = [
      "departamentos-orcamento-total",
      "SELECT SUM(orcamento) AS total_orcamento FROM departamentos;"),
 
-    # “Orçamento por departamento”, “Orçamento de cada departamento” etc.
+    # "Orçamento por departamento", "Orçamento de cada departamento" etc.
     ([
         "orçamento por departamento", "orcamento por departamento", "valores de orçamento departamentos",
         "orçamentos por departamento", "ver orçamento departamento", "exibir orçamento departamento"
@@ -397,9 +338,8 @@ query_mappings = [
      "departamentos-orcamento-por-departamento",
      "SELECT nome, orcamento FROM departamentos;"),
 
-
     # --- Estatísticas de funcionários ----------------------------------------------------------------
-    # “Salário médio”, “Média salarial”, “Média de salários” etc.
+    # "Salário médio", "Média salarial", "Média de salários" etc.
     ([
         "salário médio", "média salarial", "média de salários", "media salarial",
         "salario medio", "média salário", "média dos salários"
@@ -407,7 +347,7 @@ query_mappings = [
      "salario-medio",
      "SELECT AVG(salario) AS salario_medio FROM funcionarios;"),
 
-    # “Salário médio por departamento”, “Média salarial departamento” etc.
+    # "Salário médio por departamento", "Média salarial departamento" etc.
     ([
         "salário médio por departamento", "média salarial departamento", "salário médio departamentos",
         "média de salário por departamento", "media salarial departamento", "salário médio por depto"
@@ -418,7 +358,7 @@ query_mappings = [
      "JOIN departamentos d ON f.departamento_id = d.id "
      "GROUP BY d.nome;"),
 
-    # “Funcionários por departamento”, “Quantos funcionários por departamento” etc.
+    # "Funcionários por departamento", "Quantos funcionários por departamento" etc.
     ([
         "funcionários por departamento", "funcionarios por departamento", "quantos funcionários por departamento",
         "quantos funcionario por departamento", "funcionarios agrupados por departamento",
@@ -430,25 +370,8 @@ query_mappings = [
      "LEFT JOIN funcionarios f ON f.departamento_id = d.id "
      "GROUP BY d.nome;"),
 
-    # “Funcionários contratados no período”, “Contratações entre datas” etc.
-    ([
-        "funcionários contratados no período", "contratações entre datas", "funcionarios entre datas",
-        "funcionários entre datas", "funcionarios contratados entre", "contratacoes periodo"
-     ],
-     "funcionarios-periodo",
-     "SELECT * FROM funcionarios WHERE data_contratacao BETWEEN '{start_date}' AND '{end_date}';"),
-
-
     # --- Estatísticas de clientes -------------------------------------------------------------------
-    # “Clientes cadastrados no período”, “Clientes entre datas” etc.
-    ([
-        "clientes cadastrados no período", "clientes entre datas", "clientes no período",
-        "clientes entre", "cadastro de clientes entre", "cadastros clientes periodo"
-     ],
-     "clientes-periodo",
-     "SELECT * FROM clientes WHERE data_cadastro BETWEEN '{start_date}' AND '{end_date}';"),
-
-    # “Clientes ativos”, “Clientes com projetos em andamento”
+    # "Clientes ativos", "Clientes com projetos em andamento"
     ([
         "clientes ativos", "clientes com projetos em andamento", "clientes em atividade",
         "clientes em andamento", "clientes que têm projetos em andamento", "clientes com projetos ativos"
@@ -461,7 +384,7 @@ query_mappings = [
 
 
     # --- Estatísticas de projetos --------------------------------------------------------------------
-    # “Projetos por status”, “Quantos projetos por status” etc.
+    # "Projetos por status", "Quantos projetos por status" etc.
     ([
         "projetos por status", "quantos projetos por status", "projetos agrupados por status",
         "status de projetos", "contar projetos por status", "número de projetos por status"
@@ -469,23 +392,7 @@ query_mappings = [
      "projetos-por-status",
      "SELECT status, COUNT(*) AS total FROM projetos GROUP BY status;"),
 
-    # “Projetos por cliente”, “Projetos do cliente” etc.
-    ([
-        "projetos por cliente", "projetos do cliente", "lista de projetos cliente",
-        "projetos cliente", "buscar projetos por cliente", "listar projetos por cliente"
-     ],
-     "projetos-por-cliente",
-     "SELECT p.* FROM projetos p WHERE cliente_id = {cliente_id};"),
-
-    # “Projetos por responsável”, “Projetos do funcionário” etc.
-    ([
-        "projetos por responsável", "projetos do funcionário", "projetos de funcionário",
-        "projetos responsavel", "listar projetos por responsavel", "buscar projetos por responsavel"
-     ],
-     "projetos-por-responsavel",
-     "SELECT p.* FROM projetos p WHERE responsavel_id = {funcionario_id};"),
-
-    # “Projetos concluídos”, “Quantos projetos concluídos” etc.
+    # "Projetos concluídos", "Quantos projetos concluídos" etc.
     ([
         "projetos concluídos", "projetos concluido", "quantos projetos concluídos", "quantos projetos concluido",
         "total projetos concluídos", "total projetos concluido"
@@ -493,7 +400,7 @@ query_mappings = [
      "projetos-concluidos",
      "SELECT COUNT(*) AS total_concluidos FROM projetos WHERE status = 'Concluído';"),
 
-    # “Projetos em andamento”, “Quantos projetos em andamento” etc.
+    # "Projetos em andamento", "Quantos projetos em andamento" etc.
     ([
         "projetos em andamento", "projetos andamento", "quantos projetos em andamento",
         "total projetos em andamento", "projetos ativos", "projetos que estão em andamento"
@@ -501,7 +408,7 @@ query_mappings = [
      "projetos-andamento",
      "SELECT COUNT(*) AS total_andamento FROM projetos WHERE status = 'Em andamento';"),
 
-    # “Projetos cancelados”, “Quantos projetos cancelados” etc.
+    # "Projetos cancelados", "Quantos projetos cancelados" etc.
     ([
         "projetos cancelados", "projetos cancelado", "quantos projetos cancelados",
         "total projetos cancelados", "projetos que foram cancelados"
@@ -509,7 +416,7 @@ query_mappings = [
      "projetos-cancelados",
      "SELECT COUNT(*) AS total_cancelados FROM projetos WHERE status = 'Cancelado';"),
 
-    # “Projetos em aprovação”, “Quantos projetos em aprovação” etc.
+    # "Projetos em aprovação", "Quantos projetos em aprovação" etc.
     ([
         "projetos em aprovação", "projetos aprovacao", "quantos projetos em aprovação",
         "total projetos em aprovação", "projetos pendentes de aprovação"
@@ -517,67 +424,8 @@ query_mappings = [
      "projetos-aprovacao",
      "SELECT COUNT(*) AS total_em_aprovacao FROM projetos WHERE status = 'Em aprovação';"),
 
-    # “Projetos no período”, “Projetos entre datas” etc.
-    ([
-        "projetos no período", "projetos entre datas", "projetos entre",
-        "projetos periodo", "listar projetos entre datas", "buscar projetos entre datas"
-     ],
-     "projetos-periodo",
-     "SELECT * FROM projetos WHERE data_inicio BETWEEN '{start_date}' AND '{end_date}';"),
-
-
-    # --- Filtros e buscas específicas ----------------------------------------------------------------
-    # “Contrato por ID”, “Detalhes contrato 123” etc.
-    ([
-        "contrato id", "detalhes contrato id", "info contrato id", "contrato por id",
-        "buscar contrato id", "procurar contrato id", "ver contrato id"
-     ],
-     "contrato-por-id",
-     "SELECT * FROM contratos_marketing WHERE id = {id};"),
-
-    # “Contratos do cliente”, “Contratos de cliente X” etc.
-    ([
-        "contratos de", "contratos do cliente", "contratos para cliente", "contratos cliente",
-        "listar contratos de cliente", "buscar contratos de cliente"
-     ],
-     "contratos-do-cliente",
-     "SELECT * FROM contratos_marketing WHERE cliente_id = {cliente_id};"),
-
-    # “Venda por ID”, “Detalhes venda 123” etc.
-    ([
-        "venda id", "detalhes venda id", "info venda id", "venda por id",
-        "buscar venda id", "procurar venda id", "ver venda id"
-     ],
-     "venda-por-id",
-     "SELECT * FROM vendas WHERE id = {id};"),
-
-    # “Funcionário por nome”, “Procurar funcionário X” etc.
-    ([
-        "funcionário por nome", "funcionario por nome", "procurar funcionário", "procurar funcionario",
-        "info funcionário por nome", "info funcionario por nome", "buscar funcionário por nome"
-     ],
-     "funcionario-por-nome",
-     "SELECT * FROM funcionarios WHERE nome ILIKE '%{nome}%';"),
-
-    # “Cliente por nome”, “Procurar cliente X” etc.
-    ([
-        "cliente por nome", "procurar cliente", "info cliente por nome", "buscar cliente por nome",
-        "cliente nome", "cliente pesquisar nome"
-     ],
-     "cliente-por-nome",
-     "SELECT * FROM clientes WHERE nome_empresa ILIKE '%{nome_empresa}%';"),
-
-    # “Departamento por nome”, “Procurar departamento X” etc.
-    ([
-        "departamento por nome", "procurar departamento", "info departamento por nome", "buscar departamento por nome",
-        "departamento nome", "departamento pesquisar nome"
-     ],
-     "departamento-por-nome",
-     "SELECT * FROM departamentos WHERE nome ILIKE '%{nome}%';"),
-
-
     # --- Projeções e análises -----------------------------------------------------------------------
-    # “Receita anual de contratos”, “Contratos por ano” etc.
+    # "Receita anual de contratos", "Contratos por ano" etc.
     ([
         "receita anual de contratos", "contratos por ano", "faturamento por ano",
         "receita contratos por ano", "receita anual contratos", "contratos ano"
@@ -586,7 +434,7 @@ query_mappings = [
      "SELECT DATE_PART('year', data_inicio) AS ano, SUM(valor_total) AS receita "
      "FROM contratos_marketing GROUP BY ano ORDER BY ano;"),
 
-    # “Crescimento ano a ano de contratos”, “Crescimento contratos” etc.
+    # "Crescimento ano a ano de contratos", "Crescimento contratos" etc.
     ([
         "crescimento ano a ano de contratos", "crescimento contratos", "variação anual contratos",
         "crescimento anual contratos", "crescimento de contratos", "variação contratos ano a ano"
@@ -604,7 +452,7 @@ query_mappings = [
      ORDER BY a1.ano;
      """),
 
-    # “Projeção próximo ano”, “Forecast contratos” etc.
+    # "Projeção próximo ano", "Forecast contratos" etc.
     ([
         "projeção próximo ano", "forecast contratos", "previsão contratos",
         "projecao contratos", "previsao contratos", "forecast de contratos"

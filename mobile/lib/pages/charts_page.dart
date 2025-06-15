@@ -21,6 +21,7 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isDisposed = false; // Flag para controlar se o widget foi descartado
 
   // Controladores de animação para transições suaves
   late TabController _tabController;
@@ -50,22 +51,34 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _isDisposed = true; // Marca como descartado
+
     _tabController.dispose();
+
+    // Para qualquer animação em andamento antes de descartar
+    if (_refreshController.isAnimating) {
+      _refreshController.stop();
+    }
     _refreshController.dispose();
+
     _apiService.dispose();
     super.dispose();
   }
 
   /// Carrega todos os dados dos gráficos com tratamento robusto de erros
   Future<void> _carregarDados() async {
-    if (_isLoading) return; // Previne múltiplas chamadas simultâneas
+    if (_isLoading || _isDisposed)
+      return; // Previne múltiplas chamadas e execução após dispose
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    _refreshController.forward();
+    // Só inicia a animação se o widget ainda está ativo e o controller não foi descartado
+    if (mounted && !_isDisposed && !_refreshController.isAnimating) {
+      _refreshController.forward();
+    }
 
     try {
       // Carrega todos os dados em paralelo para melhor performance
@@ -96,8 +109,13 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         setState(() {
           _isLoading = false;
         });
+        // Só chama reset se o controller ainda não foi descartado
+        if (!_isDisposed &&
+            !_refreshController.isAnimating &&
+            !_refreshController.isDismissed) {
+          _refreshController.reset();
+        }
       }
-      _refreshController.reset();
     }
   }
 
@@ -167,16 +185,29 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        AnimatedBuilder(
-          animation: _refreshAnimation,
-          builder: (context, child) {
-            return Transform.rotate(
-              angle: _refreshAnimation.value * 2 * 3.14159,
-              child: IconButton(
+        // Verifica se mounted e se o widget não foi descartado antes de usar o AnimatedBuilder
+        Builder(
+          builder: (context) {
+            if (!mounted || _isDisposed) {
+              return IconButton(
                 icon: const Icon(Icons.refresh, color: AppColors.primary),
                 onPressed: _isLoading ? null : _carregarDados,
                 tooltip: 'Atualizar dados',
-              ),
+              );
+            }
+
+            return AnimatedBuilder(
+              animation: _refreshAnimation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _refreshAnimation.value * 2 * 3.14159,
+                  child: IconButton(
+                    icon: const Icon(Icons.refresh, color: AppColors.primary),
+                    onPressed: _isLoading ? null : _carregarDados,
+                    tooltip: 'Atualizar dados',
+                  ),
+                );
+              },
             );
           },
         ),

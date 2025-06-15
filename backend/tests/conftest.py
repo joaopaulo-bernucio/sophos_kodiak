@@ -67,28 +67,41 @@ def client():
     Returns:
         FlaskClient: Cliente para fazer requisições de teste
     """
-    # Tentar importar a aplicação Flask real para testes de API
-    try:
-        from app.app import create_app
-        test_app = create_app()
-        test_app.config['TESTING'] = True
-        test_app.config['WTF_CSRF_ENABLED'] = False
+    # Configurar variáveis de ambiente para testes
+    test_env = {
+        'DB_HOST': 'localhost',
+        'DB_PORT': '5432',
+        'DB_NAME': 'test_db',
+        'DB_USER': 'postgres',
+        'DB_PASSWORD': 'postgres',
+        'GEMINI_API_KEY': 'test_api_key_123456789',
+        'FLASK_ENV': 'testing'
+    }
 
-        with test_app.test_client() as client:
-            with test_app.app_context():
-                yield client
-    except (ImportError, Exception):
-        # Se não conseguiu importar o app, tentar usar a instância mockada
-        if hasattr(flask_app, 'test_client') and not isinstance(flask_app, Mock):
-            flask_app.config['TESTING'] = True
-            flask_app.config['WTF_CSRF_ENABLED'] = False
+    with patch.dict(os.environ, test_env):
+        # Tentar importar a aplicação Flask real para testes de API
+        try:
+            from app.app import create_app
+            test_app = create_app()
+            test_app.config['TESTING'] = True
+            test_app.config['WTF_CSRF_ENABLED'] = False
 
-            with flask_app.test_client() as client:
-                with flask_app.app_context():
+            with test_app.test_client() as client:
+                with test_app.app_context():
                     yield client
-        else:
-            # Último recurso: retornar um mock
-            yield Mock()
+        except (ImportError, Exception):
+            # Se não conseguiu importar o app, tentar usar a instância padrão
+            try:
+                from app.app import app as flask_app
+                flask_app.config['TESTING'] = True
+                flask_app.config['WTF_CSRF_ENABLED'] = False
+
+                with flask_app.test_client() as client:
+                    with flask_app.app_context():
+                        yield client
+            except:
+                # Último recurso: retornar um mock
+                yield Mock()
 
 
 @pytest.fixture

@@ -134,7 +134,7 @@ jobs:
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GEMINI_API_KEY: test_gemini_api_key_for_github_actions_testing_only
 
     - name: Upload backend coverage to Codecov
       uses: codecov/codecov-action@v4

@@ -90,3 +90,11 @@ class WidgetTestHelpers {
     expect(finder, findsNWidgets(count));
   }
 }
+
+/// Cria um aplicativo de teste com MaterialApp para widgets
+Widget createTestApp(Widget child) {
+  return MaterialApp(
+    home: child,
+    theme: ThemeData(brightness: Brightness.dark, primarySwatch: Colors.orange),
+  );
+}

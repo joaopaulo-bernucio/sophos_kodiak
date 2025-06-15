@@ -93,7 +93,13 @@ class ApiService {
           )
           .timeout(_timeout);
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final jsonData = jsonDecode(response.body);
+        // Verifica se a resposta tem o novo formato com 'data'
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        }
+        // Fallback para formato antigo
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
         throw ApiException(
@@ -116,7 +122,13 @@ class ApiService {
           )
           .timeout(_timeout);
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final jsonData = jsonDecode(response.body);
+        // Verifica se a resposta tem o novo formato com 'data'
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        }
+        // Fallback para formato antigo
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
         throw ApiException(
@@ -139,7 +151,13 @@ class ApiService {
           )
           .timeout(_timeout);
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final jsonData = jsonDecode(response.body);
+        // Verifica se a resposta tem o novo formato com 'data'
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        }
+        // Fallback para formato antigo
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
         throw ApiException(
@@ -162,7 +180,13 @@ class ApiService {
           )
           .timeout(_timeout);
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final jsonData = jsonDecode(response.body);
+        // Verifica se a resposta tem o novo formato com 'data'
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        }
+        // Fallback para formato antigo
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
         throw ApiException(
@@ -187,6 +211,40 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Busca métricas gerais do sistema para o dashboard
+  Future<Map<String, dynamic>> buscarMetricasGerais() async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$_baseUrl/api/query/metricas_gerais'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(_timeout);
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        // Verifica se a resposta tem o novo formato com 'data'
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          final data = jsonData['data'] as List;
+          return data.isNotEmpty ? data.first : {};
+        }
+        // Fallback para formato antigo
+        if (jsonData is List && jsonData.isNotEmpty) {
+          return jsonData.first;
+        }
+        return {};
+      } else {
+        final data = jsonDecode(response.body);
+        throw ApiException(
+          data['error'] ?? 'Erro ao buscar métricas gerais',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Erro de conexão: ${e.toString()}');
     }
   }
 

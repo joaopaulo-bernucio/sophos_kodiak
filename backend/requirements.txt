@@ -1,5 +1,6 @@
 # Para baixar psycopg2 no arch linux, é necessário instalar o pacote postgresql-libs
 flask
+flask-cors
 psycopg2
 python-dotenv
 requests

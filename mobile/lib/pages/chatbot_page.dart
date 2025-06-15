@@ -753,7 +753,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
       builder: (context, child) {
         return Text(
           'Digitando${''.padRight((3 * _controller.value).ceil(), '.')}',
-          style: AppTextStyles.largeText.copyWith(
+          style: AppTextStyles.primaryText.copyWith(
             color: AppColors.textSecondary,
           ),
         );

@@ -1,9 +1,68 @@
+# ===============================
+# SOPHOS KODIAK - BACKEND REQUIREMENTS
+# ===============================
+#
+# Este arquivo contém todas as dependências necessárias para o projeto,
+# incluindo dependências de produção e de teste.
+#
+# Todas as versões especificam requisitos mínimos (>=) para garantir:
+# - Compatibilidade com recursos necessários
+# - Patches de segurança atualizados
+# - Estabilidade e reprodutibilidade
+#
+# Para instalar todas as dependências:
+# pip install -r requirements.txt
+#
+# Para ambiente de produção, considere usar pip freeze > requirements.lock
+# após instalar e testar as versões específicas.
+#
+# ===============================
+
+# ===============================
+# CORE WEB FRAMEWORK
+# ===============================
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# ===============================
+# DATABASE
+# ===============================
 # Para baixar psycopg2 no arch linux, é necessário instalar o pacote postgresql-libs
-flask
-flask-cors
-psycopg2
-python-dotenv
-requests
-spacy
+psycopg2>=2.9.0
+
+# ===============================
+# CONFIGURATION & ENVIRONMENT
+# ===============================
+python-dotenv>=1.0.0
+
+# ===============================
+# HTTP CLIENTS & REQUESTS
+# ===============================
+requests>=2.31.0
+httpx>=0.24.0
+
+# ===============================
+# NATURAL LANGUAGE PROCESSING
+# ===============================
+spacy>=3.6.0
 # Para rodar o modelo spaCy em português, execute após instalar:
 # python -m spacy download pt_core_news_sm
+
+# ===============================
+# TESTING FRAMEWORK
+# ===============================
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+pytest-xdist>=3.3.1       # Parallel test execution
+pytest-html>=3.2.0        # HTML reports
+pytest-benchmark>=4.0.0   # Performance testing
+
+# ===============================
+# TESTING UTILITIES & MOCKING
+# ===============================
+responses>=0.23.3          # HTTP mocking
+factory-boy>=3.3.0         # Test data factories
+freezegun>=1.2.2           # Time mocking
+faker>=19.0.0              # Generate fake data

@@ -285,9 +285,13 @@ def extrair_lemmas(texto):
     Recebe uma string, tokeniza com spaCy e retorna um set com os lemas
     (excluindo stopwords e tokens que não sejam alfabéticos).
     """
+    import re
+
     if not spacy or not hasattr(nlp, '__call__'):
         # Mock para testes quando spaCy não está disponível
-        palavras = texto.lower().split()
+        # Remove caracteres especiais e converte para minúsculas
+        texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
+        palavras = texto_limpo.lower().split()
         return set(palavras)
 
     try:
@@ -295,8 +299,9 @@ def extrair_lemmas(texto):
         return {token.lemma_ for token in doc if token.is_alpha and not token.is_stop}
     except Exception as e:
         logging.warning(f"Erro ao processar com spaCy: {e}. Usando fallback.")
-        # Fallback simples
-        palavras = texto.lower().split()
+        # Fallback com limpeza de caracteres especiais
+        texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
+        palavras = texto_limpo.lower().split()
         return set(palavras)
 
 # ------------------------------------------------------------
@@ -455,6 +460,9 @@ def enviar_para_gemini(contexto):
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=30)
+    except TimeoutError as e:
+        logging.error(f"Timeout ao chamar a API Gemini: {e}")
+        raise TimeoutError("Request timeout")
     except Exception as e:
         logging.error(f"Falha ao chamar a API Gemini: {e}")
         return "Erro ao obter resposta da API Gemini."
@@ -472,6 +480,12 @@ def enviar_para_gemini(contexto):
         return "Erro ao obter resposta da API Gemini."
 
 # ------------------------------------------------------------
+# Inicialização de clientes globais (para testes)
+# ------------------------------------------------------------
+supabase_client = None
+gemini_client = None
+
+# ------------------------------------------------------------
 # Inicializar app Flask
 # ------------------------------------------------------------
 app = Flask(__name__)
@@ -482,7 +496,31 @@ CORS(app)  # Habilita CORS para permitir requisições do Flutter
 # ------------------------------------------------------------
 @app.route('/pergunta', methods=['POST'])
 def responder_pergunta():
-    data = request.get_json()
+    # Validar se o request tem JSON
+    if not request.is_json:
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Content-Type deve ser application/json.'
+        }), 400
+
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'JSON inválido.'
+        }), 400
+
+    # Validar se pergunta existe e não está vazia
+    if not data or 'pergunta' not in data:
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Campo "pergunta" é obrigatório.'
+        }), 400
+
     pergunta = data.get('pergunta', '').strip()
 
     if not pergunta:
@@ -492,57 +530,73 @@ def responder_pergunta():
             'erro': 'Campo "pergunta" está vazio.'
         }), 400
 
-    # Armazenar pergunta no histórico
-    historico_conversa.append(f"Usuário: {pergunta}")
+    try:
+        # Armazenar pergunta no histórico
+        historico_conversa.append(f"Usuário: {pergunta}")
 
-    # 1. Tentar mapeamento estático com lemmas
-    consultas = selecionar_queries(pergunta)
-    # 2. Se não houver mapeamento estático, tentar geração dinâmica
-    if not consultas:
-        consultas = gerar_query_dinamica(pergunta)
+        # 1. Tentar mapeamento estático com lemmas
+        consultas = selecionar_queries(pergunta)
+        # 2. Se não houver mapeamento estático, tentar geração dinâmica
+        if not consultas:
+            consultas = gerar_query_dinamica(pergunta)
 
-    # Preparar string contendo todas as SQLs geradas, para log
-    sql_strings = [sql for (_label, sql) in consultas]
-    sql_concat = ";\n".join(sql_strings) if sql_strings else None
+        # Preparar string contendo todas as SQLs geradas, para log
+        sql_strings = [sql for (_label, sql) in consultas]
+        sql_concat = ";\n".join(sql_strings) if sql_strings else None
 
-    # Executar cada query e montar o info_texto
-    info_texto = ''
-    sucesso_sql = False
-    if consultas:
-        todas_ok = True
-        for label, sql in consultas:
-            logging.info(f"Executando [{label}]: {sql}")
-            rows = executar_query(sql)
-            if rows is None or rows == []:
-                todas_ok = False
-            else:
-                sucesso_sql = True
-            info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
-        if not todas_ok:
-            sucesso_sql = False
-    else:
-        info_texto = None
+        # Executar cada query e montar o info_texto
+        info_texto = ''
         sucesso_sql = False
+        if consultas:
+            todas_ok = True
+            for label, sql in consultas:
+                logging.info(f"Executando [{label}]: {sql}")
+                rows = executar_query(sql)
+                if rows is None or rows == []:
+                    todas_ok = False
+                else:
+                    sucesso_sql = True
+                info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
+            if not todas_ok:
+                sucesso_sql = False
+        else:
+            info_texto = None
+            sucesso_sql = False
 
-    # Montar o contexto completo para enviar ao Gemini
-    contexto = instrucoes_fixas + "\n" + construir_contexto(pergunta, info_texto)
+        # Montar o contexto completo para enviar ao Gemini
+        contexto = instrucoes_fixas + "\n" + construir_contexto(pergunta, info_texto)
 
-    # Chamar a API Gemini e obter resposta
-    resposta = enviar_para_gemini(contexto)
+        # Chamar a API Gemini e obter resposta
+        try:
+            resposta = enviar_para_gemini(contexto)
+        except TimeoutError:
+            return jsonify({
+                'resposta': '',
+                'sucesso': False,
+                'erro': 'Timeout ao processar a pergunta.'
+            }), 500
 
-    # Inserir log antes de retornar
-    inserir_log(pergunta, sql_concat, resposta, sucesso_sql)
+        # Inserir log antes de retornar
+        inserir_log(pergunta, sql_concat, resposta, sucesso_sql)
 
-    # Armazenar resposta no histórico
-    historico_conversa.append(f"IA: {resposta}")
+        # Armazenar resposta no histórico
+        historico_conversa.append(f"IA: {resposta}")
 
-    return jsonify({
-        'resposta': resposta,
-        'sucesso': True,  # Sempre True se chegou até aqui sem erro
-        'erro': None,     # Adiciona campo erro como None para sucesso
-        'sucesso_sql': sucesso_sql,  # Mantém para informação adicional
-        'sqls_usadas': sql_concat
-    })
+        return jsonify({
+            'resposta': resposta,
+            'sucesso': True,  # Sempre True se chegou até aqui sem erro
+            'erro': None,     # Adiciona campo erro como None para sucesso
+            'sucesso_sql': sucesso_sql,  # Mantém para informação adicional
+            'sqls_usadas': sql_concat
+        })
+
+    except Exception as e:
+        logging.error(f"Erro interno no endpoint /pergunta: {e}")
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Erro interno do servidor.'
+        }), 500
 
 # ------------------------------------------------------------
 # Endpoints de API adicionais

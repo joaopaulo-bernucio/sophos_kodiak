@@ -26,6 +26,33 @@ except ImportError:
     spacy = None
 
 
+def pytest_configure():
+    """Configuração global para todos os testes."""
+    # Configurar variáveis de ambiente para testes
+    os.environ['FLASK_ENV'] = 'testing'
+    os.environ['DB_HOST'] = 'localhost'
+    os.environ['DB_PORT'] = '5432'
+    os.environ['DB_NAME'] = 'test_db'
+    os.environ['DB_USER'] = 'postgres'
+    os.environ['DB_PASSWORD'] = 'postgres'
+    os.environ['GEMINI_API_KEY'] = 'test_api_key'
+
+    # Configurar mocks globais para clientes que podem faltar
+    try:
+        import app.app as app_module
+        from tests.mocks.mock_supabase import MockSupabaseClient, MockGeminiClient
+
+        # Configurar clientes mock se não estiverem definidos
+        if not hasattr(app_module, 'supabase_client') or app_module.supabase_client is None:
+            app_module.supabase_client = MockSupabaseClient()
+
+        if not hasattr(app_module, 'gemini_client') or app_module.gemini_client is None:
+            app_module.gemini_client = MockGeminiClient()
+
+    except ImportError:
+        pass  # Ignorar se não conseguir importar
+
+
 @pytest.fixture(scope="session")
 def nlp_model():
     """

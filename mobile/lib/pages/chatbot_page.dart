@@ -85,20 +85,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   Future<String> _getResponseFromApi(String message) async {
-    try {
-      final response = await _apiService.enviarPergunta(message);
+    final response = await _apiService.enviarPergunta(message);
 
-      if (response.sucesso) {
-        return response.resposta;
-      } else {
-        return response.erro ?? 'Erro desconheido na resposta da API';
-      }
-    } on ApiException catch (e) {
-      debugPrint('Erro na API: ${e.message}');
-      return 'Erro: ${e.message}';
-    } catch (e) {
-      debugPrint('Erro de conexão: $e');
-      return 'Não foi possível conectar ao servidor. Verifique sua conexão.';
+    if (response.sucesso) {
+      return response.resposta;
+    } else {
+      throw ApiException.serverError(
+        response.erro ?? 'Erro desconhecido na resposta da API',
+        500,
+      );
     }
   }
 
@@ -137,15 +132,34 @@ class _ChatbotPageState extends State<ChatbotPage> {
         });
         _scrollToBottom();
       }
+    } on ApiException catch (apiError) {
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: '', // Texto vazio pois será renderizado como widget de erro
+              isUser: false,
+              timestamp: DateTime.now(),
+              isAnimating: false,
+              isError: true,
+              apiError: apiError,
+            ),
+          );
+          _isWaitingResponse = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _messages.add(
             ChatMessage(
-              text: 'Desculpe, ocorreu um erro. Tente novamente.',
+              text: '', // Texto vazio pois será renderizado como widget de erro
               isUser: false,
               timestamp: DateTime.now(),
               isAnimating: false,
+              isError: true,
+              apiError: ApiException.unknown(e.toString()),
             ),
           );
           _isWaitingResponse = false;
@@ -629,6 +643,14 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se for uma mensagem de erro, renderiza o widget de erro customizado
+    if (message.isError && message.apiError != null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: _buildErrorMessage(context, message.apiError!),
+      );
+    }
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -663,6 +685,80 @@ class _MessageBubble extends StatelessWidget {
                       : AppColors.textPrimary,
                 ),
               ),
+      ),
+    );
+  }
+
+  /// Cria uma mensagem de erro amigável baseada no tipo de erro da API
+  Widget _buildErrorMessage(BuildContext context, ApiException error) {
+    IconData icon;
+    Color iconColor;
+    String title;
+
+    switch (error.type) {
+      case ApiErrorType.connectionError:
+        icon = Icons.wifi_off;
+        iconColor = AppColors.warning;
+        title = 'Problema de Conexão';
+        break;
+      case ApiErrorType.timeout:
+        icon = Icons.access_time;
+        iconColor = AppColors.warning;
+        title = 'Timeout';
+        break;
+      case ApiErrorType.serverError:
+        icon = Icons.error_outline;
+        iconColor = AppColors.error;
+        title = 'Erro do Servidor';
+        break;
+      case ApiErrorType.invalidData:
+        icon = Icons.warning_amber;
+        iconColor = AppColors.warning;
+        title = 'Dados Inválidos';
+        break;
+      default:
+        icon = Icons.help_outline;
+        iconColor = AppColors.error;
+        title = 'Erro Inesperado';
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      decoration: BoxDecoration(
+        color: AppColors.elementsBackground,
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+        border: Border.all(color: iconColor.withValues(alpha: 0.3), width: 1),
+      ),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.85,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: AppTextStyles.primaryText.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error.userFriendlyMessage,
+            style: AppTextStyles.primaryText.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -767,11 +863,15 @@ class ChatMessage {
   final bool isUser;
   final DateTime timestamp;
   final bool isAnimating;
+  final bool isError;
+  final ApiException? apiError;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
     this.isAnimating = false,
+    this.isError = false,
+    this.apiError,
   });
 }

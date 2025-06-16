@@ -1,10 +1,74 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
+
+enum ApiErrorType {
+  connectionError,
+  serverError,
+  timeout,
+  invalidData,
+  unknown,
+}
 
 class ApiException implements Exception {
   final String message;
+  final String userFriendlyMessage;
+  final ApiErrorType type;
   final int? statusCode;
-  const ApiException(this.message, {this.statusCode});
+
+  const ApiException(
+    this.message, {
+    required this.userFriendlyMessage,
+    required this.type,
+    this.statusCode,
+  });
+
+  factory ApiException.connectionError() {
+    return const ApiException(
+      'Connection refused or network error',
+      userFriendlyMessage:
+          'Não foi possível conectar ao servidor.\n\nVerifique se:\n• Sua conexão com a internet está funcionando\n• O servidor da aplicação está em execução\n• Não há bloqueios de firewall\n\nTente novamente em alguns instantes.',
+      type: ApiErrorType.connectionError,
+    );
+  }
+
+  factory ApiException.timeout() {
+    return const ApiException(
+      'Request timeout',
+      userFriendlyMessage:
+          'O servidor está demorando para responder.\nTente novamente em alguns instantes.',
+      type: ApiErrorType.timeout,
+    );
+  }
+
+  factory ApiException.serverError(String? serverMessage, int statusCode) {
+    return ApiException(
+      serverMessage ?? 'Server error',
+      userFriendlyMessage:
+          'Ocorreu um problema no servidor.\nNossa equipe foi notificada.',
+      type: ApiErrorType.serverError,
+      statusCode: statusCode,
+    );
+  }
+
+  factory ApiException.invalidData(String message) {
+    return ApiException(
+      message,
+      userFriendlyMessage:
+          'Os dados recebidos estão em formato inválido.\nTente novamente.',
+      type: ApiErrorType.invalidData,
+    );
+  }
+
+  factory ApiException.unknown(String message) {
+    return ApiException(
+      message,
+      userFriendlyMessage:
+          'Algo inesperado aconteceu.\nTente novamente em alguns instantes.',
+      type: ApiErrorType.unknown,
+    );
+  }
+
   @override
   String toString() =>
       'ApiException: $message${statusCode != null ? ' (Status: $statusCode)' : ''}';
@@ -54,9 +118,42 @@ class ApiService {
   static const Duration _timeout = Duration(seconds: 30);
   final http.Client _client;
   ApiService({http.Client? client}) : _client = client ?? http.Client();
+
+  /// Método auxiliar para tratar erros de conexão
+  ApiException _handleConnectionError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+
+    // Verifica diferentes tipos de erro de conexão
+    if (error is http.ClientException ||
+        errorString.contains('connection refused') ||
+        errorString.contains('socketexception') ||
+        errorString.contains('network error') ||
+        errorString.contains('failed host lookup') ||
+        errorString.contains('no route to host') ||
+        errorString.contains('connection reset') ||
+        errorString.contains('connection timed out')) {
+      return ApiException.connectionError();
+    }
+
+    if (error is TimeoutException || errorString.contains('timeout')) {
+      return ApiException.timeout();
+    }
+
+    if (error is ApiException) {
+      return error;
+    }
+
+    // Se contém "connection" ou "network", trata como erro de conexão
+    if (errorString.contains('connection') || errorString.contains('network')) {
+      return ApiException.connectionError();
+    }
+
+    return ApiException.unknown(error.toString());
+  }
+
   Future<PerguntaResponse> enviarPergunta(String pergunta) async {
     if (pergunta.trim().isEmpty) {
-      throw const ApiException('Pergunta não pode estar vazia');
+      throw ApiException.invalidData('Pergunta não pode estar vazia');
     }
     try {
       final response = await _client
@@ -73,14 +170,13 @@ class ApiService {
       if (response.statusCode == 200) {
         return PerguntaResponse.fromJson(data);
       } else {
-        throw ApiException(
+        throw ApiException.serverError(
           data['erro'] ?? 'Erro desconhecido',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 
@@ -102,14 +198,13 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
-        throw ApiException(
+        throw ApiException.serverError(
           data['error'] ?? 'Erro ao buscar dados de vendas',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 
@@ -131,14 +226,13 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
-        throw ApiException(
+        throw ApiException.serverError(
           data['error'] ?? 'Erro ao buscar dados de funcionários',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 
@@ -160,14 +254,13 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
-        throw ApiException(
+        throw ApiException.serverError(
           data['error'] ?? 'Erro ao buscar dados de projetos',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 
@@ -189,14 +282,13 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonData);
       } else {
         final data = jsonDecode(response.body);
-        throw ApiException(
+        throw ApiException.serverError(
           data['error'] ?? 'Erro ao buscar dados de receita',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 
@@ -237,14 +329,13 @@ class ApiService {
         return {};
       } else {
         final data = jsonDecode(response.body);
-        throw ApiException(
+        throw ApiException.serverError(
           data['error'] ?? 'Erro ao buscar métricas gerais',
-          statusCode: response.statusCode,
+          response.statusCode,
         );
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Erro de conexão: ${e.toString()}');
+      throw _handleConnectionError(e);
     }
   }
 

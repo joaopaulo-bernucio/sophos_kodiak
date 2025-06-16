@@ -95,24 +95,6 @@ class PerguntaResponse {
   }
 }
 
-class ChartData {
-  final List<Map<String, dynamic>> dados;
-  final String tipo;
-  final String titulo;
-  const ChartData({
-    required this.dados,
-    required this.tipo,
-    required this.titulo,
-  });
-  factory ChartData.fromJson(Map<String, dynamic> json) {
-    return ChartData(
-      dados: List<Map<String, dynamic>>.from(json['dados'] ?? []),
-      tipo: json['tipo'] ?? '',
-      titulo: json['titulo'] ?? '',
-    );
-  }
-}
-
 class ApiService {
   static const String _baseUrl = 'http://10.0.2.2:5000';
   static const Duration _timeout = Duration(seconds: 30);

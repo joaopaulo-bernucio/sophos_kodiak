@@ -532,50 +532,48 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         itemCount: _suggestions.length,
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
-          const borderRadius = BorderRadius.all(
-            Radius.circular(AppDimensions.borderRadius),
-          );
 
           return Container(
             margin: const EdgeInsets.only(right: AppDimensions.paddingSmall),
             child: Material(
               elevation: 2,
-              borderRadius: borderRadius,
+              borderRadius: const BorderRadius.all(
+                Radius.circular(AppDimensions.borderRadius),
+              ),
               color: AppColors.elementsBackground,
               child: InkWell(
                 onTap: () => _sendMessage(
                   '${suggestion['title']} ${suggestion['subtitle']}',
                 ),
-                borderRadius: borderRadius,
+                borderRadius: const BorderRadius.all(
+                  Radius.circular(AppDimensions.borderRadius),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 8, right: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.paddingSmall,
-                      vertical: 8,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          suggestion['title']!,
-                          style: AppTextStyles.largeText.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingMedium,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        suggestion['title']!,
+                        style: AppTextStyles.largeText.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          suggestion['subtitle']!,
-                          style: AppTextStyles.largeText.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 10,
-                          ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        suggestion['subtitle']!,
+                        style: AppTextStyles.largeText.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

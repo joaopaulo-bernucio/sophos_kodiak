@@ -166,7 +166,21 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
 
-    - name: Run backend tests
+    - name: Run fixed endpoints tests (robust test suite)
+      run: pytest tests/test_fixed_endpoints.py -v --tb=short
+      working-directory: ./backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        FLASK_ENV: testing
+        PYTHONPATH: ${{ github.workspace }}/backend
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: test_gemini_api_key_for_github_actions_testing_only
+
+    - name: Run backend tests (legacy suite)
       run: pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
       working-directory: ./backend
       env:

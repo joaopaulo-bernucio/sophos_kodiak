@@ -287,12 +287,25 @@ def extrair_lemmas(texto):
     """
     import re
 
+    # Tratar valores None ou vazios
+    if texto is None:
+        return set()
+
+    if not isinstance(texto, str):
+        texto = str(texto)
+
+    if not texto.strip():
+        return set()
+
     if not spacy or not hasattr(nlp, '__call__'):
         # Mock para testes quando spaCy não está disponível
         # Remove caracteres especiais e converte para minúsculas
-        texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
-        palavras = texto_limpo.lower().split()
-        return set(palavras)
+        try:
+            texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
+            palavras = texto_limpo.lower().split()
+            return set(palavras)
+        except Exception:
+            return set()
 
     try:
         doc = nlp(texto.lower())
@@ -300,9 +313,12 @@ def extrair_lemmas(texto):
     except Exception as e:
         logging.warning(f"Erro ao processar com spaCy: {e}. Usando fallback.")
         # Fallback com limpeza de caracteres especiais
-        texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
-        palavras = texto_limpo.lower().split()
-        return set(palavras)
+        try:
+            texto_limpo = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', texto)
+            palavras = texto_limpo.lower().split()
+            return set(palavras)
+        except Exception:
+            return set()
 
 # ------------------------------------------------------------
 # Função: seleciona mapeamentos estáticos baseados em lemas
@@ -521,7 +537,15 @@ def responder_pergunta():
             'erro': 'Campo "pergunta" é obrigatório.'
         }), 400
 
-    pergunta = data.get('pergunta', '').strip()
+    pergunta = data.get('pergunta', '')
+
+    # Tratar casos onde pergunta pode ser None
+    if pergunta is None:
+        pergunta = ''
+    elif not isinstance(pergunta, str):
+        pergunta = str(pergunta)
+
+    pergunta = pergunta.strip()
 
     if not pergunta:
         return jsonify({

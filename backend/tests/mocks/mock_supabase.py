@@ -164,37 +164,21 @@ class MockResponse:
 
 
 class MockGeminiClient:
-    """Mock do cliente Google Gemini."""
+    """Mock do cliente Gemini para testes."""
 
     def __init__(self):
         self.responses = {}
         self.call_history = []
-        self.default_response = {
-            'candidates': [{
-                'content': {
-                    'parts': [{
-                        'text': 'SELECT COUNT(*) FROM usuarios'
-                    }]
-                }
-            }]
-        }
+        self.default_response = "Resposta padrão do mock Gemini."
 
-    def set_response(self, prompt_key: str, response: str):
-        """Define uma resposta específica para uma chave de prompt."""
-        self.responses[prompt_key] = {
-            'candidates': [{
-                'content': {
-                    'parts': [{
-                        'text': response
-                    }]
-                }
-            }]
-        }
+    def set_response(self, key: str, response: str):
+        """Define uma resposta específica para uma chave."""
+        self.responses[key] = response
 
-    def generate_content(self, prompt: str) -> Dict:
-        """Mock do método generate_content."""
+    def generate_response(self, prompt: str) -> str:
+        """Gera resposta baseada no prompt."""
         self.call_history.append({
-            'method': 'generate_content',
+            'method': 'generate_response',
             'prompt': prompt
         })
 
@@ -214,74 +198,106 @@ class MockGeminiClient:
         self.call_history.clear()
 
 
-class MockDatabaseConnection:
-    """Mock de conexão com banco de dados."""
+class MockEnviarParaGemini:
+    """Mock específico para a função enviar_para_gemini."""
 
     def __init__(self):
-        self.queries_executed = []
-        self.query_results = {}
-        self.is_connected = True
+        self.responses = {
+            'funcionários': 'Temos 10 funcionários ativos no sistema.',
+            'vendas': 'O total de vendas é R$ 50.000,00.',
+            'projetos': 'Há 5 projetos em andamento.',
+            'default': 'Resposta padrão do assistente Sophos.'
+        }
+        self.call_count = 0
+        self.last_call = None
 
-    def execute(self, query: str, params: Optional[tuple] = None):
-        """Executa uma query mock."""
-        self.queries_executed.append({
-            'query': query,
-            'params': params
-        })
+    def __call__(self, data):
+        """Simula a chamada da função."""
+        self.call_count += 1
+        self.last_call = data
 
-        # Retorna resultado baseado na query
-        query_lower = query.lower().strip()
+        # Simular diferentes tipos de resposta baseado nos dados
+        if isinstance(data, dict) and 'pergunta' in data:
+            pergunta = data['pergunta'].lower()
 
-        if 'select count' in query_lower:
-            return MockCursor([{'count': 100}])
-        elif 'select' in query_lower and 'vendas' in query_lower:
-            return MockCursor([
-                {'mes': '2024-01', 'total': 15000},
-                {'mes': '2024-02', 'total': 18000},
-                {'mes': '2024-03', 'total': 22000}
-            ])
-        elif 'select' in query_lower:
-            return MockCursor([
-                {'id': 1, 'nome': 'Produto A', 'preco': 100.0},
-                {'id': 2, 'nome': 'Produto B', 'preco': 200.0}
-            ])
+            if 'funcionário' in pergunta or 'usuario' in pergunta:
+                return self.responses['funcionários']
+            elif 'venda' in pergunta:
+                return self.responses['vendas']
+            elif 'projeto' in pergunta:
+                return self.responses['projetos']
 
-        return MockCursor([])
+        return self.responses['default']
 
-    def commit(self):
-        """Mock do método commit."""
-        pass
+    def set_response(self, key, response):
+        """Define uma resposta específica."""
+        self.responses[key] = response
 
-    def rollback(self):
-        """Mock do método rollback."""
-        pass
-
-    def close(self):
-        """Mock do método close."""
-        self.is_connected = False
+    def reset(self):
+        """Reseta o mock."""
+        self.call_count = 0
+        self.last_call = None
 
 
-class MockCursor:
-    """Mock de cursor de banco de dados."""
+class MockSelecionarQueries:
+    """Mock para a função selecionar_queries."""
 
-    def __init__(self, data: List[Dict]):
-        self.data = data
-        self.index = 0
+    def __init__(self):
+        self.queries = {
+            'funcionários': [('funcionarios-total', 'SELECT COUNT(*) FROM funcionarios')],
+            'vendas': [('vendas-total', 'SELECT SUM(valor) FROM vendas')],
+            'projetos': [('projetos-andamento', 'SELECT COUNT(*) FROM projetos WHERE status = "Em Andamento"')],
+            'default': [('query-generica', 'SELECT 1')]
+        }
+        self.call_count = 0
 
-    def fetchone(self) -> Optional[Dict]:
-        """Retorna próximo registro."""
-        if self.index < len(self.data):
-            result = self.data[self.index]
-            self.index += 1
-            return result
-        return None
+    def __call__(self, text):
+        """Simula a seleção de queries."""
+        self.call_count += 1
 
-    def fetchall(self) -> List[Dict]:
-        """Retorna todos os registros."""
-        return self.data
+        if not text:
+            return []
 
-    def fetchmany(self, size: int) -> List[Dict]:
-        """Retorna vários registros."""
-        result = self.data[self.index:self.index + size]
-        self.index += size
-        return result
+        text_lower = text.lower()
+
+        if 'funcionário' in text_lower or 'usuario' in text_lower:
+            return self.queries['funcionários']
+        elif 'venda' in text_lower:
+            return self.queries['vendas']
+        elif 'projeto' in text_lower:
+            return self.queries['projetos']
+
+        return self.queries['default']
+
+
+class MockProcessarTexto:
+    """Mock para funções de processamento de texto."""
+
+    @staticmethod
+    def extrair_lemmas(text):
+        """Mock da extração de lemmas."""
+        if not text:
+            return []
+
+        # Simular extração básica de lemmas
+        words = text.lower().split()
+        lemmas = []
+
+        for word in words:
+            # Remover pontuação básica
+            clean_word = word.strip('.,!?;:')
+            if clean_word:
+                lemmas.append(clean_word)
+
+        return lemmas
+
+    @staticmethod
+    def processar_texto(text):
+        """Mock do processamento de texto."""
+        if text is None:
+            return ""
+
+        if hasattr(text, 'lower'):
+            return text.lower().strip()
+
+        return str(text).lower().strip()

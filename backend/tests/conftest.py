@@ -17,6 +17,15 @@ from pathlib import Path
 # Configurar logging para testes
 logging.basicConfig(level=logging.INFO)
 
+# Configurar ambiente de teste antes de importar módulos
+os.environ['FLASK_ENV'] = 'testing'
+os.environ['DB_HOST'] = os.getenv('DB_HOST', 'localhost')
+os.environ['DB_PORT'] = os.getenv('DB_PORT', '5432')
+os.environ['DB_NAME'] = os.getenv('DB_NAME', 'test_db')
+os.environ['DB_USER'] = os.getenv('DB_USER', 'postgres')
+os.environ['DB_PASSWORD'] = os.getenv('DB_PASSWORD', 'postgres')
+os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY', 'test_gemini_api_key')
+
 try:
     import psycopg2
 except ImportError:
@@ -37,9 +46,10 @@ except ImportError:
 # Importar ou criar um mock da aplicação Flask
 flask_app = None
 try:
-    from app.app import app as imported_flask_app
+    from app.app import app as imported_flask_app, create_app
     flask_app = imported_flask_app
-except ImportError:
+except ImportError as e:
+    logging.warning(f"Erro ao importar app: {e}")
     # Criar uma aplicação Flask básica para testes se não conseguir importar
     flask_app = Flask(__name__)
     flask_app.config['TESTING'] = True
@@ -612,70 +622,67 @@ def mock_error_handlers():
 @pytest.fixture
 def isolated_app():
     """
-    Fixture que cria uma aplicação Flask isolada para testes.
-    Evita problemas com rotas sendo registradas após a primeira requisição.
+    Fixture que cria uma aplicação Flask completamente isolada para testes.
+
+    Esta fixture é útil para testes que precisam de um ambiente limpo
+    sem interferência de configurações globais.
+
+    Returns:
+        Flask: Nova instância da aplicação Flask configurada para testes
     """
-    from flask import Flask
-    test_app = Flask(__name__)
-    test_app.config['TESTING'] = True
-    test_app.config['WTF_CSRF_ENABLED'] = False
+    # Configurar variáveis de ambiente específicas para testes isolados
+    test_env = {
+        'DB_HOST': 'localhost',
+        'DB_PORT': '5432',
+        'DB_NAME': 'test_db',
+        'DB_USER': 'postgres',
+        'DB_PASSWORD': 'postgres',
+        'GEMINI_API_KEY': 'test_api_key_isolated',
+        'FLASK_ENV': 'testing'
+    }
 
-    # Registrar apenas as rotas necessárias para os testes
-    @test_app.route('/pergunta', methods=['POST'])
-    def pergunta():
+    with patch.dict(os.environ, test_env):
         try:
-            data = request.get_json(force=True)
-            if not data or 'pergunta' not in data:
-                return jsonify({'erro': 'Campo pergunta é obrigatório', 'sucesso': False}), 400
+            # Tentar importar e criar nova instância da aplicação
+            from app.app import create_app
+            isolated_app_instance = create_app({'TESTING': True})
+        except ImportError:
+            # Fallback: criar aplicação básica
+            isolated_app_instance = Flask(__name__)
+            isolated_app_instance.config['TESTING'] = True
 
-            if not data['pergunta'].strip():
-                return jsonify({'erro': 'Pergunta não pode estar vazio', 'sucesso': False}), 400
+            # Adicionar rotas básicas necessárias
+            @isolated_app_instance.route('/pergunta', methods=['POST'])
+            def pergunta():
+                data = request.get_json()
+                test_scenario = request.headers.get('X-Test-Scenario')
 
-            # Simular verificação de banco para testes específicos
-            if 'test_error_banco' in request.headers.get('X-Test-Scenario', ''):
-                return jsonify({'erro': 'Erro interno do servidor', 'sucesso': False}), 500
+                if test_scenario == 'test_error_banco':
+                    return jsonify({
+                        'resposta': '',
+                        'sucesso': False,
+                        'erro': 'Erro forçado de banco para teste'
+                    }), 500
 
-            # Simular processamento bem-sucedido
-            return jsonify({
-                'resposta': 'Resposta simulada para teste',
-                'sucesso': True
-            }), 200
-        except Exception as e:
-            return jsonify({'erro': f'Erro interno: {str(e)}', 'sucesso': False}), 500
+                return jsonify({
+                    'resposta': 'Resposta de teste',
+                    'sucesso': True,
+                    'erro': None
+                })
 
-    @test_app.route('/health', methods=['GET'])
-    def health():
-        return jsonify({'status': 'healthy'}), 200
+            @isolated_app_instance.route('/health', methods=['GET'])
+            def health():
+                return jsonify({'status': 'ok'}), 200
 
-    # Rotas de charts para os testes
-    @test_app.route('/api/query/total_vendas_por_mes', methods=['GET'])
-    def total_vendas_por_mes():
-        return jsonify([
-            {'mes': '2024-01', 'total_vendas': 15000.00},
-            {'mes': '2024-02', 'total_vendas': 18000.00}
-        ])
+            @isolated_app_instance.route('/api/query/total_vendas_por_mes', methods=['GET'])
+            def vendas():
+                return jsonify({'data': []}), 200
 
-    @test_app.route('/api/query/funcionarios_por_departamento', methods=['GET'])
-    def funcionarios_por_departamento():
-        return jsonify([
-            {'departamento': 'TI', 'quantidade': 5},
-            {'departamento': 'Marketing', 'quantidade': 3}
-        ])
+            @isolated_app_instance.route('/api/query/funcionarios_por_departamento', methods=['GET'])
+            def funcionarios():
+                return jsonify({'data': []}), 200
 
-    # Configurar handlers de erro
-    @test_app.errorhandler(404)
-    def not_found(error):
-        return jsonify({'erro': 'Endpoint não encontrado', 'sucesso': False}), 404
-
-    @test_app.errorhandler(405)
-    def method_not_allowed(error):
-        return jsonify({'erro': 'Método não permitido', 'sucesso': False}), 405
-
-    @test_app.errorhandler(500)
-    def internal_error(error):
-        return jsonify({'erro': 'Erro interno do servidor', 'sucesso': False}), 500
-
-    return test_app
+        yield isolated_app_instance
 
 
 # ============================================================

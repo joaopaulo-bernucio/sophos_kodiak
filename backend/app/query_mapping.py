@@ -249,7 +249,7 @@ query_mappings = [
      ],
      "vendas-ultimo-mes",
      "SELECT COUNT(*) AS total_vendas, SUM(valor) AS total_valor "
-     "FROM vendas WHERE data_venda >= NOW() - INTERVAL '1 month';"),
+     "FROM vendas WHERE data_venda >= CURRENT_DATE - INTERVAL '30 days';"),
 
     # --- Estatísticas de contratos ----------------------------------------------------------------
     # "Contratos por cliente", "Quantidade de contratos por cliente" etc.
@@ -292,7 +292,7 @@ query_mappings = [
      ],
      "contratos-ultimo-ano",
      "SELECT COUNT(*) AS total_contratos, SUM(valor_total) AS total_valor "
-     "FROM contratos_marketing WHERE data_inicio >= DATE_TRUNC('year', NOW());"),
+     "FROM contratos_marketing WHERE EXTRACT(YEAR FROM data_inicio) = EXTRACT(YEAR FROM CURRENT_DATE);"),
 
     # "Valor de contratos por mês", "Contratos mensais", "Receita por mês" etc.
     ([
@@ -318,7 +318,7 @@ query_mappings = [
      ],
      "contratos-expirando",
      "SELECT * FROM contratos_marketing "
-     "WHERE data_termino BETWEEN NOW() AND NOW() + INTERVAL '1 month';"),
+     "WHERE data_termino BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days';"),
 
 
     # --- Estatísticas de departamentos ----------------------------------------------------------------
@@ -460,7 +460,7 @@ query_mappings = [
      "projecao-contratos",
      """
      WITH anos_historico AS (
-         SELECT DATE_PART('year', data_inicio) AS ano, SUM(valor_total) AS receita
+         SELECT EXTRACT(YEAR FROM data_inicio) AS ano, SUM(valor_total) AS receita
          FROM contratos_marketing
          GROUP BY ano
      ), coef AS (
@@ -470,8 +470,8 @@ query_mappings = [
          FROM anos_historico
      )
      SELECT
-         (DATE_PART('year', NOW()) + 1) AS ano_futuro,
-         (intercept + slope * (DATE_PART('year', NOW()) + 1)) AS projecao_receita
+         (EXTRACT(YEAR FROM CURRENT_DATE) + 1) AS ano_futuro,
+         (intercept + slope * (EXTRACT(YEAR FROM CURRENT_DATE) + 1)) AS projecao_receita
      FROM coef;
      """)
 ]

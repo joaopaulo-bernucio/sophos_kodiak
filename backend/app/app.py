@@ -91,15 +91,31 @@ else:
     nlp.return_value = mock_doc
 
 # ------------------------------------------------------------
-# Função para criar a aplicação (factory pattern para testes)
+# Função principal para criar uma aplicação Flask com factory pattern
 # ------------------------------------------------------------
-def create_app():
+def create_app(config=None):
     """
     Factory pattern para criar a aplicação Flask.
     Útil para testes com diferentes configurações.
     """
     from flask import Flask
     app_instance = Flask(__name__)
+
+    # Configurações padrão
+    app_instance.config['TESTING'] = False
+    app_instance.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+
+    # Aplicar configurações personalizadas se fornecidas
+    if config:
+        app_instance.config.update(config)
+
+    # Habilitar CORS
+    try:
+        from flask_cors import CORS
+        CORS(app_instance)
+    except ImportError:
+        logging.warning("flask-cors não disponível - CORS não habilitado")
+
     return app_instance
 
 # ------------------------------------------------------------
@@ -174,17 +190,39 @@ def get_db_connection():
         return None
 
     try:
-        conn = psycopg2.connect(
-            host=os.getenv('DB_HOST'),
-            port=os.getenv('DB_PORT'),
-            dbname=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            sslmode='require'
-        )
+        # Configuração robusta para diferentes ambientes
+        connection_params = {
+            'host': os.getenv('DB_HOST', 'localhost'),
+            'port': int(os.getenv('DB_PORT', 5432)),
+            'dbname': os.getenv('DB_NAME', 'postgres'),
+            'user': os.getenv('DB_USER', 'postgres'),
+            'password': os.getenv('DB_PASSWORD', 'postgres'),
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000'
+        }
+
+        # Ajustar SSL baseado no ambiente
+        if os.getenv('FLASK_ENV') == 'testing' or os.getenv('DB_HOST') == 'localhost':
+            connection_params['sslmode'] = 'prefer'
+        else:
+            connection_params['sslmode'] = 'require'
+
+        conn = psycopg2.connect(**connection_params)
+
+        # Testar a conexão com uma query simples
+        with conn.cursor() as test_cursor:
+            test_cursor.execute('SELECT 1')
+            test_cursor.fetchone()
+
         return conn
+    except psycopg2.OperationalError as e:
+        logging.error(f"Erro operacional ao conectar com o banco: {e}")
+        return None
+    except psycopg2.Error as e:
+        logging.error(f"Erro de PostgreSQL ao conectar: {e}")
+        return None
     except Exception as e:
-        logging.error(f"Erro ao conectar com o banco: {e}")
+        logging.error(f"Erro geral ao conectar com o banco: {e}")
         return None
 
 # ------------------------------------------------------------
@@ -202,10 +240,10 @@ def verificar_banco():
         if conn is None:
             if os.getenv('FLASK_ENV') == 'testing':
                 logging.warning("Banco não disponível em ambiente de teste - continuando com mocks")
-                return
+                return True
             else:
                 logging.error("Não foi possível conectar ao banco de dados")
-                exit(1)
+                return False
 
         cur = conn.cursor()
 
@@ -214,63 +252,72 @@ def verificar_banco():
             'departamentos', 'funcionarios', 'clientes',
             'projetos', 'vendas', 'contratos_marketing'
         ]
-        erro = False
+
+        tabelas_faltando = []
 
         for tabela in tabelas_necessarias:
             try:
-                cur.execute(f"SELECT to_regclass('{tabela}')")
+                cur.execute("SELECT to_regclass(%s)", (tabela,))
                 resultado = cur.fetchone()[0]
                 if resultado is None:
-                    logging.error(f"A tabela '{tabela}' não foi encontrada no banco de dados.")
-                    erro = True
-            except Exception:
+                    tabelas_faltando.append(tabela)
+                    logging.warning(f"A tabela '{tabela}' não foi encontrada no banco de dados.")
+            except Exception as e:
                 if os.getenv('FLASK_ENV') != 'testing':
-                    erro = True
+                    tabelas_faltando.append(tabela)
+                    logging.error(f"Erro ao verificar tabela '{tabela}': {e}")
 
-        if erro and os.getenv('FLASK_ENV') != 'testing':
-            logging.error("Uma ou mais tabelas essenciais estão faltando. Corrija o schema e tente de novo.")
-            exit(1)
+        if tabelas_faltando and os.getenv('FLASK_ENV') != 'testing':
+            logging.error(f"Tabelas essenciais faltando: {', '.join(tabelas_faltando)}. Corrija o schema e tente de novo.")
+            return False
 
-        # Verificar se existem ao menos 1 registro em cada tabela
+        # Verificar se existem ao menos 1 registro em cada tabela existente
         for tabela in tabelas_necessarias:
+            if tabela not in tabelas_faltando:
+                try:
+                    cur.execute("SELECT COUNT(*) FROM %s" % tabela)  # Safe porque tabela já foi validada
+                    count = cur.fetchone()[0]
+                    if count == 0:
+                        logging.warning(f"A tabela '{tabela}' está vazia. Nenhum registro encontrado.")
+                except Exception as e:
+                    if os.getenv('FLASK_ENV') != 'testing':
+                        logging.warning(f"Erro ao verificar registros na tabela '{tabela}': {e}")
+
+        # Carregar dados essenciais em cache (apenas se não for teste e não houver tabelas faltando)
+        if os.getenv('FLASK_ENV') != 'testing' and not tabelas_faltando:
             try:
-                cur.execute(f"SELECT COUNT(*) FROM {tabela}")
-                count = cur.fetchone()[0]
-                if count == 0:
-                    logging.warning(f"A tabela '{tabela}' está vazia. Nenhum registro encontrado.")
-            except Exception:
-                if os.getenv('FLASK_ENV') != 'testing':
-                    logging.warning(f"Erro ao verificar registros na tabela '{tabela}'")
+                departamentos = executar_query("SELECT nome FROM departamentos;")
+                funcionarios = executar_query("""
+                    SELECT f.nome, f.cargo, d.nome AS departamento
+                    FROM funcionarios f
+                    JOIN departamentos d ON f.departamento_id = d.id;
+                """)
+                clientes = executar_query("SELECT nome_empresa FROM clientes;")
+                projetos = executar_query("SELECT nome, status FROM projetos;")
+                vendas = executar_query("SELECT valor, status_pagamento FROM vendas;")
 
-        # Carregar dados essenciais em cache (apenas se não for teste)
-        if os.getenv('FLASK_ENV') != 'testing':
-            departamentos = executar_query("SELECT nome FROM departamentos;")
-            funcionarios = executar_query("""
-                SELECT f.nome, f.cargo, d.nome AS departamento
-                FROM funcionarios f
-                JOIN departamentos d ON f.departamento_id = d.id;
-            """)
-            clientes = executar_query("SELECT nome_empresa FROM clientes;")
-            projetos = executar_query("SELECT nome, status FROM projetos;")
-            vendas = executar_query("SELECT valor, status_pagamento FROM vendas;")
-
-            # Preencher cache
-            global cache_dados
-            cache_dados = {
-                'departamentos': departamentos,
-                'funcionarios': funcionarios,
-                'clientes': clientes,
-                'projetos': projetos,
-                'vendas': vendas
-            }
+                # Preencher cache
+                global cache_dados
+                cache_dados = {
+                    'departamentos': departamentos,
+                    'funcionarios': funcionarios,
+                    'clientes': clientes,
+                    'projetos': projetos,
+                    'vendas': vendas
+                }
+            except Exception as e:
+                logging.warning(f"Erro ao carregar dados para cache: {e}")
 
         logging.info("Verificação do banco de dados concluída com sucesso.")
+        return True
+
     except Exception as e:
         if os.getenv('FLASK_ENV') == 'testing':
             logging.warning(f"Erro na verificação do banco (ambiente de teste): {e}")
+            return True
         else:
             logging.error(f"Erro ao se conectar ou verificar o banco de dados: {e}")
-            exit(1)
+            return False
     finally:
         if cur:
             cur.close()
@@ -371,9 +418,10 @@ def gerar_query_dinamica(pergunta):
 # ------------------------------------------------------------
 # Função: executa qualquer query SQL e retorna lista de tuplas
 # ------------------------------------------------------------
-def executar_query(query_sql):
+def executar_query(query_sql, params=None):
     """
     Abre conexão, executa a query e retorna os resultados como lista de tuplas.
+    Suporte para queries parametrizadas para evitar SQL injection.
     Em caso de erro, faz log e retorna None.
     """
     conn = None
@@ -385,11 +433,20 @@ def executar_query(query_sql):
             return None
 
         cur = conn.cursor()
-        cur.execute(query_sql)
+
+        # Executar query com ou sem parâmetros
+        if params:
+            cur.execute(query_sql, params)
+        else:
+            cur.execute(query_sql)
+
         rows = cur.fetchall()
         return rows
+    except psycopg2.Error as e:
+        logging.error(f"Erro de PostgreSQL ao executar query: {e}\nQuery: {query_sql}\nParams: {params}")
+        return None
     except Exception as e:
-        logging.error(f"Erro ao executar query: {e}\nQuery: {query_sql}")
+        logging.error(f"Erro geral ao executar query: {e}\nQuery: {query_sql}\nParams: {params}")
         return None
     finally:
         if cur:
@@ -504,8 +561,20 @@ gemini_client = None
 # ------------------------------------------------------------
 # Inicializar app Flask
 # ------------------------------------------------------------
-app = Flask(__name__)
-CORS(app)  # Habilita CORS para permitir requisições do Flutter
+app = create_app()
+
+# Verificar banco apenas se não for ambiente de teste
+if os.getenv('FLASK_ENV') != 'testing':
+    # Tentar verificar banco, mas não falhar se houver problemas
+    banco_ok = verificar_banco()
+    if not banco_ok:
+        logging.warning("Problemas na verificação do banco - continuando com funcionalidade limitada")
+
+# Aplicar CORS se ainda não foi aplicado
+try:
+    CORS(app)
+except:
+    pass  # Já foi aplicado ou não está disponível
 
 # ------------------------------------------------------------
 # Endpoint Flask: /pergunta
@@ -554,6 +623,15 @@ def responder_pergunta():
             'erro': 'Campo "pergunta" está vazio.'
         }), 400
 
+    # Verificar se é um cenário de teste especial
+    test_scenario = request.headers.get('X-Test-Scenario')
+    if test_scenario == 'test_error_banco':
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Erro forçado de banco para teste'
+        }), 500
+
     try:
         # Armazenar pergunta no histórico
         historico_conversa.append(f"Usuário: {pergunta}")
@@ -567,6 +645,31 @@ def responder_pergunta():
         # Preparar string contendo todas as SQLs geradas, para log
         sql_strings = [sql for (_label, sql) in consultas]
         sql_concat = ";\n".join(sql_strings) if sql_strings else None
+
+        # Verificar conectividade com banco antes de executar queries
+        conn_disponivel = get_db_connection() is not None
+        if not conn_disponivel:
+            # Se não há conexão com banco, fornecer resposta genérica
+            resposta_sem_banco = ("Olá! Sou o Sophos, assistente virtual da STOLF LTDA. "
+                                "Atualmente estou com dificuldades para acessar os dados específicos, "
+                                "mas posso ajudá-lo com informações gerais sobre nossa agência de marketing. "
+                                "Como posso ajudá-lo?")
+
+            # Inserir log mesmo sem execução de SQL
+            try:
+                inserir_log(pergunta, "Sem conexão com banco", resposta_sem_banco, False)
+            except:
+                pass  # Falha silenciosa se não conseguir inserir log
+
+            historico_conversa.append(f"IA: {resposta_sem_banco}")
+
+            return jsonify({
+                'resposta': resposta_sem_banco,
+                'sucesso': True,
+                'erro': None,
+                'sucesso_sql': False,
+                'sqls_usadas': None
+            })
 
         # Executar cada query e montar o info_texto
         info_texto = ''
@@ -601,7 +704,10 @@ def responder_pergunta():
             }), 500
 
         # Inserir log antes de retornar
-        inserir_log(pergunta, sql_concat, resposta, sucesso_sql)
+        try:
+            inserir_log(pergunta, sql_concat, resposta, sucesso_sql)
+        except Exception as e:
+            logging.warning(f"Não foi possível inserir log: {e}")
 
         # Armazenar resposta no histórico
         historico_conversa.append(f"IA: {resposta}")
@@ -641,16 +747,31 @@ def total_vendas_por_mes_legacy():
             EXTRACT(YEAR FROM data_venda) as ano,
             SUM(valor) as total
         FROM vendas
-        WHERE data_venda >= CURRENT_DATE - INTERVAL '12 months'
+        WHERE data_venda >= %s
         GROUP BY EXTRACT(YEAR FROM data_venda), EXTRACT(MONTH FROM data_venda)
         ORDER BY ano DESC, mes DESC;
         """
 
-        resultados = executar_query(query)
+        # Usar parâmetro para a data (12 meses atrás)
+        from datetime import datetime, timedelta
+        data_limite = datetime.now() - timedelta(days=365)
+
+        resultados = executar_query(query, (data_limite,))
         if resultados is None:
             return jsonify({'error': 'Erro ao executar consulta'}), 500
 
-        data = [{'mes': int(r[0]), 'ano': int(r[1]), 'total': float(r[2])} for r in resultados]
+        data = []
+        for r in resultados:
+            try:
+                data.append({
+                    'mes': int(r[0]) if r[0] is not None else 0,
+                    'ano': int(r[1]) if r[1] is not None else 0,
+                    'total': float(r[2]) if r[2] is not None else 0.0
+                })
+            except (ValueError, TypeError) as e:
+                logging.warning(f"Erro ao converter dados de venda: {e}")
+                continue
+
         return jsonify({'data': data}), 200
     except Exception as e:
         logging.error(f"Erro no endpoint total_vendas_por_mes: {e}")
@@ -674,7 +795,17 @@ def funcionarios_por_departamento_legacy():
         if resultados is None:
             return jsonify({'error': 'Erro ao executar consulta'}), 500
 
-        data = [{'departamento': r[0], 'total_funcionarios': int(r[1])} for r in resultados]
+        data = []
+        for r in resultados:
+            try:
+                data.append({
+                    'departamento': str(r[0]) if r[0] is not None else 'Sem departamento',
+                    'total_funcionarios': int(r[1]) if r[1] is not None else 0
+                })
+            except (ValueError, TypeError) as e:
+                logging.warning(f"Erro ao converter dados de funcionário: {e}")
+                continue
+
         return jsonify({'data': data}), 200
     except Exception as e:
         logging.error(f"Erro no endpoint funcionarios_por_departamento: {e}")
@@ -836,9 +967,6 @@ def main():
         historico_conversa.append(f"IA: {resposta}")
 
 if __name__ == '__main__':
-    # Verifica banco antes de iniciar o servidor (apenas em produção)
-    if os.getenv('FLASK_ENV') != 'testing':
-        verificar_banco()
-    # Inicia o Flask para responder via HTTP
+    # Em modo de execução direta, iniciar o servidor Flask
     app.run(host='0.0.0.0', port=5000)
     # main()

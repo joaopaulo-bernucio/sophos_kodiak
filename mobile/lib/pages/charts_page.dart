@@ -67,8 +67,9 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
 
   /// Carrega todos os dados dos gráficos com tratamento robusto de erros
   Future<void> _carregarDados() async {
-    if (_isLoading || _isDisposed)
+    if (_isLoading || _isDisposed) {
       return; // Previne múltiplas chamadas e execução após dispose
+    }
 
     setState(() {
       _isLoading = true;

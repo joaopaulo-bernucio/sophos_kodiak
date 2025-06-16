@@ -14,7 +14,7 @@ class ChatbotPage extends StatefulWidget {
   State<ChatbotPage> createState() => _ChatbotPageState();
 }
 
-class _ChatbotPageState extends State<ChatbotPage> {
+class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -24,31 +24,33 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   bool _isDropdownVisible = false;
   bool _isWaitingResponse = false;
+  String? _currentUserName;
 
   final List<Map<String, String>> _suggestions = [
+    {'title': 'Quantos funcionários', 'subtitle': 'a empresa possui?'},
+    {'title': 'Liste todos os clientes', 'subtitle': 'com e-mails e telefones'},
+    {'title': 'Qual é o valor total', 'subtitle': 'de vendas realizadas?'},
+    {'title': 'Quantos projetos estão', 'subtitle': 'em andamento?'},
+    {'title': 'Contratos de marketing', 'subtitle': 'ativos na empresa'},
     {
-      'title': 'Preveja quais clientes estão',
-      'subtitle': 'mais propensos a cancelar o serviço',
+      'title': 'Média salarial dos',
+      'subtitle': 'funcionários por departamento',
     },
-    {'title': 'Quais produtos têm a', 'subtitle': 'maior margem de lucro?'},
-    {
-      'title': 'Qual é a previsão de vendas',
-      'subtitle': 'para os próximos três meses?',
-    },
-    {
-      'title': 'Identifique oportunidades',
-      'subtitle': 'de cross-selling e upselling',
-    },
-    {'title': 'Analise o desempenho', 'subtitle': 'da equipe de vendas'},
-    {'title': 'Mostre as tendências', 'subtitle': 'do mercado atual'},
+    {'title': 'Vendas realizadas no', 'subtitle': 'último mês'},
+    {'title': 'Receita de contratos', 'subtitle': 'por cliente'},
+    {'title': 'Status dos projetos', 'subtitle': 'na empresa'},
+    {'title': 'Funcionários por', 'subtitle': 'departamento'},
   ];
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
+    _currentUserName = widget.userName;
     _addWelcomeMessage();
     _focusNode.addListener(_onFocusChange);
+    WidgetsBinding.instance.addObserver(this);
+    _loadCurrentUserName();
   }
 
   @override
@@ -58,11 +60,34 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _focusNode.dispose();
     _scrollController.dispose();
     _apiService.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _loadCurrentUserName();
+    }
+  }
+
+  Future<void> _loadCurrentUserName() async {
+    try {
+      final user = await UserStorageService.getUser();
+      final newUserName = user?.nomePreferido ?? widget.userName;
+      if (newUserName != _currentUserName) {
+        setState(() {
+          _currentUserName = newUserName;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar nome do usuário: $e');
+    }
+  }
+
   void _addWelcomeMessage() {
-    final userName = widget.userName;
+    final userName = _currentUserName;
     final welcomeMessage = userName != null
         ? 'Olá, $userName! Como posso ajudá-lo hoje?'
         : 'Olá! Como posso ajudá-lo hoje?';
@@ -259,7 +284,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   Widget _buildHeader() {
-    final userName = widget.userName ?? 'Usuário';
+    final userName = _currentUserName ?? 'Usuário';
 
     return Container(
       padding: const EdgeInsets.only(
@@ -310,7 +335,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     children: [
                       TextSpan(text: 'Olá, ', style: AppTextStyles.primaryText),
                       TextSpan(
-                        text: widget.userName != null ? userName : 'Sophos IA',
+                        text: _currentUserName != null ? userName : 'Sophos IA',
                         style: AppTextStyles.primaryText.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -320,7 +345,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   ),
                 ),
                 Text(
-                  widget.userName != null ? 'Sophos IA' : '',
+                  _currentUserName != null ? 'Sophos IA' : '',
                   style: AppTextStyles.inputPlaceholder.copyWith(fontSize: 14),
                 ),
               ],
@@ -373,9 +398,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     arguments: {
                       'cnpj': '12.345.678/0001-90',
                       'password': 'password123',
-                      'userName': widget.userName ?? 'Usuário',
+                      'userName': _currentUserName ?? 'Usuário',
                     },
-                  );
+                  ).then((_) {
+                    // Recarrega o nome do usuário quando volta da página de configurações
+                    _loadCurrentUserName();
+                  });
                 },
               ),
               _buildDropdownItem(

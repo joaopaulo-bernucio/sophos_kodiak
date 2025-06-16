@@ -4,6 +4,9 @@ import '../constants/app_constants.dart';
 import '../services/api_service.dart';
 import '../services/user_storage_service.dart';
 import '../services/auth_service.dart';
+import '../services/chat_history_service.dart';
+import '../models/chat_message.dart';
+import 'chat_history_page.dart';
 
 class ChatbotPage extends StatefulWidget {
   final String? userName;
@@ -47,10 +50,10 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     super.initState();
     _apiService = ApiService();
     _currentUserName = widget.userName;
-    _addWelcomeMessage();
     _focusNode.addListener(_onFocusChange);
     WidgetsBinding.instance.addObserver(this);
     _loadCurrentUserName();
+    _loadCurrentSessionMessages();
   }
 
   @override
@@ -86,20 +89,46 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     }
   }
 
+  /// Carrega mensagens da sessão atual (do dia) ou adiciona mensagem de boas-vindas.
+  Future<void> _loadCurrentSessionMessages() async {
+    // Primeiro adiciona mensagem de boas-vindas
+    _addWelcomeMessage();
+
+    // Depois tenta carregar mensagens do histórico
+    try {
+      final List<ChatMessage> currentMessages =
+          await ChatHistoryService.getCurrentSessionMessages();
+
+      if (currentMessages.isNotEmpty) {
+        // Remove mensagem de boas-vindas se houver mensagens anteriores
+        setState(() {
+          _messages.clear();
+          _messages.addAll(currentMessages);
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar mensagens da sessão atual: $e');
+      // Mantém apenas a mensagem de boas-vindas se houver erro
+    }
+  }
+
   void _addWelcomeMessage() {
     final userName = _currentUserName;
     final welcomeMessage = userName != null
         ? 'Olá, $userName! Como posso ajudá-lo hoje?'
         : 'Olá! Como posso ajudá-lo hoje?';
 
-    _messages.add(
-      ChatMessage(
-        text: welcomeMessage,
-        isUser: false,
-        timestamp: DateTime.now(),
-        isAnimating: false,
-      ),
+    final welcomeMsg = ChatMessage(
+      text: welcomeMessage,
+      isUser: false,
+      timestamp: DateTime.now(),
+      isAnimating: false,
     );
+
+    _messages.add(welcomeMsg);
+
+    // Salva mensagem de boas-vindas no histórico
+    _saveMessageToHistory(welcomeMsg);
   }
 
   void _onFocusChange() {
@@ -126,71 +155,91 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     final text = suggestionText ?? _messageController.text.trim();
     if (text.isEmpty || _isWaitingResponse) return;
 
+    final userMessage = ChatMessage(
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
+      isAnimating: false,
+    );
+
     setState(() {
-      _messages.add(
-        ChatMessage(
-          text: text,
-          isUser: true,
-          timestamp: DateTime.now(),
-          isAnimating: false,
-        ),
-      );
+      _messages.add(userMessage);
       _isWaitingResponse = true;
       _messageController.clear();
     });
+
+    // Salva a mensagem do usuário no histórico
+    _saveMessageToHistory(userMessage);
 
     _scrollToBottom();
 
     try {
       final response = await _getResponseFromApi(text);
       if (mounted) {
+        final botMessage = ChatMessage(
+          text: response,
+          isUser: false,
+          timestamp: DateTime.now(),
+          isAnimating: true,
+        );
+
         setState(() {
-          _messages.add(
-            ChatMessage(
-              text: response,
-              isUser: false,
-              timestamp: DateTime.now(),
-              isAnimating: true,
-            ),
-          );
+          _messages.add(botMessage);
           _isWaitingResponse = false;
         });
+
+        // Salva a resposta do bot no histórico
+        _saveMessageToHistory(botMessage);
         _scrollToBottom();
       }
     } on ApiException catch (apiError) {
       if (mounted) {
+        final errorMessage = ChatMessage(
+          text: '', // Texto vazio pois será renderizado como widget de erro
+          isUser: false,
+          timestamp: DateTime.now(),
+          isAnimating: false,
+          isError: true,
+          apiError: apiError,
+        );
+
         setState(() {
-          _messages.add(
-            ChatMessage(
-              text: '', // Texto vazio pois será renderizado como widget de erro
-              isUser: false,
-              timestamp: DateTime.now(),
-              isAnimating: false,
-              isError: true,
-              apiError: apiError,
-            ),
-          );
+          _messages.add(errorMessage);
           _isWaitingResponse = false;
         });
+
+        // Nota: Mensagens de erro não são salvas no histórico para manter simplicidade
         _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
+        final errorMessage = ChatMessage(
+          text: '', // Texto vazio pois será renderizado como widget de erro
+          isUser: false,
+          timestamp: DateTime.now(),
+          isAnimating: false,
+          isError: true,
+          apiError: ApiException.unknown(e.toString()),
+        );
+
         setState(() {
-          _messages.add(
-            ChatMessage(
-              text: '', // Texto vazio pois será renderizado como widget de erro
-              isUser: false,
-              timestamp: DateTime.now(),
-              isAnimating: false,
-              isError: true,
-              apiError: ApiException.unknown(e.toString()),
-            ),
-          );
+          _messages.add(errorMessage);
           _isWaitingResponse = false;
         });
+
+        // Nota: Mensagens de erro não são salvas no histórico para manter simplicidade
         _scrollToBottom();
       }
+    }
+  }
+
+  /// Salva uma mensagem no histórico local.
+  Future<void> _saveMessageToHistory(ChatMessage message) async {
+    try {
+      await ChatHistoryService.saveMessage(message);
+    } catch (e) {
+      debugPrint('Erro ao salvar mensagem no histórico: $e');
+      // Não interfere na experiência do usuário se houver erro no salvamento
     }
   }
 
@@ -411,7 +460,11 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                 text: 'Histórico',
                 onTap: () {
                   setState(() => _isDropdownVisible = false);
-                  // TODO: Implementar histórico
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ChatHistoryPage(),
+                    ),
+                  );
                 },
               ),
               _buildDropdownItem(
@@ -561,7 +614,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                       Text(
                         suggestion['title']!,
                         style: AppTextStyles.largeText.copyWith(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -570,7 +623,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                         suggestion['subtitle']!,
                         style: AppTextStyles.largeText.copyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 10,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -882,22 +935,4 @@ class _TypingIndicatorState extends State<TypingIndicator>
       },
     );
   }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-  final bool isAnimating;
-  final bool isError;
-  final ApiException? apiError;
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-    this.isAnimating = false,
-    this.isError = false,
-    this.apiError,
-  });
 }

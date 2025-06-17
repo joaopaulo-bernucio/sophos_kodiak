@@ -67,8 +67,8 @@ permissions:
 
 env:
   PYTHON_VERSION: '3.11'
-  FLUTTER_VERSION: '3.24.3'
-  POSTGRES_VERSION: '15'
+  FLUTTER_VERSION: '3.32.4'
+  POSTGRES_VERSION: '15.8'
 
 jobs:
   # ===========================================
@@ -81,7 +81,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.8
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -267,7 +267,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.8
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -508,7 +508,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.8
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -694,7 +694,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.8
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -848,7 +848,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.8
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

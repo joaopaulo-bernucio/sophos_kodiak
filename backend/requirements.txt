@@ -27,9 +27,10 @@ flask-cors>=4.0.0
 # ===============================
 # DATABASE
 # ===============================
-# Para baixar psycopg2 no arch linux, é necessário instalar o pacote postgresql-libs
-psycopg2>=2.9.0
-# Alternativa para desenvolvimento: psycopg2-binary>=2.9.0
+# Para desenvolvimento local e CI/CD, usamos psycopg2-binary
+# que inclui as bibliotecas necessárias pré-compiladas
+psycopg2-binary>=2.9.0
+# Para produção considere usar: psycopg2>=2.9.0 com postgresql-libs instalado
 
 # ===============================
 # CONFIGURATION & ENVIRONMENT

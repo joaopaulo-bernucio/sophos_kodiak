@@ -79,6 +79,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -109,9 +124,58 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
 
+    - name: Setup basic test database structure
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS departamentos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          orcamento DECIMAL(15,2)
+        );
+
+        CREATE TABLE IF NOT EXISTS funcionarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          cargo VARCHAR(100),
+          salario DECIMAL(10,2),
+          departamento_id INTEGER REFERENCES departamentos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS clientes (
+          id SERIAL PRIMARY KEY,
+          nome_empresa VARCHAR(200) NOT NULL,
+          data_cadastro DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS projetos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(200) NOT NULL,
+          status VARCHAR(50),
+          orcamento DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS vendas (
+          id SERIAL PRIMARY KEY,
+          valor DECIMAL(15,2) NOT NULL,
+          data_venda DATE DEFAULT CURRENT_DATE,
+          projeto_id INTEGER REFERENCES projetos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS contratos_marketing (
+          id SERIAL PRIMARY KEY,
+          descricao TEXT,
+          valor DECIMAL(15,2)
+        );
+        "
+
     - name: Run smoke tests
       working-directory: ./backend
       env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         DB_HOST: localhost
         DB_PORT: 5432
@@ -228,7 +292,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest psycopg2-binary
+        pip install pytest
       working-directory: ./backend
 
     - name: Download spaCy model
@@ -457,7 +521,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest psycopg2-binary flask-cors
         pip install pytest-cov pytest-html flake8
       working-directory: ./backend
 
@@ -767,7 +830,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-        pip install pytest psycopg2-binary
+        pip install pytest
       working-directory: ./backend
 
     - name: Setup minimal performance test database

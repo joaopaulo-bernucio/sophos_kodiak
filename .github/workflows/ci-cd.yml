@@ -179,6 +179,15 @@ jobs:
           data_termino DATE,
           status VARCHAR(50) DEFAULT 'Ativo'
         );
+
+        CREATE TABLE IF NOT EXISTS logs_perguntas (
+          id SERIAL PRIMARY KEY,
+          pergunta TEXT NOT NULL,
+          sql_gerada TEXT,
+          resposta TEXT,
+          sucesso BOOLEAN DEFAULT FALSE,
+          data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         "
 
     - name: Run smoke tests
@@ -364,6 +373,15 @@ jobs:
           data_inicio DATE DEFAULT CURRENT_DATE,
           data_termino DATE,
           status VARCHAR(50) DEFAULT 'Ativo'
+        );
+
+        CREATE TABLE IF NOT EXISTS logs_perguntas (
+          id SERIAL PRIMARY KEY,
+          pergunta TEXT NOT NULL,
+          sql_gerada TEXT,
+          resposta TEXT,
+          sucesso BOOLEAN DEFAULT FALSE,
+          data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         "
 
@@ -616,6 +634,15 @@ jobs:
           status VARCHAR(50) DEFAULT 'Ativo'
         );
 
+        CREATE TABLE IF NOT EXISTS logs_perguntas (
+          id SERIAL PRIMARY KEY,
+          pergunta TEXT NOT NULL,
+          sql_gerada TEXT,
+          resposta TEXT,
+          sucesso BOOLEAN DEFAULT FALSE,
+          data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
         -- Dados de teste para suíte completa
         INSERT INTO departamentos (nome, orcamento) VALUES
         ('Vendas', 100000.00),
@@ -739,6 +766,15 @@ jobs:
           cargo VARCHAR(100),
           salario DECIMAL(10,2),
           departamento_id INTEGER REFERENCES departamentos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS logs_perguntas (
+          id SERIAL PRIMARY KEY,
+          pergunta TEXT NOT NULL,
+          sql_gerada TEXT,
+          resposta TEXT,
+          sucesso BOOLEAN DEFAULT FALSE,
+          data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         INSERT INTO departamentos (nome, orcamento) VALUES ('Test Dept', 50000.00);
@@ -893,6 +929,15 @@ jobs:
           cargo VARCHAR(100),
           salario DECIMAL(10,2),
           departamento_id INTEGER REFERENCES departamentos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS logs_perguntas (
+          id SERIAL PRIMARY KEY,
+          pergunta TEXT NOT NULL,
+          sql_gerada TEXT,
+          resposta TEXT,
+          sucesso BOOLEAN DEFAULT FALSE,
+          data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         INSERT INTO departamentos (nome, orcamento) VALUES ('Test Dept', 50000.00);

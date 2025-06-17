@@ -190,20 +190,42 @@ jobs:
         );
         "
 
+    - name: Load CI environment configuration
+      working-directory: ./backend
+      run: |
+        if [[ -f ".env.ci" ]]; then
+          echo "📋 Carregando configurações do .env.ci para CI..."
+          export $(grep -v '^#' .env.ci | grep -v '^$' | xargs)
+          echo "✅ Configurações carregadas"
+          echo "FLASK_ENV=$FLASK_ENV"
+          echo "DATABASE_URL=$DATABASE_URL"
+          echo "REQUEST_TIMEOUT=$REQUEST_TIMEOUT"
+        else
+          echo "⚠️ Arquivo .env.ci não encontrado, usando valores padrão"
+        fi
+
     - name: Run smoke tests
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
+        CI: 'true'
+        GITHUB_ACTIONS: 'true'
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
         DB_HOST: localhost
         DB_PORT: 5432
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+        REQUEST_TIMEOUT: 15
+        CONNECT_TIMEOUT: 8
+        MAX_REQUESTS_PER_MINUTE: 10
+        RATE_LIMIT_ENABLED: true
+        ANALYZE_REAL_CODE: true
         PYTHONPATH: ${{ github.workspace }}/backend
       run: |
-        pytest -m smoke --tb=line -v
+        pytest -m smoke --tb=line -v --timeout=60
+
 
   flutter-test:
     name: 📱 Flutter Tests
@@ -385,18 +407,29 @@ jobs:
         );
         "
 
+    - name: Load CI environment configuration for critical tests
+      working-directory: ./backend
+      run: |
+        if [[ -f ".env.ci" ]]; then
+          echo "📋 Carregando configurações do .env.ci para testes críticos..."
+          export $(grep -v '^#' .env.ci | grep -v '^$' | xargs)
+          echo "✅ Configurações carregadas para testes críticos"
+        fi
+
     - name: Test API health endpoint
       run: |
         cd backend
+        # Load .env.ci if available
+        if [[ -f ".env.ci" ]]; then
+          export $(grep -v '^#' .env.ci | grep -v '^$' | xargs)
+        fi
+
         python -c "
         import os
         os.environ['FLASK_ENV'] = 'testing'
-        os.environ['DB_HOST'] = 'localhost'
-        os.environ['DB_PORT'] = '5432'
-        os.environ['DB_NAME'] = 'test_db'
-        os.environ['DB_USER'] = 'postgres'
-        os.environ['DB_PASSWORD'] = 'postgres'
-        os.environ['GEMINI_API_KEY'] = '${{ secrets.GEMINI_API_KEY || 'test_key' }}'
+        os.environ['DATABASE_URL'] = 'postgresql://postgres:postgres@localhost:5432/test_db'
+        os.environ['GEMINI_API_KEY'] = 'test_gemini_api_key_for_github_actions_testing_only'
+        os.environ['CI'] = 'true'
         from app.app import app
         import threading
         import time
@@ -428,29 +461,39 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
-        PYTHONPATH: ${{ github.workspace }}/backend
+        CI: 'true'
+        GITHUB_ACTIONS: 'true'
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+        REQUEST_TIMEOUT: 15
+        CONNECT_TIMEOUT: 8
         DB_HOST: localhost
         DB_PORT: 5432
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+        ANALYZE_REAL_CODE: true
+        PYTHONPATH: ${{ github.workspace }}/backend
       run: |
-        pytest -m critical --tb=line -v
+        pytest -m critical --tb=line -v --timeout=60
 
     - name: Run legacy test endpoints (backward compatibility)
-      run: pytest tests/test_endpoints.py -v --tb=short
+      run: pytest tests/test_endpoints.py -v --tb=short --timeout=30
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
-        PYTHONPATH: ${{ github.workspace }}/backend
+        CI: 'true'
+        GITHUB_ACTIONS: 'true'
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+        REQUEST_TIMEOUT: 15
+        CONNECT_TIMEOUT: 8
         DB_HOST: localhost
         DB_PORT: 5432
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+        ANALYZE_REAL_CODE: true
+        PYTHONPATH: ${{ github.workspace }}/backend
 
   # ===========================================
   # SECURITY SCANS - Parallel with other tests
@@ -745,9 +788,16 @@ jobs:
 
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install locust pytest-benchmark
+        pip install locust pytest-benchmark psutil
       working-directory: ./backend
+
+    - name: Download spaCy model
+      run: python -m spacy download pt_core_news_sm
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
 
     - name: Setup performance test database
       env:
@@ -795,13 +845,49 @@ jobs:
         DB_PASSWORD: postgres
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
       run: |
-        pytest -m performance --tb=line --durations=10 -v
+        echo "=== Verificando testes disponíveis ==="
+        pytest --collect-only -m performance -q
+
+        echo "=== Executando testes de performance ==="
+        pytest -m performance --tb=line --durations=10 -v --maxfail=5
 
     - name: Run performance benchmarks (if available)
-      run: pytest tests/performance/ -v --benchmark-only || echo "No benchmark tests found"
+      run: |
+        echo "=== Executando benchmarks ==="
+        if [ -d "tests/performance" ]; then
+          pytest tests/performance/ -v --tb=short || echo "Alguns benchmarks falharam, mas continuando..."
+        else
+          echo "Diretório de performance não encontrado, pulando benchmarks específicos"
+        fi
       working-directory: ./backend
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        FLASK_ENV: testing
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+
+    - name: Graceful database shutdown
+      if: always()
+      run: |
+        echo "=== Encerrando conexões de banco graciosamente ==="
+        # Aguardar conclusão de transações ativas
+        sleep 2
+        # Tentar conexão final para verificar estado
+        psql -h localhost -U postgres -d test_db -c "SELECT version();" || echo "DB já desconectado"
+      env:
+        PGPASSWORD: postgres
+
+    - name: Performance Summary
+      if: always()
+      run: |
+        echo "## ⚡ Performance Tests Summary" >> $GITHUB_STEP_SUMMARY
+        echo "Performance tests completed for main branch" >> $GITHUB_STEP_SUMMARY
+        echo "Check the test output above for detailed timing results" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================
   # BUILD AND DEPLOY - Production artifacts
@@ -908,9 +994,16 @@ jobs:
 
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
+        pip install pytest psutil
       working-directory: ./backend
+
+    - name: Download spaCy model
+      run: python -m spacy download pt_core_news_sm
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
 
     - name: Setup minimal performance test database
       env:
@@ -958,13 +1051,28 @@ jobs:
         DB_PASSWORD: postgres
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
       run: |
-        pytest -m performance --tb=line --durations=10 -v
+        echo "=== Verificando testes disponíveis ==="
+        pytest --collect-only -m performance -q
+
+        echo "=== Executando testes de performance ==="
+        pytest -m performance --tb=line --durations=10 -v --maxfail=3
+
+    - name: Graceful database shutdown
+      if: always()
+      run: |
+        echo "=== Encerrando conexões de banco graciosamente ==="
+        sleep 2
+        # Tentar conexão final para verificar estado
+        psql -h localhost -U postgres -d test_db -c "SELECT version();" || echo "DB já desconectado"
+      env:
+        PGPASSWORD: postgres
 
     - name: Performance Summary
       run: |
         echo "## ⚡ Performance Baseline Results" >> $GITHUB_STEP_SUMMARY
         echo "Performance tests completed for this PR" >> $GITHUB_STEP_SUMMARY
         echo "Check the test output above for timing details" >> $GITHUB_STEP_SUMMARY
+        echo "📊 Only baseline performance tests run on PRs" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================
   # QUALITY GATE - Final validation

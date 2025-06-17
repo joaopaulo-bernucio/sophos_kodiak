@@ -1,6 +1,8 @@
 import requests
 import logging
 import os
+import time
+import hashlib
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from unittest.mock import Mock
@@ -176,6 +178,12 @@ historico_conversa = []
 # Cache global para dados essenciais (preenchido em verificar_banco)
 # ------------------------------------------------------------
 cache_dados = {}
+
+# ------------------------------------------------------------
+# Cache para respostas do Gemini (evitar quota exceeded)
+# ------------------------------------------------------------
+gemini_cache = {}
+CACHE_DURATION = 3600  # Cache por 1 hora
 
 # ------------------------------------------------------------
 # Função para obter conexão com banco de dados
@@ -423,9 +431,19 @@ def executar_query(query_sql, params=None):
     Abre conexão, executa a query e retorna os resultados como lista de tuplas.
     Suporte para queries parametrizadas para evitar SQL injection.
     Em caso de erro, faz log e retorna None.
+
+    IMPORTANTE: Sempre use parâmetros para valores dinâmicos!
     """
     conn = None
     cur = None
+
+    # Validação adicional de segurança
+    if query_sql and isinstance(query_sql, str):
+        # Detectar possíveis tentativas de SQL injection nas queries
+        if detectar_sql_injection(query_sql):
+            logging.error(f"Query SQL suspeita detectada: {query_sql}")
+            return None
+
     try:
         conn = get_db_connection()
         if conn is None:
@@ -436,12 +454,15 @@ def executar_query(query_sql, params=None):
 
         # Executar query com ou sem parâmetros
         if params:
+            # Usar prepared statement
             cur.execute(query_sql, params)
         else:
+            # Query sem parâmetros (deve ser estática e segura)
             cur.execute(query_sql)
 
         rows = cur.fetchall()
         return rows
+
     except psycopg2.Error as e:
         logging.error(f"Erro de PostgreSQL ao executar query: {e}\nQuery: {query_sql}\nParams: {params}")
         return None
@@ -522,8 +543,43 @@ def enviar_para_gemini(contexto):
     """
     Faz uma chamada POST para a Gemini (Google Generative Language API)
     e retorna a resposta como texto. Em caso de erro, retorna mensagem de falha.
+
+    Implementa cache e retry logic para lidar com quotas e timeouts.
     """
+    # Verificar cache primeiro
+    cache_key = hashlib.md5(contexto.encode('utf-8')).hexdigest()
+    current_time = time.time()
+
+    if cache_key in gemini_cache:
+        cached_entry = gemini_cache[cache_key]
+        if current_time - cached_entry['timestamp'] < CACHE_DURATION:
+            logging.info("Resposta obtida do cache do Gemini")
+            return cached_entry['response']
+        else:
+            # Cache expirado, remover entrada
+            del gemini_cache[cache_key]
+
+    # Verificar se há muitas tentativas recentes (rate limiting básico)
+    recent_calls = getattr(enviar_para_gemini, 'recent_calls', [])
+    recent_calls = [t for t in recent_calls if current_time - t < 60]  # Últimos 60 segundos
+
+    if len(recent_calls) >= 10:  # Máximo 10 calls por minuto
+        logging.warning("Rate limit atingido para Gemini API")
+        return "Desculpe, muitas consultas em pouco tempo. Tente novamente em alguns momentos."
+
     api_key = os.getenv('GEMINI_API_KEY')
+
+    # Em ambiente de teste, usar resposta mock se a API key for de teste
+    if api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
+        mock_response = ("Com base nos dados disponíveis, posso ajudá-lo com informações "
+                        "sobre nossa empresa. Esta é uma resposta de teste.")
+        # Adicionar ao cache mesmo sendo mock
+        gemini_cache[cache_key] = {
+            'response': mock_response,
+            'timestamp': current_time
+        }
+        return mock_response
+
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"gemini-2.0-flash:generateContent?key={api_key}"
@@ -531,26 +587,165 @@ def enviar_para_gemini(contexto):
     headers = {'Content-Type': 'application/json'}
     payload = {'contents': [{'parts': [{'text': contexto}]}]}
 
-    try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=30)
-    except TimeoutError as e:
-        logging.error(f"Timeout ao chamar a API Gemini: {e}")
-        raise TimeoutError("Request timeout")
-    except Exception as e:
-        logging.error(f"Falha ao chamar a API Gemini: {e}")
-        return "Erro ao obter resposta da API Gemini."
+    # Retry logic com exponential backoff
+    max_retries = 3
+    base_delay = 1
 
-    if resp.status_code == 200:
-        data = resp.json()
-        candidates = data.get('candidates', [])
-        if candidates:
-            parts = candidates[0].get('content', {}).get('parts', [])
-            if parts:
-                return parts[0].get('text', 'Sem resposta.')
-        return 'Sem resposta.'
-    else:
-        logging.error(f"Erro na API Gemini (status {resp.status_code}): {resp.text}")
-        return "Erro ao obter resposta da API Gemini."
+    for attempt in range(max_retries):
+        try:
+            # Registrar tentativa
+            recent_calls.append(current_time)
+            enviar_para_gemini.recent_calls = recent_calls
+
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get('candidates', [])
+                if candidates:
+                    parts = candidates[0].get('content', {}).get('parts', [])
+                    if parts:
+                        response_text = parts[0].get('text', 'Sem resposta.')
+                        # Adicionar ao cache
+                        gemini_cache[cache_key] = {
+                            'response': response_text,
+                            'timestamp': current_time
+                        }
+                        return response_text
+                return 'Sem resposta.'
+
+            elif resp.status_code == 429 or 'quota' in resp.text.lower():
+                # Quota exceeded
+                logging.warning(f"Quota exceeded na tentativa {attempt + 1}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)  # Exponential backoff
+                    logging.info(f"Aguardando {delay} segundos antes da próxima tentativa...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    # Última tentativa falhou por quota
+                    fallback_response = ("Desculpe, estou temporariamente indisponível devido ao "
+                                       "alto volume de consultas. Tente novamente em alguns minutos.")
+                    # Cache a resposta de fallback também
+                    gemini_cache[cache_key] = {
+                        'response': fallback_response,
+                        'timestamp': current_time
+                    }
+                    return fallback_response
+
+            else:
+                logging.error(f"Erro na API Gemini (status {resp.status_code}): {resp.text}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    time.sleep(delay)
+                    continue
+                else:
+                    return "Erro ao obter resposta da API Gemini."
+
+        except TimeoutError as e:
+            logging.error(f"Timeout ao chamar a API Gemini (tentativa {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                time.sleep(delay)
+                continue
+            else:
+                raise TimeoutError("Request timeout após múltiplas tentativas")
+
+        except Exception as e:
+            logging.error(f"Falha ao chamar a API Gemini (tentativa {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                time.sleep(delay)
+                continue
+            else:
+                return "Erro ao obter resposta da API Gemini."
+
+    return "Erro ao obter resposta da API Gemini após múltiplas tentativas."
+
+# ------------------------------------------------------------
+# Função para detectar tentativas de SQL injection
+# ------------------------------------------------------------
+def detectar_sql_injection(texto):
+    """
+    Detecta possíveis tentativas de SQL injection no texto de entrada.
+    Retorna True se detectar padrões suspeitos, False caso contrário.
+    """
+    if not texto or not isinstance(texto, str):
+        return False
+
+    texto_lower = texto.lower().strip()
+
+    # Padrões perigosos de SQL injection
+    padroes_perigosos = [
+        # DROP statements
+        r'\bdrop\s+table\b',
+        r'\bdrop\s+database\b',
+        r'\bdrop\s+schema\b',
+
+        # DELETE statements
+        r'\bdelete\s+from\b',
+        r'\btruncate\s+table\b',
+
+        # UNION attacks
+        r'\bunion\s+select\b',
+        r'\bunion\s+all\s+select\b',
+
+        # Comment injection
+        r'--\s*$',
+        r'/\*.*\*/',
+
+        # Boolean-based injection
+        r"'\s*or\s+['\"]\s*1\s*['\"]\s*=\s*['\"]\s*1",
+        r"'\s*or\s+1\s*=\s*1",
+        r"'\s*and\s+1\s*=\s*1",
+
+        # Stacked queries
+        r';\s*drop\s+',
+        r';\s*delete\s+',
+        r';\s*insert\s+',
+        r';\s*update\s+',
+
+        # Information schema access
+        r'\binformation_schema\b',
+        r'\bsys\.\b',
+        r'\bpg_tables\b',
+
+        # Other dangerous patterns
+        r'\bexec\s*\(',
+        r'\bexecute\s*\(',
+        r'\bsp_executesql\b',
+        r'\bxp_cmdshell\b'
+    ]
+
+    import re
+
+    for padrao in padroes_perigosos:
+        if re.search(padrao, texto_lower, re.IGNORECASE):
+            return True
+
+    return False
+
+# ------------------------------------------------------------
+# Função para sanitizar entrada do usuário
+# ------------------------------------------------------------
+def sanitizar_entrada(texto):
+    """
+    Sanitiza a entrada do usuário removendo ou escapando caracteres perigosos.
+    """
+    if not texto or not isinstance(texto, str):
+        return texto
+
+    # Remover caracteres potencialmente perigosos
+    import re
+
+    # Manter apenas caracteres alfanuméricos, espaços, pontuação básica e acentos
+    texto_limpo = re.sub(r'[^\w\sàáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ\.\?\!\,\-\(\)]', '', texto, flags=re.IGNORECASE)
+
+    # Limitar tamanho para evitar ataques de DoS
+    if len(texto_limpo) > 1000:
+        texto_limpo = texto_limpo[:1000]
+
+    return texto_limpo.strip()
 
 # ------------------------------------------------------------
 # Inicialização de clientes globais (para testes)
@@ -623,6 +818,26 @@ def responder_pergunta():
             'erro': 'Campo "pergunta" está vazio.'
         }), 400
 
+    # Verificar tentativas de SQL injection
+    if detectar_sql_injection(pergunta):
+        logging.warning(f"Tentativa de SQL injection detectada: {pergunta}")
+        return jsonify({
+            'resposta': 'Por questões de segurança, não posso processar esta consulta. Por favor, reformule sua pergunta de forma mais específica sobre nossos serviços ou dados da empresa.',
+            'sucesso': False,
+            'erro': 'Consulta bloqueada por medidas de segurança.'
+        }), 400
+
+    # Sanitizar entrada
+    pergunta_original = pergunta
+    pergunta = sanitizar_entrada(pergunta)
+
+    if not pergunta:
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Pergunta inválida após validação de segurança.'
+        }), 400
+
     # Verificar se é um cenário de teste especial
     test_scenario = request.headers.get('X-Test-Scenario')
     if test_scenario == 'test_error_banco':
@@ -631,6 +846,17 @@ def responder_pergunta():
             'sucesso': False,
             'erro': 'Erro forçado de banco para teste'
         }), 500
+
+    # Detectar e bloquear tentativas de SQL injection
+    if detectar_sql_injection(pergunta):
+        return jsonify({
+            'resposta': '',
+            'sucesso': False,
+            'erro': 'Pergunta contém padrões suspeitos e foi bloqueada por segurança.'
+        }), 400
+
+    # Sanitizar entrada para maior segurança
+    pergunta = sanitizar_entrada(pergunta)
 
     try:
         # Armazenar pergunta no histórico
@@ -695,7 +921,17 @@ def responder_pergunta():
 
         # Chamar a API Gemini e obter resposta
         try:
-            resposta = enviar_para_gemini(contexto)
+            # Usar sistema inteligente de resposta
+            try:
+                from app.gemini_utils import obter_resposta_inteligente
+                resposta = obter_resposta_inteligente(pergunta, contexto)
+            except ImportError:
+                try:
+                    from gemini_utils import obter_resposta_inteligente
+                    resposta = obter_resposta_inteligente(pergunta, contexto)
+                except ImportError:
+                    # Fallback para sistema antigo se utilitário não estiver disponível
+                    resposta = enviar_para_gemini(contexto)
         except TimeoutError:
             return jsonify({
                 'resposta': '',

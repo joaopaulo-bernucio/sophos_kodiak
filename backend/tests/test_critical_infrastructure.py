@@ -108,6 +108,7 @@ class TestDatabaseCritical:
         except Exception as e:
             pytest.fail(f"Erro ao verificar tabelas: {e}")
 
+    @pytest.mark.performance
     def test_database_performance_basic(self, env_vars):
         """Testa performance básica do banco de dados."""
         try:
@@ -361,6 +362,7 @@ class TestGeminiAPIIntegration:
             else:
                 pytest.fail(f"Erro na API Gemini: {e}")
 
+    @pytest.mark.performance
     def test_gemini_api_performance(self, env_vars):
         """Testa performance básica da API Gemini."""
         api_key = env_vars.get('GEMINI_API_KEY')

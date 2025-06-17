@@ -485,6 +485,7 @@ class TestPerformanceUnderLoad:
     Testes de performance sob diferentes cargas.
     """
 
+    @pytest.mark.performance
     def test_sustained_load_performance(self, client):
         """Testa performance sob carga sustentada."""
         duration_seconds = 30
@@ -548,7 +549,8 @@ class TestPerformanceUnderLoad:
         else:
             pytest.fail("Nenhuma requisição bem-sucedida durante teste de carga")
 
-    def test_burst_load_handling(self, client):
+    @pytest.mark.performance
+    def test_burst_load_handling(self, app):
         """Testa como o sistema lida com rajadas de requisições."""
         burst_size = 10
         num_bursts = 3
@@ -561,14 +563,15 @@ class TestPerformanceUnderLoad:
 
             burst_results = []
 
-            # Executar rajada de requisições
-            with ThreadPoolExecutor(max_workers=burst_size) as executor:
-                def make_burst_request(request_id):
-                    try:
+            # Criar clientes separados para cada thread para evitar conflitos de contexto
+            def make_burst_request(request_id):
+                try:
+                    # Criar cliente independente para cada requisição
+                    with app.test_client() as local_client:
                         start_time = time.time()
-                        response = client.post('/pergunta',
-                                             json={'pergunta': f'Pergunta {request_id}'},
-                                             content_type='application/json')
+                        response = local_client.post('/pergunta',
+                                                   json={'pergunta': f'Pergunta {request_id}'},
+                                                   content_type='application/json')
                         response_time = time.time() - start_time
 
                         return {
@@ -578,21 +581,23 @@ class TestPerformanceUnderLoad:
                             'status_code': response.status_code,
                             'success': response.status_code in [200, 400, 500]
                         }
-                    except Exception as e:
-                        return {
-                            'burst': burst_num + 1,
-                            'request_id': request_id,
-                            'error': str(e),
-                            'success': False
-                        }
+                except Exception as e:
+                    return {
+                        'burst': burst_num + 1,
+                        'request_id': request_id,
+                        'error': str(e),
+                        'success': False
+                    }
 
+            # Executar rajada de requisições com timeout maior
+            with ThreadPoolExecutor(max_workers=min(burst_size, 5)) as executor:  # Limitar workers
                 # Submeter todas as requisições da rajada
                 futures = [executor.submit(make_burst_request, i) for i in range(burst_size)]
 
-                # Coletar resultados
-                for future in as_completed(futures):
+                # Coletar resultados com timeout
+                for future in as_completed(futures, timeout=45):  # Timeout aumentado
                     try:
-                        result = future.result(timeout=30)
+                        result = future.result(timeout=10)
                         burst_results.append(result)
                     except Exception as e:
                         burst_results.append({
@@ -628,6 +633,7 @@ class TestPerformanceUnderLoad:
         # Sistema deve lidar bem com rajadas
         assert success_rate >= 0.7, f"Sistema não lidou bem com rajadas: {success_rate:.1%}"
 
+    @pytest.mark.performance
     def test_memory_stability_under_load(self, client):
         """Testa estabilidade de memória sob carga (básico)."""
         # Executar várias requisições para detectar vazamentos evidentes

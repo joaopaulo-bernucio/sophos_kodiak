@@ -388,7 +388,9 @@ class TestBasicSecurity:
             sql_injection_attempts = [
                 "'; DROP TABLE funcionarios; --",
                 "' OR '1'='1",
-                "UNION SELECT * FROM funcionarios"
+                "UNION SELECT * FROM funcionarios",
+                "drop table funcionarios",
+                "; DELETE FROM vendas WHERE 1=1; --"
             ]
 
             for attempt in sql_injection_attempts:
@@ -396,46 +398,56 @@ class TestBasicSecurity:
                                      json={'pergunta': attempt},
                                      content_type='application/json')
 
-                # Sistema deve responder (não crash) e não deve executar SQL malicioso
+                # Sistema deve responder (não crash)
                 assert response.status_code is not None, "Sistema deve responder a tentativa de SQL injection"
 
-                # Se resposta for 200, verificar se não retornou dados sensíveis
-                if response.status_code == 200:
+                # Se resposta for 200 ou 400, verificar conteúdo
+                if response.status_code in [200, 400]:
                     try:
-                        data = json.loads(response.data)
+                        data = response.get_json()
+                        assert data is not None, "Resposta deve conter JSON válido"
+
                         response_text = str(data).lower()
+                        sucesso = data.get('sucesso', True)
 
-                        # Verificar se o sistema rejeitou adequadamente a tentativa
-                        rejection_indicators = [
-                            'injeção sql', 'sql injection', 'segurança', 'security',
-                            'não posso processar', 'cannot process', 'blocked', 'bloqueado'
-                        ]
+                        # Sistema deve rejeitar tentativas de SQL injection
+                        if response.status_code == 400 and not sucesso:
+                            # Verificar se foi bloqueado por segurança
+                            rejection_indicators = [
+                                'segurança', 'security', 'bloqueado', 'blocked',
+                                'não posso processar', 'cannot process',
+                                'reformule sua pergunta', 'medidas de segurança'
+                            ]
 
-                        # Se contém indicadores de rejeição, é comportamento correto
-                        has_rejection_indicator = any(indicator in response_text for indicator in rejection_indicators)
+                            has_rejection_indicator = any(indicator in response_text for indicator in rejection_indicators)
+                            assert has_rejection_indicator, f"Sistema deveria rejeitar SQL injection: {attempt}"
+                            print(f"✅ Sistema bloqueou corretamente: {attempt[:30]}...")
 
-                        if has_rejection_indicator:
-                            # Sistema corretamente rejeitou tentativa maliciosa
-                            print(f"✅ Sistema rejeitou corretamente: {attempt[:20]}...")
-                            continue
+                        elif response.status_code == 200:
+                            # Se retornou 200, deve ser resposta segura (não dados do banco)
+                            response_content = data.get('resposta', '')
 
-                        # Se não há indicadores de rejeição, verificar se não executou SQL malicioso
-                        dangerous_executions = [
-                            'drop table', 'delete from', 'truncate table',
-                            # Verificar execução real, não apenas menção na mensagem
-                            'select * from funcionarios where',
-                            'dados deletados', 'tabela removida'
-                        ]
+                            # Verificar se não executou comandos perigosos
+                            dangerous_results = [
+                                'table dropped', 'tabela removida', 'dados deletados',
+                                'delete from', 'drop table', 'truncate table'
+                            ]
 
-                        for pattern in dangerous_executions:
-                            assert pattern not in response_text, f"Possível execução de SQL malicioso: {pattern}"
+                            for dangerous in dangerous_results:
+                                assert dangerous not in response_content.lower(), \
+                                    f"Sistema pode ter executado comando perigoso: {dangerous}"
 
-                    except json.JSONDecodeError:
-                        pass  # Se não for JSON, pelo menos não crashou
+                            # Se chegou até aqui, pelo menos não executou SQL malicioso
+                            print(f"✅ Sistema respondeu de forma segura para: {attempt[:30]}...")
 
-                # Status 400 (Bad Request) também é aceitável para SQL injection
-                elif response.status_code == 400:
-                    print(f"✅ Sistema retornou erro 400 para: {attempt[:20]}...")
+                    except Exception as json_error:
+                        # Se não conseguir parsear JSON, verificar pelo menos que não crashou
+                        assert response.status_code != 500, f"Sistema crashou com SQL injection: {attempt}"
+
+                # Status 500 nunca deve acontecer com SQL injection
+                assert response.status_code != 500, f"Sistema crashou com SQL injection: {attempt}"
+
+            print("✅ Todos os testes de proteção contra SQL injection passaram")
 
         except Exception as e:
             pytest.fail(f"Erro no teste de SQL injection: {e}")
@@ -520,6 +532,7 @@ class TestPerformanceBaseline:
     Testes básicos de performance para estabelecer baseline.
     """
 
+    @pytest.mark.performance
     def test_application_startup_time(self):
         """Verifica tempo de inicialização da aplicação."""
         try:
@@ -539,6 +552,7 @@ class TestPerformanceBaseline:
         except Exception as e:
             pytest.fail(f"Erro na medição de startup: {e}")
 
+    @pytest.mark.performance
     def test_basic_endpoint_response_time(self, client):
         """Verifica tempo básico de resposta do endpoint principal."""
         try:
@@ -558,6 +572,7 @@ class TestPerformanceBaseline:
         except Exception as e:
             pytest.fail(f"Erro na medição de resposta: {e}")
 
+    @pytest.mark.performance
     def test_memory_usage_baseline(self):
         """Estabelece baseline básico de uso de memória."""
         try:

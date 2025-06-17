@@ -514,6 +514,7 @@ class TestRobustezEErrorHandling:
             assert isinstance(resultado, set)
             # Deve processar sem erros
 
+    @pytest.mark.performance
     def test_memoria_e_performance(self):
         """Testa uso de memória e performance básica."""
         # Texto moderadamente grande
@@ -678,6 +679,7 @@ class TestIntegracaoCompleta:
                 # Sistema deve processar sem erros
                 assert queries is not None
 
+    @pytest.mark.performance
     def test_performance_basica(self):
         """Testa performance básica do sistema."""
         import time

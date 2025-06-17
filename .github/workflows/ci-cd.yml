@@ -155,20 +155,29 @@ jobs:
           status VARCHAR(50),
           orcamento DECIMAL(15,2),
           cliente_id INTEGER REFERENCES clientes(id),
-          data_inicio DATE DEFAULT CURRENT_DATE
+          responsavel_id INTEGER REFERENCES funcionarios(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE
         );
 
         CREATE TABLE IF NOT EXISTS vendas (
           id SERIAL PRIMARY KEY,
           valor DECIMAL(15,2) NOT NULL,
           data_venda DATE DEFAULT CURRENT_DATE,
-          projeto_id INTEGER REFERENCES projetos(id)
+          projeto_id INTEGER REFERENCES projetos(id),
+          funcionario_id INTEGER REFERENCES funcionarios(id),
+          status_pagamento VARCHAR(50) DEFAULT 'Pendente'
         );
 
         CREATE TABLE IF NOT EXISTS contratos_marketing (
           id SERIAL PRIMARY KEY,
           descricao TEXT,
-          valor DECIMAL(15,2)
+          valor DECIMAL(15,2),
+          valor_total DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE,
+          status VARCHAR(50) DEFAULT 'Ativo'
         );
         "
 
@@ -332,20 +341,29 @@ jobs:
           status VARCHAR(50),
           orcamento DECIMAL(15,2),
           cliente_id INTEGER REFERENCES clientes(id),
-          data_inicio DATE DEFAULT CURRENT_DATE
+          responsavel_id INTEGER REFERENCES funcionarios(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE
         );
 
         CREATE TABLE IF NOT EXISTS vendas (
           id SERIAL PRIMARY KEY,
           valor DECIMAL(15,2) NOT NULL,
           data_venda DATE DEFAULT CURRENT_DATE,
-          projeto_id INTEGER REFERENCES projetos(id)
+          projeto_id INTEGER REFERENCES projetos(id),
+          funcionario_id INTEGER REFERENCES funcionarios(id),
+          status_pagamento VARCHAR(50) DEFAULT 'Pendente'
         );
 
         CREATE TABLE IF NOT EXISTS contratos_marketing (
           id SERIAL PRIMARY KEY,
           descricao TEXT,
-          valor DECIMAL(15,2)
+          valor DECIMAL(15,2),
+          valor_total DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE,
+          status VARCHAR(50) DEFAULT 'Ativo'
         );
         "
 
@@ -570,20 +588,29 @@ jobs:
           status VARCHAR(50),
           orcamento DECIMAL(15,2),
           cliente_id INTEGER REFERENCES clientes(id),
-          data_inicio DATE DEFAULT CURRENT_DATE
+          responsavel_id INTEGER REFERENCES funcionarios(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE
         );
 
         CREATE TABLE IF NOT EXISTS vendas (
           id SERIAL PRIMARY KEY,
           valor DECIMAL(15,2) NOT NULL,
           data_venda DATE DEFAULT CURRENT_DATE,
-          projeto_id INTEGER REFERENCES projetos(id)
+          projeto_id INTEGER REFERENCES projetos(id),
+          funcionario_id INTEGER REFERENCES funcionarios(id),
+          status_pagamento VARCHAR(50) DEFAULT 'Pendente'
         );
 
         CREATE TABLE IF NOT EXISTS contratos_marketing (
           id SERIAL PRIMARY KEY,
           descricao TEXT,
-          valor DECIMAL(15,2)
+          valor DECIMAL(15,2),
+          valor_total DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE,
+          data_termino DATE,
+          status VARCHAR(50) DEFAULT 'Ativo'
         );
 
         -- Dados de teste para suíte completa
@@ -603,13 +630,17 @@ jobs:
         ('Beta Corporation'),
         ('Gamma Solutions');
 
-        INSERT INTO projetos (nome, status, orcamento, cliente_id) VALUES
-        ('Projeto Alpha 2024', 'Em andamento', 25000.00, 1),
-        ('Campanha Beta', 'Concluído', 15000.00, 2);
+        INSERT INTO projetos (nome, status, orcamento, cliente_id, responsavel_id) VALUES
+        ('Projeto Alpha 2024', 'Em andamento', 25000.00, 1, 1),
+        ('Campanha Beta', 'Concluído', 15000.00, 2, 2);
 
-        INSERT INTO vendas (valor, projeto_id) VALUES
-        (25000.00, 1),
-        (15000.00, 2);
+        INSERT INTO vendas (valor, projeto_id, funcionario_id) VALUES
+        (25000.00, 1, 1),
+        (15000.00, 2, 2);
+
+        INSERT INTO contratos_marketing (descricao, valor, valor_total, cliente_id, status) VALUES
+        ('Contrato Marketing Alpha', 10000.00, 10000.00, 1, 'Ativo'),
+        ('Contrato Publicidade Beta', 15000.00, 15000.00, 2, 'Concluído');
         "
 
     - name: Run comprehensive test suite with coverage
@@ -693,14 +724,23 @@ jobs:
         PGPASSWORD: postgres
       run: |
         psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS departamentos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          orcamento DECIMAL(15,2)
+        );
+
         CREATE TABLE IF NOT EXISTS funcionarios (
           id SERIAL PRIMARY KEY,
           nome VARCHAR(100) NOT NULL,
           cargo VARCHAR(100),
-          salario DECIMAL(10,2)
+          salario DECIMAL(10,2),
+          departamento_id INTEGER REFERENCES departamentos(id)
         );
-        INSERT INTO funcionarios (nome, cargo, salario) VALUES
-        ('Test User', 'Test Role', 1000.00);
+
+        INSERT INTO departamentos (nome, orcamento) VALUES ('Test Dept', 50000.00);
+        INSERT INTO funcionarios (nome, cargo, salario, departamento_id) VALUES
+        ('Test User', 'Test Role', 1000.00, 1);
         "
 
     - name: Run performance baseline tests
@@ -838,14 +878,23 @@ jobs:
         PGPASSWORD: postgres
       run: |
         psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS departamentos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          orcamento DECIMAL(15,2)
+        );
+
         CREATE TABLE IF NOT EXISTS funcionarios (
           id SERIAL PRIMARY KEY,
           nome VARCHAR(100) NOT NULL,
           cargo VARCHAR(100),
-          salario DECIMAL(10,2)
+          salario DECIMAL(10,2),
+          departamento_id INTEGER REFERENCES departamentos(id)
         );
-        INSERT INTO funcionarios (nome, cargo, salario) VALUES
-        ('Test User', 'Test Role', 1000.00);
+
+        INSERT INTO departamentos (nome, orcamento) VALUES ('Test Dept', 50000.00);
+        INSERT INTO funcionarios (nome, cargo, salario, departamento_id) VALUES
+        ('Test User', 'Test Role', 1000.00, 1);
         "
 
     - name: Run performance baseline tests

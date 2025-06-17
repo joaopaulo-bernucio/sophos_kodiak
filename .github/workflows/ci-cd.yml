@@ -66,8 +66,8 @@ permissions:
   security-events: write
 
 env:
-  PYTHON_VERSION: '3.13.3'
-  FLUTTER_VERSION: '3.32.1'
+  PYTHON_VERSION: '3.11'
+  FLUTTER_VERSION: '3.24.3'
   POSTGRES_VERSION: '15'
 
 jobs:
@@ -393,8 +393,11 @@ jobs:
 
         try:
             response = requests.get('http://localhost:5000/health', timeout=5)
-            assert response.status_code == 200, f'Health check failed: {response.status_code}'
-            print('Health check passed!')
+            if response.status_code == 200:
+                print('Health check passed!')
+            else:
+                print(f'Health check failed with status: {response.status_code}')
+                exit(1)
         except Exception as e:
             print(f'Health check failed: {e}')
             exit(1)
@@ -418,7 +421,7 @@ jobs:
         pytest -m critical --tb=line -v
 
     - name: Run legacy test endpoints (backward compatibility)
-      run: pytest tests/test_fixed_endpoints.py -v --tb=short
+      run: pytest tests/test_endpoints.py -v --tb=short
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db

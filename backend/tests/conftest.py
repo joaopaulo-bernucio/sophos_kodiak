@@ -82,6 +82,23 @@ try:
 except ImportError:
     psycopg2 = None
 
+# Imports condicionais para dependências opcionais
+genai = None
+GOOGLE_GENAI_AVAILABLE = False
+try:
+    import google.generativeai as genai  # type: ignore
+    GOOGLE_GENAI_AVAILABLE = True
+except ImportError:
+    pass
+
+psutil = None
+PSUTIL_AVAILABLE = False
+try:
+    import psutil  # type: ignore
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    pass
+
 
 def pytest_collection_modifyitems(config, items):
     """Modificar itens de teste coletados."""
@@ -659,6 +676,9 @@ def gemini_api_client(env_vars):
     Returns:
         object: Cliente Gemini ou None se não disponível
     """
+    if not GOOGLE_GENAI_AVAILABLE:
+        pytest.skip("Biblioteca google-generativeai não disponível")
+
     api_key = env_vars.get('GEMINI_API_KEY')
 
     # Pular se não tiver API key real
@@ -666,15 +686,11 @@ def gemini_api_client(env_vars):
         pytest.skip("API key do Gemini não disponível para teste real")
 
     try:
-        import google.generativeai as genai
-
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-pro')
 
         return model
 
-    except ImportError:
-        pytest.skip("Biblioteca google-generativeai não disponível")
     except Exception as e:
         pytest.skip(f"Erro ao configurar Gemini: {e}")
 
@@ -692,12 +708,12 @@ def performance_monitor():
     start_time = time.time()
     start_memory = None
 
-    try:
-        import psutil
-        process = psutil.Process()
-        start_memory = process.memory_info().rss
-    except ImportError:
-        pass
+    if PSUTIL_AVAILABLE:
+        try:
+            process = psutil.Process()
+            start_memory = process.memory_info().rss
+        except Exception:
+            pass
 
     yield {
         'start_time': start_time,
@@ -710,13 +726,12 @@ def performance_monitor():
 
     end_memory = None
     memory_diff = None
-    if start_memory:
+    if start_memory and PSUTIL_AVAILABLE:
         try:
-            import psutil
             process = psutil.Process()
             end_memory = process.memory_info().rss
             memory_diff = end_memory - start_memory
-        except ImportError:
+        except Exception:
             pass
 
     print(f"\nPerformance: {execution_time:.3f}s", end="")

@@ -29,6 +29,7 @@ flask-cors>=4.0.0
 # ===============================
 # Para baixar psycopg2 no arch linux, é necessário instalar o pacote postgresql-libs
 psycopg2>=2.9.0
+# Alternativa para desenvolvimento: psycopg2-binary>=2.9.0
 
 # ===============================
 # CONFIGURATION & ENVIRONMENT
@@ -56,7 +57,7 @@ spacy>=3.6.0
 click==8.1.7
 
 # ===============================
-# TESTING FRAMEWORK
+# TESTING FRAMEWORK & CORE UTILITIES
 # ===============================
 pytest>=7.4.0
 pytest-cov>=4.1.0
@@ -73,3 +74,39 @@ responses>=0.23.3          # HTTP mocking
 factory-boy>=3.3.0         # Test data factories
 freezegun>=1.2.2           # Time mocking
 faker>=19.0.0              # Generate fake data
+
+# ===============================
+# DEPENDÊNCIAS OPCIONAIS PARA TESTES AVANÇADOS
+# ===============================
+# As seguintes dependências são opcionais e são carregadas condicionalmente
+# nos testes quando disponíveis. São instaladas por padrão mas podem ser
+# removidas se não necessárias:
+
+# Para testes com API do Gemini (Google Generative AI)
+google-generativeai>=0.3.0
+
+# Para monitoramento de performance em testes
+psutil>=5.8.0
+
+# ===============================
+# NOTAS DE INSTALAÇÃO
+# ===============================
+#
+# 1. SPACY MODEL (obrigatório para NLP):
+#    python -m spacy download pt_core_news_sm
+#
+# 2. POSTGRESQL (para psycopg2 no Arch Linux):
+#    sudo pacman -S postgresql-libs
+#
+# 3. AMBIENTE DE DESENVOLVIMENTO:
+#    pip install -r requirements.txt
+#    python -m spacy download pt_core_news_sm
+#
+# 4. TESTES:
+#    ./run_tests.sh --quick    # Testes básicos
+#    ./run_tests.sh --full     # Suite completa
+#
+# 5. DEPENDÊNCIAS OPCIONAIS:
+#    Se google-generativeai ou psutil causarem problemas,
+#    podem ser removidos temporariamente. Os testes se
+#    adaptam automaticamente à disponibilidade.

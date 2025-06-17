@@ -8,137 +8,89 @@ entre todos os testes do backend Flask.
 
 import pytest
 import os
-import tempfile
 import json
 import sys
 import logging
+import time
 from pathlib import Path
+from flask import Flask
+
+# Carregar variáveis do arquivo .env (se existir)
+try:
+    from dotenv import load_dotenv
+    # Tenta carregar .env do diretório backend
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✅ Carregado .env de: {env_path}")
+    else:
+        print("⚠️  Arquivo .env não encontrado, usando variáveis de ambiente do sistema")
+except ImportError:
+    print("⚠️  python-dotenv não instalado, usando apenas variáveis de ambiente do sistema")
 
 # Configurar logging para testes
 logging.basicConfig(level=logging.INFO)
 
-# Configurar ambiente de teste antes de importar módulos
-os.environ['FLASK_ENV'] = 'testing'
-os.environ['DB_HOST'] = os.getenv('DB_HOST', 'localhost')
-os.environ['DB_PORT'] = os.getenv('DB_PORT', '5432')
-os.environ['DB_NAME'] = os.getenv('DB_NAME', 'test_db')
-os.environ['DB_USER'] = os.getenv('DB_USER', 'postgres')
-os.environ['DB_PASSWORD'] = os.getenv('DB_PASSWORD', 'postgres')
-os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY', 'test_gemini_api_key')
-
-try:
-    import psycopg2
-except ImportError:
-    psycopg2 = None
-
-from unittest.mock import Mock, patch, MagicMock
-from flask import Flask, jsonify, request
-
 # Adicionar o diretório do backend ao path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
+
+# Configurar ambiente de teste com fallbacks seguros
+def get_test_env_var(key, local_default, ci_default):
+    """
+    Pega variável de ambiente com diferentes defaults para local vs CI.
+
+    Args:
+        key: Nome da variável de ambiente
+        local_default: Valor padrão para desenvolvimento local
+        ci_default: Valor padrão para CI/CD
+    """
+    # Se estamos em CI (GitHub Actions, GitLab CI, etc.)
+    if os.getenv('CI') or os.getenv('GITHUB_ACTIONS') or os.getenv('GITLAB_CI'):
+        return os.getenv(key, ci_default)
+    else:
+        return os.getenv(key, local_default)
+
+# Configurar ambiente de teste
+os.environ['FLASK_ENV'] = 'testing'
+os.environ['DB_HOST'] = get_test_env_var('DB_HOST',
+                                        local_default=os.getenv('DB_HOST', 'localhost'),
+                                        ci_default='localhost')
+os.environ['DB_PORT'] = get_test_env_var('DB_PORT',
+                                        local_default=os.getenv('DB_PORT', '5432'),
+                                        ci_default='5432')
+os.environ['DB_NAME'] = get_test_env_var('DB_NAME',
+                                        local_default=os.getenv('DB_NAME', 'test_db'),
+                                        ci_default='test_db')
+os.environ['DB_USER'] = get_test_env_var('DB_USER',
+                                        local_default=os.getenv('DB_USER', 'postgres'),
+                                        ci_default='postgres')
+os.environ['DB_PASSWORD'] = get_test_env_var('DB_PASSWORD',
+                                            local_default=os.getenv('DB_PASSWORD', 'postgres'),
+                                            ci_default='postgres')
+os.environ['GEMINI_API_KEY'] = get_test_env_var('GEMINI_API_KEY',
+                                               local_default=os.getenv('GEMINI_API_KEY', 'test_gemini_api_key'),
+                                               ci_default='fake_gemini_key_for_tests')
 
 try:
     import spacy
 except ImportError:
     spacy = None
 
-# Importar ou criar um mock da aplicação Flask
-flask_app = None
 try:
-    from app.app import app as imported_flask_app, create_app
-    flask_app = imported_flask_app
-except ImportError as e:
-    logging.warning(f"Erro ao importar app: {e}")
-    # Criar uma aplicação Flask básica para testes se não conseguir importar
-    flask_app = Flask(__name__)
-    flask_app.config['TESTING'] = True
-
-    # Adicionar rotas básicas necessárias para os testes
-    @flask_app.route('/pergunta', methods=['POST'])
-    def pergunta():
-        try:
-            data = request.get_json()
-            if not data or 'pergunta' not in data:
-                return jsonify({'erro': 'Campo pergunta é obrigatório', 'sucesso': False}), 400
-
-            if not data['pergunta'].strip():
-                return jsonify({'erro': 'Pergunta não pode estar vazio', 'sucesso': False}), 400
-
-            # Simular processamento bem-sucedido
-            return jsonify({
-                'resposta': 'Resposta simulada para teste',
-                'sucesso': True
-            }), 200
-        except Exception as e:
-            return jsonify({'erro': f'Erro interno: {str(e)}', 'sucesso': False}), 500
-
-    @flask_app.route('/health', methods=['GET'])
-    def health():
-        return jsonify({'status': 'healthy'}), 200
-
-
-def pytest_configure():
-    """Configuração global para todos os testes."""
-    # Configurar variáveis de ambiente para testes
-    os.environ['FLASK_ENV'] = 'testing'
-    os.environ['DB_HOST'] = 'localhost'
-    os.environ['DB_PORT'] = '5432'
-    os.environ['DB_NAME'] = 'test_db'
-    os.environ['DB_USER'] = 'postgres'
-    os.environ['DB_PASSWORD'] = 'postgres'
-    os.environ['GEMINI_API_KEY'] = 'test_api_key'
-
-    # Configurar mocks globais para clientes que podem faltar
-    try:
-        import app.app as app_module
-        from tests.mocks.mock_supabase import (
-            MockSupabaseClient,
-            MockGeminiClient,
-            MockEnviarParaGemini,
-            MockSelecionarQueries,
-            MockProcessarTexto
-        )
-
-        # Configurar clientes mock se não estiverem definidos
-        if not hasattr(app_module, 'supabase_client') or app_module.supabase_client is None:
-            app_module.supabase_client = MockSupabaseClient()
-
-        if not hasattr(app_module, 'gemini_client') or app_module.gemini_client is None:
-            app_module.gemini_client = MockGeminiClient()
-
-        # Configurar mocks de funções específicas
-        if not hasattr(app_module, 'enviar_para_gemini'):
-            app_module.enviar_para_gemini = MockEnviarParaGemini()
-
-        if not hasattr(app_module, 'selecionar_queries'):
-            app_module.selecionar_queries = MockSelecionarQueries()
-
-        # Configurar funções de processamento de texto
-        if not hasattr(app_module, 'extrair_lemmas'):
-            app_module.extrair_lemmas = MockProcessarTexto.extrair_lemmas
-
-        if not hasattr(app_module, 'processar_texto'):
-            app_module.processar_texto = MockProcessarTexto.processar_texto
-
-    except ImportError:
-        logging.warning("Não foi possível importar app.app, usando mocks básicos")
-        pass  # Ignorar se não conseguir importar
-
-
-def pytest_runtest_setup(item):
-    """Setup executado antes de cada teste."""
-    # Garantir que temos os mocks necessários disponíveis
-    pass
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 
 def pytest_collection_modifyitems(config, items):
     """Modificar itens de teste coletados."""
     for item in items:
-        # Adicionar marker para testes que precisam de mocks específicos
-        if "test_pergunta" in item.name:
+        # Adicionar marker para testes de API
+        if "test_pergunta" in item.name or "test_endpoint" in item.name:
             item.add_marker(pytest.mark.api)
-        elif "test_nlp" in item.name:
+        # Adicionar marker para testes de NLP
+        elif "test_nlp" in item.name or "test_query_mapping" in item.name:
             item.add_marker(pytest.mark.nlp)
 
 
@@ -148,82 +100,16 @@ def nlp_model():
     Fixture que carrega o modelo spaCy uma vez para toda a sessão de testes.
 
     Returns:
-        spacy.Language: Modelo spaCy carregado ou mock se não disponível
+        spacy.Language: Modelo spaCy carregado ou None se não disponível
     """
     if spacy is None:
-        # Se spacy não estiver disponível, criar um mock robusto
-        mock_nlp = Mock()
-        mock_token = Mock()
-        mock_token.lemma_ = "test"
-        mock_token.pos_ = "NOUN"
-        mock_token.text = "test"
-        mock_token.lower_ = "test"
-
-        mock_doc = Mock()
-        mock_doc.configure_mock(**{
-            '__iter__': lambda x: iter([mock_token]),
-            'text': 'test',
-            'ents': [],
-        })
-        mock_nlp.return_value = mock_doc
-        return mock_nlp
+        pytest.skip("spaCy não está disponível")
 
     try:
         nlp = spacy.load("pt_core_news_sm")
         return nlp
     except Exception:
-        # Se o modelo não estiver disponível, criar um mock robusto
-        mock_nlp = Mock()
-        mock_token = Mock()
-        mock_token.lemma_ = "test"
-        mock_token.pos_ = "NOUN"
-        mock_token.text = "test"
-        mock_token.lower_ = "test"
-
-        mock_doc = Mock()
-        mock_doc.configure_mock(**{
-            '__iter__': lambda x: iter([mock_token]),
-            'text': 'test',
-            'ents': [],
-        })
-        mock_nlp.return_value = mock_doc
-        return mock_nlp
-
-
-@pytest.fixture
-def client():
-    """
-    Fixture que fornece um cliente de teste Flask.
-
-    Returns:
-        FlaskClient: Cliente para fazer requisições de teste
-    """
-    # Configurar variáveis de ambiente para testes
-    test_env = {
-        'DB_HOST': 'localhost',
-        'DB_PORT': '5432',
-        'DB_NAME': 'test_db',
-        'DB_USER': 'postgres',
-        'DB_PASSWORD': 'postgres',
-        'GEMINI_API_KEY': 'test_api_key_123456789',
-        'FLASK_ENV': 'testing'
-    }
-
-    with patch.dict(os.environ, test_env):
-        # Usar a aplicação Flask configurada globalmente
-        if flask_app is None:
-            # Criar uma aplicação básica se não existir
-            test_app = Flask(__name__)
-            test_app.config['TESTING'] = True
-            test_app.config['WTF_CSRF_ENABLED'] = False
-        else:
-            test_app = flask_app
-            test_app.config['TESTING'] = True
-            test_app.config['WTF_CSRF_ENABLED'] = False
-
-        with test_app.test_client() as client:
-            with test_app.app_context():
-                yield client
+        pytest.skip("Modelo spaCy pt_core_news_sm não está disponível")
 
 
 @pytest.fixture
@@ -234,305 +120,30 @@ def app():
     Returns:
         Flask: Instância da aplicação configurada para testes
     """
-    if hasattr(flask_app, 'config'):
-        flask_app.config['TESTING'] = True
+    try:
+        from app.app import app as flask_app
+        flask_app.config.update({
+            'TESTING': True,
+            'WTF_CSRF_ENABLED': False,
+            'JSON_AS_ASCII': False,
+            'JSON_SORT_KEYS': False
+        })
         return flask_app
-    else:
-        # Se não conseguiu importar o app, retornar um mock
-        return Mock()
+    except ImportError:
+        pytest.skip("Não foi possível importar a aplicação Flask")
 
 
 @pytest.fixture
-def mock_db_connection():
+def client(app):
     """
-    Fixture que simula uma conexão com o banco de dados.
+    Fixture que fornece um cliente de teste Flask.
 
     Returns:
-        Mock: Conexão mockada com métodos cursor e close
+        FlaskClient: Cliente para fazer requisições de teste
     """
-    mock_conn = Mock()
-    mock_cursor = Mock()
-
-    # Configurar o cursor para retornar dados fictícios
-    mock_cursor.fetchall.return_value = [
-        (1, 'João Silva', 'Desenvolvedor', 'TI', 5000),
-        (2, 'Maria Santos', 'Designer', 'Criação', 4500),
-    ]
-    mock_cursor.fetchone.return_value = (1, 'João Silva', 'Desenvolvedor', 'TI', 5000)
-    mock_cursor.description = [
-        ('id',), ('nome',), ('cargo',), ('departamento',), ('salario',)
-    ]
-    mock_cursor.execute = Mock()
-    mock_cursor.close = Mock()
-
-    mock_conn.cursor.return_value = mock_cursor
-    mock_conn.close = Mock()
-    mock_conn.commit = Mock()
-    mock_conn.rollback = Mock()
-
-    return mock_conn
-
-
-@pytest.fixture
-def mock_get_db_connection(mock_db_connection):
-    """
-    Mock da função get_db_connection que retorna uma conexão mockada.
-    """
-    with patch('app.app.get_db_connection') as mock_func:
-        mock_func.return_value = mock_db_connection
-        yield mock_func
-
-
-@pytest.fixture
-def mock_enviar_para_gemini():
-    """
-    Mock da função enviar_para_gemini que retorna respostas controladas.
-    """
-    from tests.mocks.mock_supabase import MockEnviarParaGemini
-
-    mock_func = MockEnviarParaGemini()
-
-    with patch('app.app.enviar_para_gemini', side_effect=mock_func) as patched:
-        yield patched
-
-
-@pytest.fixture
-def mock_selecionar_queries():
-    """
-    Mock da função selecionar_queries que retorna queries padrão.
-    """
-    from tests.mocks.mock_supabase import MockSelecionarQueries
-
-    mock_func = MockSelecionarQueries()
-
-    with patch('app.app.selecionar_queries', side_effect=mock_func) as patched:
-        yield patched
-
-
-@pytest.fixture
-def mock_text_processing():
-    """
-    Mock das funções de processamento de texto para evitar erros de NoneType.
-    """
-    from tests.mocks.mock_supabase import MockProcessarTexto
-
-    with patch('app.app.extrair_lemmas', side_effect=MockProcessarTexto.extrair_lemmas) as mock_lemmas, \
-         patch('app.app.processar_texto', side_effect=MockProcessarTexto.processar_texto) as mock_process:
-
-        yield {'lemmas': mock_lemmas, 'process': mock_process}
-
-
-@pytest.fixture
-def mock_gemini_response():
-    """
-    Fixture que simula uma resposta da API Gemini.
-
-    Returns:
-        dict: Resposta mockada da API Gemini
-    """
-    return {
-        "candidates": [
-            {
-                "content": {
-                    "parts": [
-                        {
-                            "text": "Olá! Sou o Sophos, assistente virtual da STOLF LTDA. "
-                                   "Com base nos dados consultados, posso ajudá-lo com informações "
-                                   "sobre funcionários, projetos e vendas."
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-
-
-@pytest.fixture
-def json_response_mock():
-    """
-    Fixture que garante que todas as respostas Flask sejam JSON válidas.
-    """
-    original_jsonify = jsonify
-
-    def safe_jsonify(*args, **kwargs):
-        """Versão segura do jsonify que sempre retorna JSON válido."""
-        try:
-            return original_jsonify(*args, **kwargs)
-        except Exception as e:
-            # Se houver erro na serialização, retornar erro estruturado
-            return original_jsonify({
-                'erro': f'Erro na serialização JSON: {str(e)}',
-                'sucesso': False
-            }), 500
-
-    with patch('flask.jsonify', side_effect=safe_jsonify):
-        yield
-
-
-@pytest.fixture
-def mock_parameterized_queries():
-    """
-    Mock para queries parametrizadas que previne SQL injection.
-    """
-    def execute_safe_query(query, params=None):
-        """Executa query de forma segura com parâmetros."""
-        if params is None:
-            params = []
-
-        # Simular validação de parâmetros
-        if '%s' in query and not params:
-            raise ValueError("Query com placeholders precisa de parâmetros")
-
-        # Retornar resultado mockado
-        return [
-            {'id': 1, 'nome': 'Resultado Mock', 'valor': 1000}
-        ]
-
-    mock_cursor = Mock()
-    mock_cursor.execute.side_effect = execute_safe_query
-    mock_cursor.fetchall.return_value = [
-        (1, 'Resultado Mock', 1000)
-    ]
-
-    yield mock_cursor
-
-
-@pytest.fixture
-def sample_funcionarios():
-    """
-    Fixture com dados de exemplo de funcionários.
-
-    Returns:
-        list: Lista de dicionários representando funcionários
-    """
-    return [
-        {
-            'id': 1,
-            'nome': 'João Silva',
-            'cargo': 'Desenvolvedor Senior',
-            'departamento': 'TI',
-            'salario': 8000
-        },
-        {
-            'id': 2,
-            'nome': 'Maria Santos',
-            'cargo': 'Designer Gráfico',
-            'departamento': 'Criação',
-            'salario': 6000
-        },
-        {
-            'id': 3,
-            'nome': 'Pedro Costa',
-            'cargo': 'Analista de Marketing',
-            'departamento': 'Marketing Digital',
-            'salario': 5500
-        }
-    ]
-
-
-@pytest.fixture
-def sample_queries():
-    """
-    Fixture com perguntas de exemplo para testes.
-
-    Returns:
-        list: Lista de perguntas e respostas esperadas
-    """
-    return [
-        {
-            'pergunta': 'Quantos funcionários temos?',
-            'label_esperado': 'funcionarios-total',
-            'tipo': 'contagem',
-            'resposta_esperada': 'Temos X funcionários no total.'
-        },
-        {
-            'pergunta': 'Qual o salário médio?',
-            'label_esperado': 'salario-medio',
-            'tipo': 'estatistica',
-            'resposta_esperada': 'O salário médio é R$ X.'
-        },
-        {
-            'pergunta': 'Listar todos os funcionários',
-            'label_esperado': 'funcionarios-lista',
-            'tipo': 'listagem',
-            'resposta_esperada': 'Aqui está a lista de funcionários:'
-        },
-        {
-            'pergunta': 'Projetos em andamento',
-            'label_esperado': 'projetos-andamento',
-            'tipo': 'filtro',
-            'resposta_esperada': 'Projetos atualmente em andamento:'
-        },
-        {
-            'pergunta': '',  # Pergunta vazia para teste de erro
-            'label_esperado': None,
-            'tipo': 'erro',
-            'resposta_esperada': 'erro'
-        }
-    ]
-
-
-@pytest.fixture
-def error_scenarios():
-    """
-    Fixture com cenários de erro para testes robustos.
-    """
-    return [
-        {
-            'tipo': 'json_invalido',
-            'data': 'not json',
-            'content_type': 'application/json',
-            'status_esperado': 400
-        },
-        {
-            'tipo': 'campo_faltando',
-            'data': {'outro_campo': 'valor'},
-            'content_type': 'application/json',
-            'status_esperado': 400
-        },
-        {
-            'tipo': 'pergunta_vazia',
-            'data': {'pergunta': ''},
-            'content_type': 'application/json',
-            'status_esperado': 400
-        },
-        {
-            'tipo': 'content_type_errado',
-            'data': '{"pergunta": "teste"}',
-            'content_type': 'text/plain',
-            'status_esperado': 400
-        },
-        {
-            'tipo': 'pergunta_muito_longa',
-            'data': {'pergunta': 'a' * 1001},
-            'content_type': 'application/json',
-            'status_esperado': 400
-        }
-    ]
-
-
-@pytest.fixture
-def mock_charts_data():
-    """
-    Mock de dados para endpoints de charts.
-    """
-    return {
-        'total_vendas_por_mes': [
-            {'mes': '2024-01', 'total_vendas': 15000.00},
-            {'mes': '2024-02', 'total_vendas': 18000.00},
-            {'mes': '2024-03', 'total_vendas': 22000.00}
-        ],
-        'funcionarios_por_departamento': [
-            {'departamento': 'TI', 'quantidade': 5},
-            {'departamento': 'Marketing', 'quantidade': 3},
-            {'departamento': 'Vendas', 'quantidade': 4}
-        ],
-        'projetos_por_status': [
-            {'status': 'Em Andamento', 'quantidade': 8},
-            {'status': 'Concluído', 'quantidade': 12},
-            {'status': 'Pausado', 'quantidade': 2}
-        ]
-    }
+    with app.test_client() as client:
+        with app.app_context():
+            yield client
 
 
 @pytest.fixture
@@ -540,149 +151,18 @@ def env_vars():
     """
     Fixture que configura variáveis de ambiente para testes.
 
-    Yields:
+    Returns:
         dict: Dicionário com as variáveis de ambiente configuradas
     """
-    test_env = {
-        'DB_HOST': 'localhost',
-        'DB_PORT': '5432',
-        'DB_NAME': 'test_db',
-        'DB_USER': 'test_user',
-        'DB_PASSWORD': 'test_password',
-        'GEMINI_API_KEY': 'test_api_key_123456789',
+    return {
+        'DB_HOST': os.getenv('DB_HOST', 'localhost'),
+        'DB_PORT': os.getenv('DB_PORT', '5432'),
+        'DB_NAME': os.getenv('DB_NAME', 'test_db'),
+        'DB_USER': os.getenv('DB_USER', 'postgres'),
+        'DB_PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+        'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', 'test_api_key'),
         'FLASK_ENV': 'testing'
     }
-
-    # Aplicar as variáveis de ambiente
-    with patch.dict(os.environ, test_env, clear=False):
-        yield test_env
-
-
-@pytest.fixture(autouse=True)
-def configure_app_for_tests():
-    """
-    Fixture que configura automaticamente a aplicação para testes.
-    Executa automaticamente antes de cada teste.
-    """
-    if flask_app and hasattr(flask_app, 'config'):
-        # Configurar a aplicação para testes
-        flask_app.config.update({
-            'TESTING': True,
-            'WTF_CSRF_ENABLED': False,
-            'JSON_AS_ASCII': False,  # Para suportar caracteres especiais
-            'JSON_SORT_KEYS': False
-        })
-
-
-@pytest.fixture
-def mock_error_handlers():
-    """
-    Mock dos handlers de erro para garantir respostas JSON consistentes.
-    """
-    def handle_400_error(error):
-        return jsonify({
-            'erro': 'Bad Request',
-            'sucesso': False,
-            'detalhes': str(error)
-        }), 400
-
-    def handle_404_error(error):
-        return jsonify({
-            'erro': 'Endpoint não encontrado',
-            'sucesso': False
-        }), 404
-
-    def handle_405_error(error):
-        return jsonify({
-            'erro': 'Método não permitido',
-            'sucesso': False
-        }), 405
-
-    def handle_500_error(error):
-        return jsonify({
-            'erro': 'Erro interno do servidor',
-            'sucesso': False,
-            'detalhes': str(error)
-        }), 500
-
-    if flask_app:
-        flask_app.register_error_handler(400, handle_400_error)
-        flask_app.register_error_handler(404, handle_404_error)
-        flask_app.register_error_handler(405, handle_405_error)
-        flask_app.register_error_handler(500, handle_500_error)
-
-    yield {
-        '400': handle_400_error,
-        '404': handle_404_error,
-        '405': handle_405_error,
-        '500': handle_500_error
-    }
-
-
-@pytest.fixture
-def isolated_app():
-    """
-    Fixture que cria uma aplicação Flask completamente isolada para testes.
-
-    Esta fixture é útil para testes que precisam de um ambiente limpo
-    sem interferência de configurações globais.
-
-    Returns:
-        Flask: Nova instância da aplicação Flask configurada para testes
-    """
-    # Configurar variáveis de ambiente específicas para testes isolados
-    test_env = {
-        'DB_HOST': 'localhost',
-        'DB_PORT': '5432',
-        'DB_NAME': 'test_db',
-        'DB_USER': 'postgres',
-        'DB_PASSWORD': 'postgres',
-        'GEMINI_API_KEY': 'test_api_key_isolated',
-        'FLASK_ENV': 'testing'
-    }
-
-    with patch.dict(os.environ, test_env):
-        try:
-            # Tentar importar e criar nova instância da aplicação
-            from app.app import create_app
-            isolated_app_instance = create_app({'TESTING': True})
-        except ImportError:
-            # Fallback: criar aplicação básica
-            isolated_app_instance = Flask(__name__)
-            isolated_app_instance.config['TESTING'] = True
-
-            # Adicionar rotas básicas necessárias
-            @isolated_app_instance.route('/pergunta', methods=['POST'])
-            def pergunta():
-                data = request.get_json()
-                test_scenario = request.headers.get('X-Test-Scenario')
-
-                if test_scenario == 'test_error_banco':
-                    return jsonify({
-                        'resposta': '',
-                        'sucesso': False,
-                        'erro': 'Erro forçado de banco para teste'
-                    }), 500
-
-                return jsonify({
-                    'resposta': 'Resposta de teste',
-                    'sucesso': True,
-                    'erro': None
-                })
-
-            @isolated_app_instance.route('/health', methods=['GET'])
-            def health():
-                return jsonify({'status': 'ok'}), 200
-
-            @isolated_app_instance.route('/api/query/total_vendas_por_mes', methods=['GET'])
-            def vendas():
-                return jsonify({'data': []}), 200
-
-            @isolated_app_instance.route('/api/query/funcionarios_por_departamento', methods=['GET'])
-            def funcionarios():
-                return jsonify({'data': []}), 200
-
-        yield isolated_app_instance
 
 
 # ============================================================
@@ -734,36 +214,6 @@ def make_api_request(client, endpoint, method='GET', data=None, headers=None):
         return client.delete(endpoint, headers=headers)
     else:
         raise ValueError(f"Método HTTP não suportado: {method}")
-
-
-def setup_mock_environment():
-    """
-    Configura o ambiente mock para testes isolados.
-    """
-    # Mock de todas as dependências externas
-    mocks = {}
-
-    # Mock do banco de dados
-    with patch('app.app.get_db_connection') as mock_db:
-        mock_conn = Mock()
-        mock_cursor = Mock()
-        mock_cursor.fetchall.return_value = []
-        mock_cursor.fetchone.return_value = None
-        mock_conn.cursor.return_value = mock_cursor
-        mock_db.return_value = mock_conn
-        mocks['db'] = mock_db
-
-    # Mock do Gemini
-    with patch('app.app.enviar_para_gemini') as mock_gemini:
-        mock_gemini.return_value = "Resposta padrão do mock"
-        mocks['gemini'] = mock_gemini
-
-    # Mock do processamento de texto
-    with patch('app.app.processar_texto') as mock_process:
-        mock_process.side_effect = lambda x: x.lower() if x else ""
-        mocks['process'] = mock_process
-
-    return mocks
 
 
 class TestDataFactory:
@@ -821,37 +271,724 @@ pytest.mark.nlp = pytest.mark.nlp  # Testes de NLP
 pytest.mark.integration = pytest.mark.integration  # Testes de integração
 pytest.mark.unit = pytest.mark.unit  # Testes unitários
 
+
+# ======================================
+# FIXTURES PARA TESTES DE QUERY MAPPING
+# ======================================
+
 @pytest.fixture
-def mock_charts_endpoints():
+def fresh_query_manager():
     """
-    Mock para endpoints de charts sem problemas de importação.
+    Fixture que retorna uma nova instância do QueryMappingManager.
+
+    Útil para testes que precisam de um estado limpo do gerenciador,
+    sem interferir na instância global.
     """
-    def mock_total_vendas():
+    try:
+        from app.query_mapping import QueryMappingManager
+        return QueryMappingManager()
+    except ImportError:
+        pytest.skip("QueryMappingManager não disponível")
+
+
+@pytest.fixture
+def sample_query_mapping():
+    """
+    Fixture que retorna um QueryMapping de exemplo para testes.
+    """
+    try:
+        from app.query_mapping import QueryMapping, QueryCategory
+        return QueryMapping(
+            keywords=["teste", "exemplo", "sample"],
+            query_id="teste-exemplo",
+            sql_query="SELECT * FROM teste WHERE exemplo = 'sample';",
+            category=QueryCategory.LISTS,
+            description="Mapeamento de exemplo para testes"
+        )
+    except ImportError:
+        pytest.skip("QueryMapping não disponível")
+
+
+@pytest.fixture
+def query_test_cases():
+    """
+    Fixture que retorna casos de teste para validação de queries SQL.
+
+    Returns:
+        List[Dict]: Lista de casos de teste com estrutura:
+        - input: entrada do usuário
+        - expected_id: ID esperado do mapeamento
+        - expected_category: categoria esperada
+    """
+    try:
+        from app.query_mapping import QueryCategory
         return [
-            {'mes': '2024-01', 'total_vendas': 15000.00},
-            {'mes': '2024-02', 'total_vendas': 18000.00},
-            {'mes': '2024-03', 'total_vendas': 22000.00}
+            {
+                "input": "quantos funcionários",
+                "expected_id": "funcionarios-total",
+                "expected_category": QueryCategory.TOTALS
+            },
+            {
+                "input": "listar funcionários",
+                "expected_id": "funcionarios-lista",
+                "expected_category": QueryCategory.LISTS
+            },
+            {
+                "input": "salário médio",
+                "expected_id": "salario-medio",
+                "expected_category": QueryCategory.STATISTICS
+            },
+            {
+                "input": "detalhes de vendas",
+                "expected_id": "vendas-detalhes",
+                "expected_category": QueryCategory.DETAILS
+            },
+            {
+                "input": "último projeto",
+                "expected_id": "projeto-mais-recente",
+                "expected_category": QueryCategory.RECENT
+            }
         ]
+    except ImportError:
+        pytest.skip("QueryCategory não disponível")
 
-    def mock_funcionarios_departamento():
-        return [
-            {'departamento': 'TI', 'quantidade': 5},
-            {'departamento': 'Marketing', 'quantidade': 3},
-            {'departamento': 'Vendas', 'quantidade': 4}
-        ]
 
-    # Simular os patches necessários para evitar importação de graphs.py
-    with patch('app.graphs.get_db_connection') as mock_get_db:
-        mock_conn = Mock()
-        mock_cursor = Mock()
+@pytest.fixture
+def expected_table_names():
+    """
+    Fixture que retorna os nomes de tabelas esperados no sistema.
+    """
+    return [
+        'funcionarios',
+        'projetos',
+        'clientes',
+        'vendas',
+        'departamentos',
+        'contratos_marketing'
+    ]
 
-        # Configurar retornos diferentes baseados no teste
-        mock_cursor.fetchall.side_effect = lambda: mock_total_vendas()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_get_db.return_value = mock_conn
 
-        yield {
-            'total_vendas': mock_total_vendas,
-            'funcionarios_dept': mock_funcionarios_departamento,
-            'mock_db': mock_get_db
+@pytest.fixture
+def sql_security_test_cases():
+    """
+    Fixture que retorna casos de teste para validação de segurança SQL.
+
+    Returns:
+        List[Dict]: Lista com estrutura:
+        - description: descrição do teste
+        - query: query SQL a ser testada
+        - should_be_safe: se a query deveria ser considerada segura
+    """
+    return [
+        {
+            "description": "Query básica segura",
+            "query": "SELECT COUNT(*) FROM funcionarios;",
+            "should_be_safe": True
+        },
+        {
+            "description": "Query com WHERE usando comparação direta",
+            "query": "SELECT * FROM funcionarios WHERE status = 'Ativo';",
+            "should_be_safe": True
+        },
+        {
+            "description": "Query com BETWEEN",
+            "query": "SELECT * FROM vendas WHERE data_venda BETWEEN '2024-01-01' AND '2024-12-31';",
+            "should_be_safe": True
+        },
+        {
+            "description": "Query com CURRENT_DATE",
+            "query": "SELECT * FROM projetos WHERE data_inicio = CURRENT_DATE;",
+            "should_be_safe": True
+        },
+        {
+            "description": "Query com JOIN",
+            "query": """
+                SELECT f.nome, d.nome
+                FROM funcionarios f
+                JOIN departamentos d ON f.departamento_id = d.id;
+            """,
+            "should_be_safe": True
         }
+    ]
+
+
+@pytest.fixture(scope="session")
+def global_query_manager():
+    """
+    Fixture de sessão que retorna a instância global do query_manager.
+
+    Scope 'session' significa que será criada uma vez por sessão de testes
+    e reutilizada em todos os testes que a requisitarem.
+    """
+    try:
+        from app.query_mapping import query_manager
+        return query_manager
+    except ImportError:
+        pytest.skip("query_manager não disponível")
+
+
+# ======================================
+# FIXTURES PARA TESTES DE NLP
+# ======================================
+
+@pytest.fixture
+def nlp_test_texts():
+    """
+    Fixture que retorna textos de teste para processamento NLP.
+
+    Returns:
+        Dict: Dicionário com categorias de textos de teste
+    """
+    return {
+        'simples': [
+            "funcionários",
+            "projetos",
+            "clientes",
+            "vendas"
+        ],
+        'compostos': [
+            "quantos funcionários",
+            "total de projetos",
+            "listar clientes",
+            "salário médio"
+        ],
+        'complexos': [
+            "Gostaria de saber quantos funcionários temos na empresa",
+            "Você pode me mostrar o total de projetos concluídos?",
+            "Qual é a lista de todos os clientes ativos no sistema?"
+        ],
+        'especiais': [
+            "funcionário@empresa.com",
+            "R$ 5.000,00",
+            "10% dos funcionários",
+            "vendas (último mês)"
+        ],
+        'acentuados': [
+            "funcionário",
+            "operação",
+            "informação",
+            "relatório",
+            "estatísticas"
+        ]
+    }
+
+
+@pytest.fixture
+def expected_lemmas():
+    """
+    Fixture que retorna lemmas esperados para textos específicos.
+
+    Returns:
+        Dict: Mapeamento de texto para lemmas esperados
+    """
+    return {
+        "funcionários trabalham": {"funcionário", "trabalhar"},
+        "projetos concluídos": {"projeto", "concluído"},
+        "clientes ativos": {"cliente", "ativo"},
+        "vendas mensais": {"venda", "mensal"},
+        "salário médio": {"salário", "médio"}
+    }
+
+
+@pytest.fixture
+def nlp_integration_cases():
+    """
+    Fixture que retorna casos de teste para integração NLP.
+
+    Returns:
+        List[Dict]: Lista de casos de teste com estrutura:
+        - input: texto de entrada
+        - expected_category: categoria esperada
+        - min_lemmas: número mínimo de lemmas esperados
+    """
+    return [
+        {
+            "input": "quantos funcionários",
+            "expected_category": "funcionario",
+            "min_lemmas": 1
+        },
+        {
+            "input": "total de projetos",
+            "expected_category": "projeto",
+            "min_lemmas": 1
+        },
+        {
+            "input": "listar clientes ativos",
+            "expected_category": "cliente",
+            "min_lemmas": 2
+        },
+        {
+            "input": "salário médio dos empregados",
+            "expected_category": "salario",
+            "min_lemmas": 2
+        }
+    ]
+
+
+@pytest.fixture
+def performance_test_data():
+    """
+    Fixture que retorna dados para testes de performance.
+
+    Returns:
+        Dict: Dados para testes de performance
+    """
+    return {
+        'texto_curto': "funcionários",
+        'texto_medio': "funcionários do departamento de vendas trabalham com clientes",
+        'texto_longo': " ".join(["funcionários trabalham departamento vendas clientes projetos"] * 20),
+        'repeticoes': 10,
+        'timeout_maximo': 1.0  # 1 segundo
+    }
+
+
+@pytest.fixture(scope="session")
+def spacy_model_available():
+    """
+    Fixture de sessão que verifica se o modelo spaCy está disponível.
+
+    Returns:
+        bool: True se o modelo está disponível, False caso contrário
+    """
+    try:
+        import spacy
+        model = spacy.load("pt_core_news_sm")
+        return True
+    except Exception:
+        return False
+
+
+@pytest.fixture
+def fallback_test_cases():
+    """
+    Fixture que retorna casos de teste para fallback quando spaCy não está disponível.
+
+    Returns:
+        List[Dict]: Casos de teste para fallback
+    """
+    return [
+        {
+            "input": "funcionários trabalham",
+            "expected_type": set,
+            "should_contain": ["funcionários", "trabalham"]
+        },
+        {
+            "input": "projetos, clientes!",
+            "expected_type": set,
+            "should_not_contain": [",", "!"]
+        },
+        {
+            "input": "R$ 1.000,00",
+            "expected_type": set,
+            "should_contain": ["r", "1", "000", "00"]
+        }
+    ]
+
+
+# ======================================
+# FIXTURES PARA NOVOS TESTES
+# ======================================
+
+@pytest.fixture(scope="session")
+def database_connection(env_vars):
+    """
+    Fixture que fornece conexão real com banco de dados para testes críticos.
+
+    Returns:
+        psycopg2.connection: Conexão com banco ou None se não disponível
+    """
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=env_vars['DB_HOST'],
+            port=env_vars['DB_PORT'],
+            dbname=env_vars['DB_NAME'],
+            user=env_vars['DB_USER'],
+            password=env_vars['DB_PASSWORD'],
+            connect_timeout=10
+        )
+
+        # Testar conexão
+        cur = conn.cursor()
+        cur.execute("SELECT 1;")
+        cur.fetchone()
+        cur.close()
+
+        yield conn
+
+        try:
+            conn.close()
+        except:
+            pass
+
+    except ImportError:
+        pytest.skip("psycopg2 não disponível")
+    except Exception as e:
+        pytest.skip(f"Banco de dados não disponível: {e}")
+
+
+@pytest.fixture
+def real_query_execution(database_connection):
+    """
+    Fixture que permite execução real de queries SQL.
+
+    Returns:
+        Callable: Função para executar queries
+    """
+    def execute_query(sql, params=None):
+        if database_connection is None:
+            pytest.skip("Conexão com banco não disponível")
+
+        cur = database_connection.cursor()
+        try:
+            cur.execute(sql, params)
+            result = cur.fetchall()
+            return result
+        finally:
+            cur.close()
+
+    return execute_query
+
+
+@pytest.fixture
+def gemini_api_client(env_vars):
+    """
+    Fixture que fornece cliente real da API Gemini quando disponível.
+
+    Returns:
+        object: Cliente Gemini ou None se não disponível
+    """
+    api_key = env_vars.get('GEMINI_API_KEY')
+
+    # Pular se não tiver API key real
+    if not api_key or api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
+        pytest.skip("API key do Gemini não disponível para teste real")
+
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-pro')
+
+        return model
+
+    except ImportError:
+        pytest.skip("Biblioteca google-generativeai não disponível")
+    except Exception as e:
+        pytest.skip(f"Erro ao configurar Gemini: {e}")
+
+
+@pytest.fixture
+def performance_monitor():
+    """
+    Fixture para monitoramento básico de performance.
+
+    Returns:
+        Dict: Métricas de performance
+    """
+    import time
+
+    start_time = time.time()
+    start_memory = None
+
+    try:
+        import psutil
+        process = psutil.Process()
+        start_memory = process.memory_info().rss
+    except ImportError:
+        pass
+
+    yield {
+        'start_time': start_time,
+        'start_memory': start_memory
+    }
+
+    # Calcular métricas finais
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    end_memory = None
+    memory_diff = None
+    if start_memory:
+        try:
+            import psutil
+            process = psutil.Process()
+            end_memory = process.memory_info().rss
+            memory_diff = end_memory - start_memory
+        except ImportError:
+            pass
+
+    print(f"\nPerformance: {execution_time:.3f}s", end="")
+    if memory_diff is not None:
+        print(f", Memória: {memory_diff/1024/1024:.1f}MB")
+    else:
+        print("")
+
+
+@pytest.fixture
+def concurrent_test_helper():
+    """
+    Fixture que fornece utilitários para testes concorrentes.
+
+    Returns:
+        Dict: Funções auxiliares para concorrência
+    """
+    import threading
+    import queue
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def run_concurrent_tasks(tasks, max_workers=5, timeout=30):
+        """
+        Executa tarefas em paralelo.
+
+        Args:
+            tasks: Lista de funções para executar
+            max_workers: Número máximo de threads
+            timeout: Timeout em segundos
+
+        Returns:
+            List: Resultados das tarefas
+        """
+        results = []
+        errors = []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(task) for task in tasks]
+
+            for future in as_completed(futures, timeout=timeout):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    errors.append(str(e))
+
+        return {
+            'results': results,
+            'errors': errors,
+            'success_count': len(results),
+            'error_count': len(errors)
+        }
+
+    def create_load_test(client, endpoint, data, num_requests=10):
+        """
+        Cria teste de carga para um endpoint.
+
+        Args:
+            client: Cliente Flask de teste
+            endpoint: URL do endpoint
+            data: Dados para enviar
+            num_requests: Número de requisições
+
+        Returns:
+            List: Funções de teste
+        """
+        def make_request():
+            return client.post(endpoint, json=data, content_type='application/json')
+
+        return [make_request for _ in range(num_requests)]
+
+    return {
+        'run_concurrent': run_concurrent_tasks,
+        'create_load_test': create_load_test
+    }
+
+
+@pytest.fixture
+def smoke_test_data():
+    """
+    Fixture que fornece dados padronizados para smoke tests.
+
+    Returns:
+        Dict: Dados de teste
+    """
+    return {
+        'valid_questions': [
+            'Quantos funcionários temos?',
+            'Total de projetos',
+            'Listar departamentos'
+        ],
+        'invalid_questions': [
+            '',
+            None,
+            'x' * 10000
+        ],
+        'malicious_inputs': [
+            "'; DROP TABLE funcionarios; --",
+            '<script>alert("xss")</script>',
+            '../../etc/passwd'
+        ],
+        'test_endpoints': [
+            '/health',
+            '/pergunta',
+            '/api/query/metricas_gerais'
+        ]
+    }
+
+
+@pytest.fixture
+def data_quality_checker(database_connection):
+    """
+    Fixture que fornece funções para verificação de qualidade dos dados.
+
+    Returns:
+        Dict: Funções de verificação
+    """
+    def check_table_exists(table_name):
+        """Verifica se tabela existe."""
+        if not database_connection:
+            return False
+
+        cur = database_connection.cursor()
+        try:
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = %s
+                );
+            """, (table_name,))
+            return cur.fetchone()[0]
+        finally:
+            cur.close()
+
+    def get_table_count(table_name):
+        """Obtém contagem de registros de uma tabela."""
+        if not database_connection:
+            return 0
+
+        cur = database_connection.cursor()
+        try:
+            cur.execute(f"SELECT COUNT(*) FROM {table_name};")
+            return cur.fetchone()[0]
+        except:
+            return 0
+        finally:
+            cur.close()
+
+    def check_data_consistency(table_configs):
+        """
+        Verifica consistência entre tabelas.
+
+        Args:
+            table_configs: Lista de configurações de verificação
+
+        Returns:
+            Dict: Resultados da verificação
+        """
+        results = {}
+
+        for config in table_configs:
+            table = config['table']
+            checks = config.get('checks', [])
+
+            results[table] = {
+                'exists': check_table_exists(table),
+                'count': get_table_count(table),
+                'checks': {}
+            }
+
+            for check in checks:
+                check_name = check['name']
+                check_sql = check['sql']
+
+                cur = database_connection.cursor()
+                try:
+                    cur.execute(check_sql)
+                    result = cur.fetchone()[0]
+                    results[table]['checks'][check_name] = result
+                except Exception as e:
+                    results[table]['checks'][check_name] = f"Erro: {e}"
+                finally:
+                    cur.close()
+
+        return results
+
+    return {
+        'table_exists': check_table_exists,
+        'table_count': get_table_count,
+        'check_consistency': check_data_consistency
+    }
+
+
+@pytest.fixture
+def real_scenarios_data():
+    """
+    Fixture que fornece dados para testes de cenários reais.
+
+    Returns:
+        Dict: Dados e configurações para cenários
+    """
+    return {
+        'user_interactions': [
+            {
+                'name': 'consulta_funcionarios',
+                'steps': [
+                    {'action': 'pergunta', 'data': 'Quantos funcionários temos?'},
+                    {'action': 'pergunta', 'data': 'Funcionários por departamento'},
+                    {'action': 'pergunta', 'data': 'Salário médio'}
+                ]
+            },
+            {
+                'name': 'consulta_projetos',
+                'steps': [
+                    {'action': 'pergunta', 'data': 'Total de projetos'},
+                    {'action': 'pergunta', 'data': 'Projetos em andamento'},
+                    {'action': 'api', 'endpoint': '/api/query/projetos_por_status'}
+                ]
+            }
+        ],
+        'stress_test_config': {
+            'concurrent_users': 5,
+            'requests_per_user': 10,
+            'test_duration': 30,
+            'request_interval': 0.5
+        },
+        'performance_thresholds': {
+            'max_response_time': 10.0,
+            'max_error_rate': 0.2,
+            'max_memory_increase': 100  # MB
+        }
+    }
+
+
+# ======================================
+# MARKERS PARA CATEGORIZAÇÃO DE TESTES
+# ======================================
+
+# Registrar novos markers
+pytest.mark.critical = pytest.mark.critical  # Testes críticos
+pytest.mark.smoke = pytest.mark.smoke  # Smoke tests
+pytest.mark.infrastructure = pytest.mark.infrastructure  # Testes de infraestrutura
+pytest.mark.data_quality = pytest.mark.data_quality  # Testes de qualidade dos dados
+pytest.mark.real_scenarios = pytest.mark.real_scenarios  # Cenários reais
+pytest.mark.performance = pytest.mark.performance  # Testes de performance
+pytest.mark.concurrent = pytest.mark.concurrent  # Testes de concorrência
+pytest.mark.security = pytest.mark.security  # Testes de segurança
+
+
+def pytest_configure(config):
+    """Configurar pytest com novos markers."""
+    config.addinivalue_line(
+        "markers", "critical: marca testes críticos de infraestrutura"
+    )
+    config.addinivalue_line(
+        "markers", "smoke: marca smoke tests básicos"
+    )
+    config.addinivalue_line(
+        "markers", "infrastructure: marca testes de infraestrutura"
+    )
+    config.addinivalue_line(
+        "markers", "data_quality: marca testes de qualidade dos dados"
+    )
+    config.addinivalue_line(
+        "markers", "real_scenarios: marca testes de cenários reais"
+    )
+    config.addinivalue_line(
+        "markers", "performance: marca testes de performance"
+    )
+    config.addinivalue_line(
+        "markers", "concurrent: marca testes de concorrência"
+    )
+    config.addinivalue_line(
+        "markers", "security: marca testes de segurança"
+    )

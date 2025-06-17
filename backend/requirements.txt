@@ -49,6 +49,13 @@ spacy>=3.6.0
 # python -m spacy download pt_core_news_sm
 
 # ===============================
+# CLI FRAMEWORK (Click - versão fixa para compatibilidade)
+# ===============================
+# Fixado em 8.1.7 para evitar avisos de depreciação do spacy/weasel
+# que ainda usam a API antiga do click.parser.split_arg_string
+click==8.1.7
+
+# ===============================
 # TESTING FRAMEWORK
 # ===============================
 pytest>=7.4.0

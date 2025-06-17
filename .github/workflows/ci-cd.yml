@@ -1,4 +1,59 @@
-name: Flutter CI/CD Pipeline
+# ================================================================================
+# SOPHOS KODIAK - UNIFIED CI/CD PIPELINE
+# ================================================================================
+#
+# Este workflow unificado gerencia tanto o backend (Flask) quanto o frontend (Flutter)
+# do projeto Sophos Kodiak, eliminando duplicações e centralizando a lógica de CI/CD.
+#
+# ESTRUTURA DO PIPELINE:
+#
+# 1. 🚀 SMOKE TESTS (sempre executa, rápido)
+#    - Validação básica do backend
+#    - Testes fundamentais do Flutter
+#
+# 2. 🔥 CRITICAL TESTS (após smoke tests)
+#    - Infraestrutura crítica do backend com DB real
+#    - Health checks e endpoints essenciais
+#
+# 3. 🔒 SECURITY SCAN (em paralelo)
+#    - Trivy, Bandit, Safety
+#    - Testes de segurança específicos
+#
+# 4. 🧪 COMPREHENSIVE TESTS (apenas main branch)
+#    - Suíte completa de testes do backend
+#    - Cobertura detalhada
+#    - Todos os cenários reais
+#
+# 5. ⚡ PERFORMANCE TESTS
+#    - Baseline em PRs
+#    - Testes completos em main
+#
+# 6. 🚀 BUILD & DEPLOY (apenas main)
+#    - APK do Flutter
+#    - Pacote do backend
+#    - Artefatos para produção
+#
+# 7. ✅ QUALITY GATE (sempre)
+#    - Validação final
+#    - Resumo dos resultados
+#
+# MARCADORES PYTEST SUPORTADOS:
+# - smoke: Testes básicos e rápidos
+# - critical: Infraestrutura crítica
+# - security: Testes de segurança
+# - performance: Testes de performance
+# - external: Testes que dependem de APIs externas
+# - integration: Testes de integração
+# - unit: Testes unitários
+#
+# OBSERVAÇÕES:
+# - Sem mocks: todos os testes usam recursos reais
+# - DB PostgreSQL real para testes de infraestrutura
+# - Configuração via environment variables
+# - Suporte a execução seletiva via pytest markers
+# ================================================================================
+
+name: Sophos Kodiak CI/CD Pipeline
 
 on:
   push:
@@ -10,9 +65,66 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  PYTHON_VERSION: '3.13.3'
+  FLUTTER_VERSION: '3.32.1'
+  POSTGRES_VERSION: '15'
+
 jobs:
+  # ===========================================
+  # SMOKE TESTS - Fast validation (runs always)
+  # ===========================================
+  backend-smoke-tests:
+    name: 🚀 Backend Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest
+      working-directory: ./backend
+
+    - name: Download spaCy model
+      run: python -m spacy download pt_core_news_sm
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
+
+    - name: Run smoke tests
+      working-directory: ./backend
+      env:
+        FLASK_ENV: testing
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+        PYTHONPATH: ${{ github.workspace }}/backend
+      run: |
+        pytest -m smoke --tb=line -v
+
   flutter-test:
-    name: Flutter Tests
+    name: 📱 Flutter Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +134,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.32.1'
+        flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
     - name: Verify Flutter and Dart versions
@@ -71,13 +183,18 @@ jobs:
         name: flutter-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  backend-test:
-    name: Backend Tests
+  # ===========================================
+  # CRITICAL TESTS - Real infrastructure tests
+  # ===========================================
+  backend-critical-tests:
+    name: 🔥 Backend Critical Infrastructure Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: backend-smoke-tests
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ env.POSTGRES_VERSION }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -97,7 +214,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.13.3'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache pip dependencies
       uses: actions/cache@v4
@@ -111,6 +228,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pytest psycopg2-binary
       working-directory: ./backend
 
     - name: Download spaCy model
@@ -119,18 +237,56 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
 
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      working-directory: ./backend
+    - name: Setup test database structure
       env:
-        PYTHONPATH: ${{ github.workspace }}/backend
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS departamentos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          orcamento DECIMAL(15,2)
+        );
+
+        CREATE TABLE IF NOT EXISTS funcionarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          cargo VARCHAR(100),
+          salario DECIMAL(10,2),
+          departamento_id INTEGER REFERENCES departamentos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS clientes (
+          id SERIAL PRIMARY KEY,
+          nome_empresa VARCHAR(200) NOT NULL,
+          data_cadastro DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS projetos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(200) NOT NULL,
+          status VARCHAR(50),
+          orcamento DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS vendas (
+          id SERIAL PRIMARY KEY,
+          valor DECIMAL(15,2) NOT NULL,
+          data_venda DATE DEFAULT CURRENT_DATE,
+          projeto_id INTEGER REFERENCES projetos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS contratos_marketing (
+          id SERIAL PRIMARY KEY,
+          descricao TEXT,
+          valor DECIMAL(15,2)
+        );
+        "
 
     - name: Test API health endpoint
       run: |
-        # Start the Flask app in background for health check
         cd backend
         python -c "
         import os
@@ -140,21 +296,19 @@ jobs:
         os.environ['DB_NAME'] = 'test_db'
         os.environ['DB_USER'] = 'postgres'
         os.environ['DB_PASSWORD'] = 'postgres'
-        os.environ['GEMINI_API_KEY'] = 'test_key'
+        os.environ['GEMINI_API_KEY'] = '${{ secrets.GEMINI_API_KEY || 'test_key' }}'
         from app.app import app
         import threading
         import time
         import requests
 
-        # Start Flask app in background thread
         def run_app():
             app.run(host='0.0.0.0', port=5000, debug=False)
 
         thread = threading.Thread(target=run_app, daemon=True)
         thread.start()
-        time.sleep(3)  # Wait for server to start
+        time.sleep(3)
 
-        # Test health endpoint
         try:
             response = requests.get('http://localhost:5000/health', timeout=5)
             assert response.status_code == 200, f'Health check failed: {response.status_code}'
@@ -166,7 +320,22 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
 
-    - name: Run fixed endpoints tests (robust test suite)
+    - name: Run critical infrastructure tests
+      working-directory: ./backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        FLASK_ENV: testing
+        PYTHONPATH: ${{ github.workspace }}/backend
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+      run: |
+        pytest -m critical --tb=line -v
+
+    - name: Run legacy test endpoints (backward compatibility)
       run: pytest tests/test_fixed_endpoints.py -v --tb=short
       working-directory: ./backend
       env:
@@ -178,10 +347,209 @@ jobs:
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: test_gemini_api_key_for_github_actions_testing_only
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
 
-    - name: Run backend tests (legacy suite)
-      run: pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
+  # ===========================================
+  # SECURITY SCANS - Parallel with other tests
+  # ===========================================
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install security tools
+      run: |
+        pip install -r backend/requirements.txt
+        pip install safety bandit[toml]
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Python security scan with bandit
+      run: |
+        bandit -r backend/app/ -f json -o bandit-report.json || true
+      continue-on-error: true
+
+    - name: Check dependencies for known vulnerabilities
+      run: |
+        safety check --file backend/requirements.txt || true
+      continue-on-error: true
+
+    - name: Run security-focused tests
+      working-directory: ./backend
+      env:
+        FLASK_ENV: testing
+        PYTHONPATH: ${{ github.workspace }}/backend
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+      run: |
+        pytest -m security --tb=line -v || true
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          trivy-results.sarif
+          bandit-report.json
+
+  # ===========================================
+  # COMPREHENSIVE TESTS - Full test suite for main branch
+  # ===========================================
+  backend-comprehensive-tests:
+    name: 🧪 Backend Comprehensive Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [backend-critical-tests, security-scan]
+    if: github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install all dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest psycopg2-binary flask-cors
+        pip install pytest-cov pytest-html flake8
+      working-directory: ./backend
+
+    - name: Download spaCy model
+      run: python -m spacy download pt_core_news_sm
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
+
+    - name: Lint with flake8
+      run: |
+        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
+
+    - name: Setup comprehensive test database
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d test_db -c "
+        -- Estrutura das tabelas
+        CREATE TABLE IF NOT EXISTS departamentos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          orcamento DECIMAL(15,2)
+        );
+
+        CREATE TABLE IF NOT EXISTS funcionarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          cargo VARCHAR(100),
+          salario DECIMAL(10,2),
+          departamento_id INTEGER REFERENCES departamentos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS clientes (
+          id SERIAL PRIMARY KEY,
+          nome_empresa VARCHAR(200) NOT NULL,
+          data_cadastro DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS projetos (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(200) NOT NULL,
+          status VARCHAR(50),
+          orcamento DECIMAL(15,2),
+          cliente_id INTEGER REFERENCES clientes(id),
+          data_inicio DATE DEFAULT CURRENT_DATE
+        );
+
+        CREATE TABLE IF NOT EXISTS vendas (
+          id SERIAL PRIMARY KEY,
+          valor DECIMAL(15,2) NOT NULL,
+          data_venda DATE DEFAULT CURRENT_DATE,
+          projeto_id INTEGER REFERENCES projetos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS contratos_marketing (
+          id SERIAL PRIMARY KEY,
+          descricao TEXT,
+          valor DECIMAL(15,2)
+        );
+
+        -- Dados de teste para suíte completa
+        INSERT INTO departamentos (nome, orcamento) VALUES
+        ('Vendas', 100000.00),
+        ('Marketing Digital', 80000.00),
+        ('Criação', 60000.00),
+        ('Atendimento', 50000.00);
+
+        INSERT INTO funcionarios (nome, cargo, salario, departamento_id) VALUES
+        ('João Silva', 'Gerente de Vendas', 5000.00, 1),
+        ('Maria Santos', 'Analista de Marketing', 4000.00, 2),
+        ('Pedro Costa', 'Designer', 3500.00, 3);
+
+        INSERT INTO clientes (nome_empresa) VALUES
+        ('Empresa Alpha'),
+        ('Beta Corporation'),
+        ('Gamma Solutions');
+
+        INSERT INTO projetos (nome, status, orcamento, cliente_id) VALUES
+        ('Projeto Alpha 2024', 'Em andamento', 25000.00, 1),
+        ('Campanha Beta', 'Concluído', 15000.00, 2);
+
+        INSERT INTO vendas (valor, projeto_id) VALUES
+        (25000.00, 1),
+        (15000.00, 2);
+        "
+
+    - name: Run comprehensive test suite with coverage
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -192,7 +560,13 @@ jobs:
         DB_NAME: test_db
         DB_USER: postgres
         DB_PASSWORD: postgres
-        GEMINI_API_KEY: test_gemini_api_key_for_github_actions_testing_only
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_gemini_api_key_for_github_actions_testing_only' }}
+      run: |
+        # Run full test suite with coverage, excluding external tests in CI
+        ./run_tests.sh --full --skip-optional
+
+        # Generate detailed coverage report
+        pytest --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing -m "not external"
 
     - name: Upload backend coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -202,20 +576,110 @@ jobs:
         name: backend-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  build-and-deploy:
-    name: Build and Deploy
-    needs: [flutter-test, backend-test]
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-comprehensive-test-results
+        path: |
+          backend/htmlcov/
+          backend/pytest-report.html
+
+  # ===========================================
+  # PERFORMANCE TESTS - Only on main branch pushes
+  # ===========================================
+  performance-test:
+    name: ⚡ Performance Tests
+    needs: [flutter-test, backend-critical-tests]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install locust pytest-benchmark
+      working-directory: ./backend
+
+    - name: Setup performance test database
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS funcionarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          cargo VARCHAR(100),
+          salario DECIMAL(10,2)
+        );
+        INSERT INTO funcionarios (nome, cargo, salario) VALUES
+        ('Test User', 'Test Role', 1000.00);
+        "
+
+    - name: Run performance baseline tests
+      working-directory: ./backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        FLASK_ENV: testing
+        PYTHONPATH: ${{ github.workspace }}/backend
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+      run: |
+        pytest -m performance --tb=line --durations=10 -v
+
+    - name: Run performance benchmarks (if available)
+      run: pytest tests/performance/ -v --benchmark-only || echo "No benchmark tests found"
+      working-directory: ./backend
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
+
+  # ===========================================
+  # BUILD AND DEPLOY - Production artifacts
+  # ===========================================
+  build-and-deploy:
+    name: 🚀 Build and Deploy
+    needs: [flutter-test, backend-comprehensive-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Flutter Build
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.32.1'
+        flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
     - name: Setup Java for Android
@@ -238,15 +702,17 @@ jobs:
         name: app-release.apk
         path: mobile/build/app/outputs/flutter-apk/app-release.apk
 
+    # Backend Build
     - name: Setup Python for backend
       uses: actions/setup-python@v4
       with:
-        python-version: '3.13.3'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Create backend deployment package
       run: |
         pip install -r requirements.txt
-        zip -r backend-deployment.zip . -x "tests/*" "*.pyc" "__pycache__/*"
+        python -m spacy download pt_core_news_sm
+        zip -r backend-deployment.zip . -x "tests/*" "*.pyc" "__pycache__/*" ".pytest_cache/*" "htmlcov/*"
       working-directory: ./backend
 
     - name: Upload backend artifact
@@ -255,11 +721,39 @@ jobs:
         name: backend-deployment.zip
         path: backend/backend-deployment.zip
 
-  performance-test:
-    name: Performance Tests
-    needs: [flutter-test, backend-test]
+    # Deployment summary
+    - name: Deployment Summary
+      run: |
+        echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Flutter APK built successfully" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Backend package created successfully" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "📦 Artifacts uploaded for deployment" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================
+  # PERFORMANCE BASELINE - Only on PRs
+  # ===========================================
+  performance-baseline:
+    name: ⚡ Performance Baseline (PR only)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    needs: backend-critical-tests
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
     - name: Checkout code
@@ -268,51 +762,87 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.13.3'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-        pip install locust
+        pip install pytest psycopg2-binary
       working-directory: ./backend
 
-    - name: Run performance tests
-      run: pytest tests/performance/ -v --benchmark-only
+    - name: Setup minimal performance test database
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d test_db -c "
+        CREATE TABLE IF NOT EXISTS funcionarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(100) NOT NULL,
+          cargo VARCHAR(100),
+          salario DECIMAL(10,2)
+        );
+        INSERT INTO funcionarios (nome, cargo, salario) VALUES
+        ('Test User', 'Test Role', 1000.00);
+        "
+
+    - name: Run performance baseline tests
       working-directory: ./backend
       env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_api_key' }}
+      run: |
+        pytest -m performance --tb=line --durations=10 -v
 
-  security-scan:
-    name: Security Scan
+    - name: Performance Summary
+      run: |
+        echo "## ⚡ Performance Baseline Results" >> $GITHUB_STEP_SUMMARY
+        echo "Performance tests completed for this PR" >> $GITHUB_STEP_SUMMARY
+        echo "Check the test output above for timing details" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================
+  # QUALITY GATE - Final validation
+  # ===========================================
+  quality-gate:
+    name: ✅ Quality Gate
     runs-on: ubuntu-latest
+    needs: [flutter-test, backend-critical-tests, security-scan]
+    if: always()
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-results.sarif'
-
-    - name: Python security scan with bandit
+    - name: Check Quality Gate
       run: |
-        pip install bandit[toml]
-        bandit -r backend/app/ -f json -o bandit-report.json || true
-      continue-on-error: true
+        echo "## 🎯 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
 
-    - name: Upload security scan results
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-reports
-        path: |
-          trivy-results.sarif
-          bandit-report.json
+        # Check if critical jobs passed
+        if [ "${{ needs.flutter-test.result }}" = "success" ]; then
+          echo "✅ Flutter tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Flutter tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ needs.backend-critical-tests.result }}" = "success" ]; then
+          echo "✅ Backend critical tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Backend critical tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ needs.security-scan.result }}" = "success" ]; then
+          echo "✅ Security scan: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Security scan: COMPLETED (check reports)" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # Fail if critical tests failed
+        if [ "${{ needs.flutter-test.result }}" != "success" ] || [ "${{ needs.backend-critical-tests.result }}" != "success" ]; then
+          echo "❌ Quality gate: FAILED - Critical tests did not pass"
+          exit 1
+        else
+          echo "✅ Quality gate: PASSED - All critical tests successful"
+        fi

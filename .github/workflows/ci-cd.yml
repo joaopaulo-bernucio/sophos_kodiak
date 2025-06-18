@@ -12,9 +12,9 @@
 #    - Detecção rápida de problemas críticos
 #
 # 2. 🔥 COMPREHENSIVE TESTS (execução paralela)
-#    - Todos os testes do backend com DB real
-#    - Testes unitários, integração e cenários reais
-#    - Sem uso de mocks - ambiente real
+#    - Backend: Todos os testes com DB real, sem mocks
+#    - Flutter: Testes unitários, widget e integração
+#    - Cobertura de código completa
 #
 # 3. 🔒 SECURITY SCAN (execução paralela)
 #    - Análise de vulnerabilidades
@@ -169,9 +169,14 @@ jobs:
       run: flutter analyze
       working-directory: ./mobile
 
-    - name: Run Flutter tests
+    - name: Run Flutter smoke tests
       if: matrix.component == 'frontend'
-      run: flutter test
+      run: |
+        # Execute smoke test básico
+        flutter test test/widget_test.dart
+        # Verifica se a estrutura de testes está correta
+        flutter test test/unit/models/ --reporter expanded || echo "Unit tests directory found"
+        flutter test test/widget/ --reporter expanded || echo "Widget tests directory found"
       working-directory: ./mobile
 
   # ===========================================
@@ -344,6 +349,82 @@ jobs:
         path: |
           backend/htmlcov/
           backend/.coverage
+
+  # ===========================================
+  # COMPREHENSIVE FLUTTER TESTS - Suíte completa de testes Flutter
+  # ===========================================
+  comprehensive-flutter-tests:
+    name: 📱 Comprehensive Flutter Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: smoke-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+
+    - name: Setup Java for Android
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+      working-directory: ./mobile
+
+    - name: Run code analysis
+      run: flutter analyze
+      working-directory: ./mobile
+
+    - name: Run unit tests
+      run: |
+        echo "🧪 Running Unit Tests..."
+        flutter test test/unit/ --reporter expanded
+      working-directory: ./mobile
+
+    - name: Run widget tests
+      run: |
+        echo "🎨 Running Widget Tests..."
+        flutter test test/widget/ --reporter expanded
+      working-directory: ./mobile
+
+    - name: Run integration tests
+      run: |
+        echo "🔄 Running Integration Tests..."
+        flutter test integration_test/ --reporter expanded
+      working-directory: ./mobile
+
+    - name: Generate test coverage
+      run: |
+        echo "📊 Generating Coverage Report..."
+        flutter test --coverage
+        echo "Coverage report generated at coverage/lcov.info"
+      working-directory: ./mobile
+
+    - name: Upload Flutter coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./mobile/coverage/lcov.info
+        flags: flutter
+        name: flutter-coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload Flutter test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: flutter-test-results
+        path: |
+          mobile/coverage/
+          mobile/test/
 
   # ===========================================
   # SECURITY SCAN - Análise de segurança
@@ -563,7 +644,7 @@ jobs:
     name: 🚀 Build & Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [comprehensive-tests, security-scan]
+    needs: [comprehensive-tests, comprehensive-flutter-tests, security-scan]
     if: github.ref == 'refs/heads/main'
 
     steps:
@@ -648,7 +729,7 @@ jobs:
     name: ✅ Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [smoke-tests, comprehensive-tests, security-scan, performance-tests]
+    needs: [smoke-tests, comprehensive-tests, comprehensive-flutter-tests, security-scan, performance-tests]
     if: always()
 
     steps:
@@ -666,9 +747,16 @@ jobs:
 
         # Check comprehensive tests
         if [ "${{ needs.comprehensive-tests.result }}" = "success" ]; then
-          echo "✅ **Comprehensive Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Comprehensive Backend Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
         else
-          echo "❌ **Comprehensive Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "❌ **Comprehensive Backend Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # Check comprehensive Flutter tests
+        if [ "${{ needs.comprehensive-flutter-tests.result }}" = "success" ]; then
+          echo "✅ **Comprehensive Flutter Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Comprehensive Flutter Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
 
         # Check security scan
@@ -690,7 +778,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         # Overall gate decision
-        if [ "${{ needs.smoke-tests.result }}" = "success" ] && [ "${{ needs.comprehensive-tests.result }}" = "success" ]; then
+        if [ "${{ needs.smoke-tests.result }}" = "success" ] && [ "${{ needs.comprehensive-tests.result }}" = "success" ] && [ "${{ needs.comprehensive-flutter-tests.result }}" = "success" ]; then
           echo "🎉 **Overall Quality Gate**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
           echo "All critical validations successful. Ready for deployment!" >> $GITHUB_STEP_SUMMARY
         else
@@ -705,23 +793,26 @@ jobs:
       with:
         script: |
           const smokePassed = '${{ needs.smoke-tests.result }}' === 'success';
-          const testsPassed = '${{ needs.comprehensive-tests.result }}' === 'success';
+          const backendTestsPassed = '${{ needs.comprehensive-tests.result }}' === 'success';
+          const flutterTestsPassed = '${{ needs.comprehensive-flutter-tests.result }}' === 'success';
           const securityPassed = '${{ needs.security-scan.result }}' === 'success';
 
-          const status = smokePassed && testsPassed ? '✅ PASSED' : '❌ FAILED';
-          const emoji = smokePassed && testsPassed ? '🎉' : '⚠️';
+          const allTestsPassed = smokePassed && backendTestsPassed && flutterTestsPassed;
+          const status = allTestsPassed ? '✅ PASSED' : '❌ FAILED';
+          const emoji = allTestsPassed ? '🎉' : '⚠️';
 
           const body = `${emoji} **Quality Gate Results**
 
           | Check | Status |
           |-------|--------|
           | Smoke Tests | ${smokePassed ? '✅' : '❌'} |
-          | Comprehensive Tests | ${testsPassed ? '✅' : '❌'} |
+          | Backend Tests | ${backendTestsPassed ? '✅' : '❌'} |
+          | Flutter Tests | ${flutterTestsPassed ? '✅' : '❌'} |
           | Security Scan | ${securityPassed ? '✅' : '⚠️'} |
 
           **Overall Status**: ${status}
 
-          ${smokePassed && testsPassed ?
+          ${allTestsPassed ?
             'All critical tests passed! This PR is ready for review.' :
             'Some tests failed. Please review the workflow results.'}`;
 

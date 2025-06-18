@@ -1,98 +1,107 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sophos_kodiak/models/user.dart';
+import '../../helpers/test_data.dart';
 
 void main() {
-  group('User Model Tests', () {
-    group('Constructor and Properties', () {
-      test('should create user with required fields', () {
-        // Arrange & Act
-        const user = User(cnpj: '12345678000100', senha: 'password123');
+  group('User Model', () {
+    group('Constructor', () {
+      test('deve criar usuário com dados válidos', () {
+        final user = TestData.createValidUser();
 
-        // Assert
-        expect(user.cnpj, equals('12345678000100'));
-        expect(user.senha, equals('password123'));
-        expect(user.nomePreferido, isNull);
-        expect(user.ultimoLogin, isNull);
+        expect(user.cnpj, TestData.validCnpj);
+        expect(user.senha, TestData.validPassword);
+        expect(user.nomePreferido, TestData.validUserName);
+        expect(user.ultimoLogin, isNotNull);
       });
 
-      test('should create user with all fields', () {
-        // Arrange
-        final loginTime = DateTime.now();
-
-        // Act
+      test('deve criar usuário sem nome preferido', () {
         final user = User(
-          cnpj: '12345678000100',
-          senha: 'password123',
-          nomePreferido: 'João Silva',
-          ultimoLogin: loginTime,
+          cnpj: TestData.validCnpj,
+          senha: TestData.validPassword,
         );
 
-        // Assert
-        expect(user.cnpj, equals('12345678000100'));
-        expect(user.senha, equals('password123'));
-        expect(user.nomePreferido, equals('João Silva'));
-        expect(user.ultimoLogin, equals(loginTime));
+        expect(user.cnpj, TestData.validCnpj);
+        expect(user.senha, TestData.validPassword);
+        expect(user.nomePreferido, isNull);
+        expect(user.ultimoLogin, isNull);
       });
     });
 
     group('JSON Serialization', () {
-      test('should serialize to JSON correctly', () {
-        // Arrange
+      test('deve converter User para JSON corretamente', () {
+        final now = DateTime.now();
         final user = User(
-          cnpj: '12345678000100',
-          senha: 'password123',
-          nomePreferido: 'João Silva',
-          ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
+          cnpj: TestData.validCnpj,
+          senha: TestData.validPassword,
+          nomePreferido: TestData.validUserName,
+          ultimoLogin: now,
         );
 
-        // Act
         final json = user.toJson();
 
-        // Assert
-        expect(json['cnpj'], equals('12345678000100'));
-        expect(json['senha'], equals('password123'));
-        expect(json['nomePreferido'], equals('João Silva'));
-        expect(json['ultimoLogin'], equals('2024-01-15T10:30:00.000Z'));
+        expect(json['cnpj'], TestData.validCnpj);
+        expect(json['senha'], TestData.validPassword);
+        expect(json['nomePreferido'], TestData.validUserName);
+        expect(json['ultimoLogin'], now.toIso8601String());
       });
 
-      test('should serialize to JSON with null fields', () {
-        // Arrange
+      test('deve converter JSON para User corretamente', () {
+        final now = DateTime.now();
+        final json = {
+          'cnpj': TestData.validCnpj,
+          'senha': TestData.validPassword,
+          'nomePreferido': TestData.validUserName,
+          'ultimoLogin': now.toIso8601String(),
+        };
+
+        final user = User.fromJson(json);
+
+        expect(user.cnpj, TestData.validCnpj);
+        expect(user.senha, TestData.validPassword);
+        expect(user.nomePreferido, TestData.validUserName);
+        expect(user.ultimoLogin, now);
+      });
+
+      test('deve lidar com campos opcionais nulos no JSON', () {
+        final json = {
+          'cnpj': TestData.validCnpj,
+          'senha': TestData.validPassword,
+        };
+
+        final user = User.fromJson(json);
+
+        expect(user.cnpj, TestData.validCnpj);
+        expect(user.senha, TestData.validPassword);
+        expect(user.nomePreferido, isNull);
+        expect(user.ultimoLogin, isNull);
+      });
+
+      test('deve manter consistência na conversão JSON -> User -> JSON', () {
+        final originalJson = {
+          'cnpj': TestData.validCnpj,
+          'senha': TestData.validPassword,
+          'nomePreferido': TestData.validUserName,
+          'ultimoLogin': DateTime.now().toIso8601String(),
+        };
+
+        final user = User.fromJson(originalJson);
+        final convertedJson = user.toJson();
+
+        expect(convertedJson, equals(originalJson));
+      });
+
+      test('deve serializar com campos nulos', () {
         const user = User(cnpj: '12345678000100', senha: 'password123');
 
-        // Act
         final json = user.toJson();
 
-        // Assert
-        expect(json['cnpj'], equals('12345678000100'));
-        expect(json['senha'], equals('password123'));
+        expect(json['cnpj'], '12345678000100');
+        expect(json['senha'], 'password123');
         expect(json['nomePreferido'], isNull);
         expect(json['ultimoLogin'], isNull);
       });
 
-      test('should deserialize from JSON correctly', () {
-        // Arrange
-        final json = {
-          'cnpj': '12345678000100',
-          'senha': 'password123',
-          'nomePreferido': 'João Silva',
-          'ultimoLogin': '2024-01-15T10:30:00Z',
-        };
-
-        // Act
-        final user = User.fromJson(json);
-
-        // Assert
-        expect(user.cnpj, equals('12345678000100'));
-        expect(user.senha, equals('password123'));
-        expect(user.nomePreferido, equals('João Silva'));
-        expect(
-          user.ultimoLogin,
-          equals(DateTime.parse('2024-01-15T10:30:00Z')),
-        );
-      });
-
-      test('should deserialize from JSON with null fields', () {
-        // Arrange
+      test('deve deserializar com campos nulos', () {
         final json = {
           'cnpj': '12345678000100',
           'senha': 'password123',
@@ -100,115 +109,131 @@ void main() {
           'ultimoLogin': null,
         };
 
-        // Act
         final user = User.fromJson(json);
 
-        // Assert
-        expect(user.cnpj, equals('12345678000100'));
-        expect(user.senha, equals('password123'));
+        expect(user.cnpj, '12345678000100');
+        expect(user.senha, 'password123');
         expect(user.nomePreferido, isNull);
         expect(user.ultimoLogin, isNull);
       });
 
-      test('should handle missing optional fields in JSON', () {
-        // Arrange
+      test('deve lidar com campos opcionais ausentes no JSON', () {
         final json = {'cnpj': '12345678000100', 'senha': 'password123'};
 
-        // Act
         final user = User.fromJson(json);
 
-        // Assert
-        expect(user.cnpj, equals('12345678000100'));
-        expect(user.senha, equals('password123'));
+        expect(user.cnpj, '12345678000100');
+        expect(user.senha, 'password123');
         expect(user.nomePreferido, isNull);
         expect(user.ultimoLogin, isNull);
       });
     });
 
-    group('copyWith Method', () {
-      test('should copy user with updated fields', () {
-        // Arrange
+    group('CopyWith', () {
+      test('deve criar cópia com novos valores', () {
+        final originalUser = TestData.createValidUser();
+        final newCnpj = '98.765.432/0001-09';
+        final newNome = 'Maria Silva';
+
+        final updatedUser = originalUser.copyWith(
+          cnpj: newCnpj,
+          nomePreferido: newNome,
+        );
+
+        expect(updatedUser.cnpj, newCnpj);
+        expect(updatedUser.senha, originalUser.senha); // Deve manter original
+        expect(updatedUser.nomePreferido, newNome);
+        expect(
+          updatedUser.ultimoLogin,
+          originalUser.ultimoLogin,
+        ); // Deve manter original
+      });
+
+      test('deve manter valores originais quando não especificado', () {
+        final originalUser = TestData.createValidUser();
+
+        final copiedUser = originalUser.copyWith();
+
+        expect(copiedUser.cnpj, originalUser.cnpj);
+        expect(copiedUser.senha, originalUser.senha);
+        expect(copiedUser.nomePreferido, originalUser.nomePreferido);
+        expect(copiedUser.ultimoLogin, originalUser.ultimoLogin);
+      });
+
+      test('deve copiar usuário com campos atualizados', () {
         const originalUser = User(
           cnpj: '12345678000100',
           senha: 'password123',
           nomePreferido: 'João Silva',
         );
 
-        // Act
         final updatedUser = originalUser.copyWith(
           nomePreferido: 'João Santos',
           ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
         );
 
-        // Assert
-        expect(updatedUser.cnpj, equals('12345678000100'));
-        expect(updatedUser.senha, equals('password123'));
-        expect(updatedUser.nomePreferido, equals('João Santos'));
-        expect(
-          updatedUser.ultimoLogin,
-          equals(DateTime.parse('2024-01-15T10:30:00Z')),
-        );
+        expect(updatedUser.cnpj, '12345678000100');
+        expect(updatedUser.senha, 'password123');
+        expect(updatedUser.nomePreferido, 'João Santos');
+        expect(updatedUser.ultimoLogin, DateTime.parse('2024-01-15T10:30:00Z'));
       });
 
-      test('should copy user without changes when no parameters provided', () {
-        // Arrange
-        final originalUser = User(
-          cnpj: '12345678000100',
-          senha: 'password123',
-          nomePreferido: 'João Silva',
-          ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
-        );
+      test(
+        'deve copiar usuário sem mudanças quando nenhum parâmetro fornecido',
+        () {
+          final originalUser = User(
+            cnpj: '12345678000100',
+            senha: 'password123',
+            nomePreferido: 'João Silva',
+            ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
+          );
 
-        // Act
-        final copiedUser = originalUser.copyWith();
+          final copiedUser = originalUser.copyWith();
 
-        // Assert
-        expect(copiedUser.cnpj, equals(originalUser.cnpj));
-        expect(copiedUser.senha, equals(originalUser.senha));
-        expect(copiedUser.nomePreferido, equals(originalUser.nomePreferido));
-        expect(copiedUser.ultimoLogin, equals(originalUser.ultimoLogin));
-      });
+          expect(copiedUser.cnpj, originalUser.cnpj);
+          expect(copiedUser.senha, originalUser.senha);
+          expect(copiedUser.nomePreferido, originalUser.nomePreferido);
+          expect(copiedUser.ultimoLogin, originalUser.ultimoLogin);
+        },
+      );
     });
 
-    group('toString Method', () {
-      test('should return formatted string representation', () {
-        // Arrange
-        final user = User(
-          cnpj: '12345678000100',
-          senha: 'password123',
-          nomePreferido: 'João Silva',
-          ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
+    group('Equality', () {
+      test('deve considerar iguais usuários com mesmos dados', () {
+        final now = DateTime.now();
+        final user1 = User(
+          cnpj: TestData.validCnpj,
+          senha: TestData.validPassword,
+          nomePreferido: TestData.validUserName,
+          ultimoLogin: now,
+        );
+        final user2 = User(
+          cnpj: TestData.validCnpj,
+          senha: TestData.validPassword,
+          nomePreferido: TestData.validUserName,
+          ultimoLogin: now,
         );
 
-        // Act
-        final userString = user.toString();
-
-        // Assert
-        expect(userString, contains('12345678000100'));
-        expect(userString, contains('João Silva'));
-        expect(userString, contains('2024-01-15'));
-        expect(
-          userString,
-          isNot(contains('password123')),
-        ); // Não deve mostrar senha
+        expect(user1 == user2, isTrue);
+        expect(user1.hashCode, user2.hashCode);
       });
 
-      test('should handle null fields in toString', () {
-        // Arrange
-        const user = User(cnpj: '12345678000100', senha: 'password123');
+      test('deve considerar diferentes usuários com dados diferentes', () {
+        final user1 = TestData.createValidUser();
+        final user2 = TestData.createValidUser(cnpj: '98.765.432/0001-09');
 
-        // Act
-        final userString = user.toString();
-
-        // Assert
-        expect(userString, contains('12345678000100'));
-        expect(userString, contains('null'));
+        expect(user1 == user2, isFalse);
+        expect(user1.hashCode, isNot(user2.hashCode));
       });
-    });
 
-    group('Equality and HashCode', () {
-      test('should be equal when all fields are the same', () {
-        // Arrange
+      test('deve considerar diferentes usuários com senhas diferentes', () {
+        final user1 = TestData.createValidUser();
+        final user2 = TestData.createValidUser(senha: 'different123');
+
+        expect(user1 == user2, isFalse);
+      });
+
+      test('deve ser igual quando todos os campos são iguais', () {
         final user1 = User(
           cnpj: '12345678000100',
           senha: 'password123',
@@ -223,13 +248,11 @@ void main() {
           ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
         );
 
-        // Act & Assert
         expect(user1 == user2, isTrue);
-        expect(user1.hashCode, equals(user2.hashCode));
+        expect(user1.hashCode, user2.hashCode);
       });
 
-      test('should not be equal when fields differ', () {
-        // Arrange
+      test('não deve ser igual quando campos diferem', () {
         const user1 = User(
           cnpj: '12345678000100',
           senha: 'password123',
@@ -242,9 +265,62 @@ void main() {
           nomePreferido: 'Maria Silva',
         );
 
-        // Act & Assert
         expect(user1 == user2, isFalse);
-        expect(user1.hashCode, isNot(equals(user2.hashCode)));
+        expect(user1.hashCode, isNot(user2.hashCode));
+      });
+    });
+
+    group('ToString', () {
+      test('deve gerar string representativa do usuário', () {
+        final user = TestData.createValidUser();
+        final userString = user.toString();
+
+        expect(userString, contains('User('));
+        expect(userString, contains('cnpj: ${TestData.validCnpj}'));
+        expect(
+          userString,
+          contains('nomePreferido: ${TestData.validUserName}'),
+        );
+        expect(userString, contains('ultimoLogin:'));
+      });
+
+      test('deve lidar com campos nulos na string', () {
+        final user = User(
+          cnpj: TestData.validCnpj,
+          senha: TestData.validPassword,
+        );
+        final userString = user.toString();
+
+        expect(userString, contains('nomePreferido: null'));
+        expect(userString, contains('ultimoLogin: null'));
+      });
+
+      test('deve retornar representação string formatada', () {
+        final user = User(
+          cnpj: '12345678000100',
+          senha: 'password123',
+          nomePreferido: 'João Silva',
+          ultimoLogin: DateTime.parse('2024-01-15T10:30:00Z'),
+        );
+
+        final userString = user.toString();
+
+        expect(userString, contains('12345678000100'));
+        expect(userString, contains('João Silva'));
+        expect(userString, contains('2024-01-15'));
+        expect(
+          userString,
+          isNot(contains('password123')),
+        ); // Não deve mostrar senha
+      });
+
+      test('deve lidar com campos nulos no toString', () {
+        const user = User(cnpj: '12345678000100', senha: 'password123');
+
+        final userString = user.toString();
+
+        expect(userString, contains('12345678000100'));
+        expect(userString, contains('null'));
       });
     });
   });

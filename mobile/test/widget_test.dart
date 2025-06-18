@@ -1,17 +1,28 @@
-// Este é um teste básico para garantir que o Flutter encontre pelo menos um teste
-// quando executar flutter test
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:sophos_kodiak/app.dart';
+import 'helpers/test_helpers.dart';
 
 void main() {
-  testWidgets('App starts correctly smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const App());
+  group('Smoke Tests', () {
+    testWidgets('App deve inicializar sem erros', (WidgetTester tester) async {
+      await tester.pumpWidget(const App());
+      await waitForUI(tester);
 
-    // Verify that the app initializes without throwing errors
-    expect(find.byType(MaterialApp), findsOneWidget);
+      expectWidgetPresent(MaterialApp);
+      expectTextPresent('SOPHOS');
+      expectTextPresent('KODIAK');
+    });
+
+    testWidgets('App deve ter configuração básica correta', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const App());
+
+      final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(materialApp.title, equals('Sophos Kodiak'));
+      expect(materialApp.debugShowCheckedModeBanner, isFalse);
+      expect(materialApp.initialRoute, equals('/login'));
+    });
   });
 }

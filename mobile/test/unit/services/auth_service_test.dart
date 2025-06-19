@@ -1,13 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/services/auth_service.dart';
 import 'package:sophos_kodiak/models/user.dart';
 import '../../helpers/test_data.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AuthService', () {
     late AuthService authService;
 
     setUp(() {
+      // Inicializa o mock do SharedPreferences com valores vazios
+      SharedPreferences.setMockInitialValues({});
       authService = AuthService();
     });
 

@@ -54,8 +54,21 @@ class AuthService {
   }
 
   bool validarFormatoCnpj(String cnpj) {
+    // Verifica o formato básico
     final regex = RegExp(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$');
-    return regex.hasMatch(cnpj);
+    if (!regex.hasMatch(cnpj)) {
+      return false;
+    }
+
+    // Remove formatação para validação adicional
+    final numericCnpj = cnpj.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Verifica se todos os dígitos são iguais (inválido)
+    if (RegExp(r'^(\d)\1{13}$').hasMatch(numericCnpj)) {
+      return false;
+    }
+
+    return true;
   }
 
   bool validarSenha(String senha) {

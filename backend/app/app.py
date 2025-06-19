@@ -568,16 +568,30 @@ def enviar_para_gemini(contexto):
         return "Desculpe, muitas consultas em pouco tempo. Tente novamente em alguns momentos."
 
     api_key = os.getenv('GEMINI_API_KEY')
+    use_mock = os.getenv('USE_MOCK_GEMINI', '').lower() == 'true'
+    is_test_env = os.getenv('FLASK_ENV') == 'testing'
 
-    # Em ambiente de teste, usar resposta mock se a API key for de teste
-    if api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
-        mock_response = ("Com base nos dados disponíveis, posso ajudá-lo com informações "
-                        "sobre nossa empresa. Esta é uma resposta de teste.")
+    # Em ambiente de teste ou quando explicitamente solicitado mock, usar resposta mock
+    if (use_mock or is_test_env or
+        api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']):
+
+        # Resposta mock mais rápida baseada no contexto
+        if 'funcionários' in contexto.lower() or 'funcionarios' in contexto.lower():
+            mock_response = ("Com base nos dados de RH, nossa empresa conta com uma equipe "
+                           "qualificada distribuída em diferentes departamentos.")
+        elif 'vendas' in contexto.lower() or 'receita' in contexto.lower():
+            mock_response = ("Os dados de vendas mostram resultados positivos no período analisado. "
+                           "Para relatórios detalhados, consulte o departamento comercial.")
+        else:
+            mock_response = ("Com base nos dados disponíveis, posso ajudá-lo com informações "
+                            "sobre nossa empresa. Esta é uma resposta de teste.")
+
         # Adicionar ao cache mesmo sendo mock
         gemini_cache[cache_key] = {
             'response': mock_response,
             'timestamp': current_time
         }
+        logging.info("Usando resposta mock do Gemini (ambiente de teste)")
         return mock_response
 
     url = (
@@ -738,8 +752,14 @@ def sanitizar_entrada(texto):
     # Remover caracteres potencialmente perigosos
     import re
 
+    # Primeiro, remover tags HTML/XML (incluindo <script>)
+    texto_limpo = re.sub(r'<[^>]*>', '', texto, flags=re.IGNORECASE)
+
+    # Remover caracteres de escape e controle
+    texto_limpo = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', texto_limpo)
+
     # Manter apenas caracteres alfanuméricos, espaços, pontuação básica e acentos
-    texto_limpo = re.sub(r'[^\w\sàáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ\.\?\!\,\-\(\)]', '', texto, flags=re.IGNORECASE)
+    texto_limpo = re.sub(r'[^\w\sàáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ\.\?\!\,\-\(\)]', '', texto_limpo, flags=re.IGNORECASE)
 
     # Limitar tamanho para evitar ataques de DoS
     if len(texto_limpo) > 1000:

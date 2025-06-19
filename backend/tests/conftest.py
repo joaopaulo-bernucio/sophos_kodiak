@@ -53,6 +53,7 @@ def get_test_env_var(key, local_default, ci_default):
 
 # Configurar ambiente de teste
 os.environ['FLASK_ENV'] = 'testing'
+os.environ['USE_MOCK_GEMINI'] = 'true'  # Forçar uso de mock em testes
 os.environ['DB_HOST'] = get_test_env_var('DB_HOST',
                                         local_default=os.getenv('DB_HOST', 'localhost'),
                                         ci_default='localhost')
@@ -158,6 +159,13 @@ def client(app):
     Returns:
         FlaskClient: Cliente para fazer requisições de teste
     """
+    app.config.update({
+        'TESTING': True,
+        'WTF_CSRF_ENABLED': False,
+        'JSON_AS_ASCII': False,
+        'JSON_SORT_KEYS': False
+    })
+
     with app.test_client() as client:
         with app.app_context():
             yield client

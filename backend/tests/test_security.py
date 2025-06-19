@@ -193,6 +193,12 @@ class TestPerformanceImprovements:
 
     def test_response_time_reasonable(self, client):
         """Verifica se tempo de resposta é razoável."""
+        # Fazer uma requisição de aquecimento primeiro
+        client.post('/pergunta',
+                   json={'pergunta': 'warmup'},
+                   content_type='application/json')
+
+        # Agora medir o tempo da requisição real
         start_time = time.time()
 
         response = client.post('/pergunta',
@@ -202,47 +208,99 @@ class TestPerformanceImprovements:
         end_time = time.time()
         response_time = end_time - start_time
 
-        # Em ambiente de teste com mock, deve ser rápido
-        assert response_time < 5.0, f"Tempo de resposta muito alto: {response_time:.2f}s"
+        # Verificar se está usando mock ou API real
+        import os
+        is_ci_environment = os.getenv('CI') == 'true'
+        is_test_environment = os.getenv('FLASK_ENV') == 'testing'
+        use_mock = os.getenv('USE_MOCK_GEMINI', '').lower() == 'true'
+
+        if is_ci_environment or is_test_environment or use_mock:
+            # Em ambiente de CI/teste com mock, esperamos respostas rápidas
+            max_time = 3.0
+        else:
+            # Em ambiente local com API real, mais tolerante
+            max_time = 20.0
+
+        assert response_time < max_time, f"Tempo de resposta muito alto: {response_time:.2f}s (limite: {max_time}s, mock: {use_mock})"
         assert response.status_code in [200, 400]
+
+        # Se for sucesso, verificar se a resposta faz sentido
+        if response.status_code == 200:
+            data = response.get_json()
+            resposta = data.get('resposta', '')
+            assert len(resposta) > 10, "Resposta muito curta"
 
     def test_concurrent_requests_handling(self, client):
         """Testa tratamento de requisições concorrentes."""
-        import threading
-        import queue
+        import time
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        results = queue.Queue()
-        num_threads = 3
-
-        def make_request(thread_id):
+        def make_single_request(request_id):
+            """Faz uma única requisição de teste."""
             try:
                 response = client.post('/pergunta',
-                                     json={'pergunta': f'Teste concorrência {thread_id}'},
+                                     json={'pergunta': f'Teste concorrência {request_id}'},
                                      content_type='application/json')
-                results.put((thread_id, response.status_code, True))
+                return {
+                    'id': request_id,
+                    'status_code': response.status_code,
+                    'success': True,
+                    'response_time': time.time()
+                }
             except Exception as e:
-                results.put((thread_id, None, False))
+                return {
+                    'id': request_id,
+                    'status_code': None,
+                    'success': False,
+                    'error': str(e),
+                    'response_time': time.time()
+                }
 
-        # Executar requisições concorrentes
-        threads = []
-        for i in range(num_threads):
-            thread = threading.Thread(target=make_request, args=(i,))
-            threads.append(thread)
-            thread.start()
+        # Configurações do teste
+        num_requests = 3
+        timeout_seconds = 15
 
-        # Aguardar conclusão
-        for thread in threads:
-            thread.join(timeout=10)
+        # Executar requisições em paralelo usando ThreadPoolExecutor
+        results = []
 
-        # Verificar resultados
-        success_count = 0
-        while not results.empty():
-            thread_id, status_code, success = results.get()
-            if success and status_code in [200, 400]:
-                success_count += 1
+        with ThreadPoolExecutor(max_workers=num_requests) as executor:
+            # Submeter todas as tarefas
+            futures = [executor.submit(make_single_request, i) for i in range(num_requests)]
 
-        # Pelo menos a maioria deve ser bem-sucedida
-        assert success_count >= num_threads * 0.7, f"Muitas falhas em requisições concorrentes: {success_count}/{num_threads}"
+            # Coletar resultados
+            for future in as_completed(futures, timeout=timeout_seconds):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    results.append({
+                        'id': 'unknown',
+                        'status_code': None,
+                        'success': False,
+                        'error': str(e)
+                    })
+
+        # Analisar resultados
+        successful_requests = [r for r in results if r['success'] and r['status_code'] in [200, 400]]
+        failed_requests = [r for r in results if not r['success']]
+
+        success_rate = len(successful_requests) / len(results) if results else 0
+
+        # Validações
+        assert len(results) == num_requests, f"Esperado {num_requests} resultados, obtido {len(results)}"
+        assert success_rate >= 0.7, f"Taxa de sucesso muito baixa: {success_rate:.2%} ({len(successful_requests)}/{len(results)})"
+
+        # Log dos resultados para debug
+        print(f"\nTeste de concorrência - Resultados:")
+        print(f"Total de requisições: {len(results)}")
+        print(f"Bem-sucedidas: {len(successful_requests)}")
+        print(f"Falharam: {len(failed_requests)}")
+        print(f"Taxa de sucesso: {success_rate:.2%}")
+
+        if failed_requests:
+            print("Erros encontrados:")
+            for req in failed_requests[:3]:  # Mostrar apenas os primeiros 3 erros
+                print(f"  - ID {req['id']}: {req.get('error', 'Erro desconhecido')}")
 
 
 class TestErrorHandling:

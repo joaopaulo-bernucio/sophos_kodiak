@@ -96,7 +96,8 @@ class PerguntaResponse {
 }
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:5000';
+  static const String _baseUrl =
+      'http://ip-do-endpoint-mefeus:5000'; //http://10.0.2.2:5000
   static const Duration _timeout = Duration(seconds: 30);
   final http.Client _client;
   ApiService({http.Client? client}) : _client = client ?? http.Client();

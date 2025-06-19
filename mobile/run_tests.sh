@@ -1,58 +1,187 @@
+#!/bin/bash
+
 # Script para Executar Todos os Testes - Sophos Kodiak
+# Autor: Equipe Sophos Kodiak
+# Data: $(date +%Y-%m-%d)
+
+set -e  # Para no primeiro erro
+
+# Função para mostrar ajuda
+show_help() {
+    echo "Uso: $0 [OPÇÃO]"
+    echo ""
+    echo "Opções:"
+    echo "  --unit        Executar apenas testes unitários"
+    echo "  --widget      Executar apenas testes de widget"
+    echo "  --integration Executar apenas testes de integração"
+    echo "  --coverage    Executar todos os testes com cobertura"
+    echo "  --help        Mostrar esta ajuda"
+    echo ""
+    echo "Sem argumentos: Executa todos os testes"
+}
+
+# Processar argumentos
+case "${1:-all}" in
+    --help|-h)
+        show_help
+        exit 0
+        ;;
+    --unit)
+        TEST_TYPE="unit"
+        ;;
+    --widget)
+        TEST_TYPE="widget"
+        ;;
+    --integration)
+        TEST_TYPE="integration"
+        ;;
+    --coverage)
+        TEST_TYPE="coverage"
+        ;;
+    all|"")
+        TEST_TYPE="all"
+        ;;
+    *)
+        echo "❌ Opção inválida: $1"
+        show_help
+        exit 1
+        ;;
+esac
 
 echo "🧪 Executando Testes do Sophos Kodiak Mobile"
 echo "=============================================="
+
+# Verificar se Flutter está instalado
+if ! command -v flutter &> /dev/null; then
+    echo "❌ Flutter não está instalado ou não está no PATH"
+    exit 1
+fi
 
 echo ""
 echo "📦 Instalando dependências..."
 flutter pub get
 
 echo ""
-echo "🔧 Executando Smoke Tests..."
-flutter test test/widget_test.dart
+echo "� Instalando dependências..."
+flutter pub get
 
-echo ""
-echo "🧪 Executando Testes Unitários..."
-echo "  → Testando modelos..."
-flutter test test/unit/models/
+# Função para executar testes unitários
+run_unit_tests() {
+    echo ""
+    echo "🧪 Executando Testes Unitários..."
+    echo "  → Testando modelos..."
+    flutter test test/unit/models/ --reporter compact
 
-echo "  → Testando serviços..."
-flutter test test/unit/services/
+    echo "  → Testando serviços..."
+    flutter test test/unit/services/ --reporter compact
+}
 
-echo ""
-echo "🎨 Executando Testes de Widget..."
-flutter test test/widget/
+# Função para executar testes de widget
+run_widget_tests() {
+    echo ""
+    echo "🔧 Executando Smoke Tests..."
+    flutter test test/widget/widget_test.dart
 
-echo ""
-echo "🔄 Executando Testes de Integração..."
-flutter test integration_test/
+    echo ""
+    echo "🎨 Executando Testes de Widget..."
+    echo "  → Testando aplicação principal..."
+    flutter test test/widget/app_test.dart --reporter compact
 
-echo ""
-echo "📊 Gerando Relatório de Cobertura..."
-flutter test --coverage
-if [ -f "coverage/lcov.info" ]; then
-    echo "  → Cobertura gerada em coverage/lcov.info"
-    if command -v genhtml &> /dev/null; then
-        genhtml coverage/lcov.info -o coverage/html
-        echo "  → Relatório HTML gerado em coverage/html/"
+    echo "  → Testando páginas..."
+    flutter test test/widget/pages/ --reporter compact
+}
+
+# Função para executar testes de integração
+run_integration_tests() {
+    echo ""
+    echo "🔄 Executando Testes de Integração..."
+    flutter test integration_test/ --reporter compact
+}
+
+# Função para executar testes com cobertura
+run_coverage_tests() {
+    echo ""
+    echo "📊 Gerando Relatório de Cobertura..."
+    echo "  → Executando todos os testes com cobertura..."
+    flutter test --coverage --reporter compact
+
+    process_coverage_report
+}
+
+# Função para processar relatório de cobertura
+process_coverage_report() {
+    if [ -f "coverage/lcov.info" ]; then
+        echo "  → Cobertura gerada em coverage/lcov.info"
+        if command -v genhtml &> /dev/null; then
+            genhtml coverage/lcov.info -o coverage/html --quiet
+            echo "  → Relatório HTML gerado em coverage/html/"
+            echo "  → Abra coverage/html/index.html no navegador para ver o relatório"
+        else
+            echo "  → genhtml não encontrado. Instale lcov para gerar relatório HTML:"
+            echo "    sudo apt-get install lcov  (Ubuntu/Debian)"
+            echo "    brew install lcov          (macOS)"
+        fi
+
+        # Mostrar resumo básico da cobertura
+        if command -v lcov &> /dev/null; then
+            echo "  → Resumo da cobertura:"
+            lcov --summary coverage/lcov.info 2>/dev/null | grep -E "(lines|functions)" || echo "    Dados de cobertura processados com sucesso"
+        fi
     else
-        echo "  → genhtml não encontrado. Instale lcov para gerar relatório HTML"
+        echo "  → ⚠️  Arquivo de cobertura não gerado"
+        echo "    Verifique se todos os testes passaram corretamente"
     fi
-else
-    echo "  → Arquivo de cobertura não gerado"
-fi
+}
+
+# Executar testes baseado no tipo selecionado
+case "$TEST_TYPE" in
+    unit)
+        run_unit_tests
+        ;;
+    widget)
+        run_widget_tests
+        ;;
+    integration)
+        run_integration_tests
+        ;;
+    coverage)
+        run_coverage_tests
+        ;;
+    all)
+        run_unit_tests
+        run_widget_tests
+        run_integration_tests
+        run_coverage_tests
+        ;;
+esac
 
 echo ""
 echo "✅ Testes concluídos!"
+
+# Contar arquivos de teste
+UNIT_TESTS=$(find test/unit -name "*_test.dart" | wc -l)
+WIDGET_TESTS=$(find test/widget -name "*_test.dart" | wc -l)
+INTEGRATION_TESTS=$(find integration_test -name "*_test.dart" 2>/dev/null | wc -l || echo "0")
+TOTAL_TESTS=$((UNIT_TESTS + WIDGET_TESTS + INTEGRATION_TESTS))
+
+echo ""
+echo "📊 Estatísticas dos Testes:"
+echo "  • Testes Unitários: $UNIT_TESTS arquivos"
+echo "  • Testes de Widget: $WIDGET_TESTS arquivos"
+echo "  • Testes de Integração: $INTEGRATION_TESTS arquivos"
+echo "  • Total de arquivos de teste: $TOTAL_TESTS"
 echo ""
 echo "📋 Resumo da Estrutura de Testes:"
-echo "  • Testes Unitários: Models e Services"
-echo "  • Testes de Widget: UI e Interações"
-echo "  • Testes de Integração: Fluxos E2E"
-echo "  • Helpers: Utilitários e Dados de Teste"
+echo "  • Testes Unitários: Models (User, ChatMessage) e Services (Auth, UserStorage)"
+echo "  • Testes de Widget: App principal e páginas (Login, Charts)"
+echo "  • Testes de Integração: Fluxos E2E completos"
+echo "  • Helpers: Utilitários (TestData, WidgetTestHelpers) e dados de teste"
 echo ""
 echo "🚀 Para executar testes específicos:"
-echo "  flutter test test/unit/                    # Apenas unitários"
-echo "  flutter test test/widget/                  # Apenas widgets"
-echo "  flutter test integration_test/             # Apenas integração"
-echo "  flutter test test/unit/models/user_model_test.dart  # Teste específico"
+echo "  ./run_tests.sh --unit                            # Apenas unitários"
+echo "  ./run_tests.sh --widget                          # Apenas widgets"
+echo "  ./run_tests.sh --integration                     # Apenas integração"
+echo "  ./run_tests.sh --coverage                        # Apenas cobertura"
+echo "  flutter test test/unit/models/user_test.dart      # Teste específico do modelo User"
+echo "  flutter test test/unit/models/chat_message_test.dart  # Teste específico do modelo ChatMessage"
+echo "  flutter test test/widget/pages/login_page_test.dart   # Teste específico da página de login"

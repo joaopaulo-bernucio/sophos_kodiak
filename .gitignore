@@ -30,6 +30,7 @@ mobile/.flutter-plugins-dependencies
 mobile/.pub-cache/
 mobile/.pub/
 mobile/build/
+mobile/coverage/
 
 # Symbolication related (mobile)
 mobile/app.*.symbols

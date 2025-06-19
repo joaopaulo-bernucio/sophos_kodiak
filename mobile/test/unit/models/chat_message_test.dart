@@ -29,7 +29,11 @@ void main() {
       });
 
       test('deve criar mensagem de erro corretamente', () {
-        final apiError = ApiException.connectionError();
+        const apiError = ApiException(
+          'Connection error',
+          userFriendlyMessage: 'Erro de conexão',
+          type: ApiErrorType.connectionError,
+        );
         final message = ChatMessage(
           text: 'Erro de conexão',
           isUser: false,
@@ -135,8 +139,12 @@ void main() {
     group('CopyWith', () {
       test('deve criar cópia com novos valores', () {
         final originalMessage = TestData.createUserMessage();
-        final newText = 'Nova pergunta';
-        final apiError = ApiException.timeout();
+        const newText = 'Nova pergunta';
+        const apiError = ApiException(
+          'Timeout error',
+          userFriendlyMessage: 'Timeout',
+          type: ApiErrorType.timeout,
+        );
 
         final updatedMessage = originalMessage.copyWith(
           text: newText,
@@ -145,14 +153,8 @@ void main() {
         );
 
         expect(updatedMessage.text, equals(newText));
-        expect(
-          updatedMessage.isUser,
-          equals(originalMessage.isUser),
-        ); // Deve manter original
-        expect(
-          updatedMessage.timestamp,
-          equals(originalMessage.timestamp),
-        ); // Deve manter original
+        expect(updatedMessage.isUser, equals(originalMessage.isUser));
+        expect(updatedMessage.timestamp, equals(originalMessage.timestamp));
         expect(updatedMessage.isError, isTrue);
         expect(updatedMessage.apiError, equals(apiError));
       });

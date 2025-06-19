@@ -26,12 +26,17 @@ class AuthService {
       throw const AuthException('CNPJ ou senha incorretos');
     }
     final existingUser = await UserStorageService.getUser();
-    return User(
+    final user = User(
       cnpj: cnpj,
       senha: senha,
       nomePreferido: existingUser?.nomePreferido,
       ultimoLogin: DateTime.now(),
     );
+
+    // Salvar usuário com remember me ativado
+    await UserStorageService.saveUser(user, rememberMe: true);
+
+    return user;
   }
 
   Future<bool> estaLogado() async {

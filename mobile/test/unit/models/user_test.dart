@@ -8,9 +8,9 @@ void main() {
       test('deve criar usuário com dados válidos', () {
         final user = TestData.createValidUser();
 
-        expect(user.cnpj, TestData.validCnpj);
-        expect(user.senha, TestData.validPassword);
-        expect(user.nomePreferido, TestData.validUserName);
+        expect(user.cnpj, equals(TestData.validCnpj));
+        expect(user.senha, equals(TestData.validPassword));
+        expect(user.nomePreferido, equals(TestData.validUserName));
         expect(user.ultimoLogin, isNotNull);
       });
 
@@ -20,8 +20,8 @@ void main() {
           senha: TestData.validPassword,
         );
 
-        expect(user.cnpj, TestData.validCnpj);
-        expect(user.senha, TestData.validPassword);
+        expect(user.cnpj, equals(TestData.validCnpj));
+        expect(user.senha, equals(TestData.validPassword));
         expect(user.nomePreferido, isNull);
         expect(user.ultimoLogin, isNull);
       });
@@ -39,10 +39,10 @@ void main() {
 
         final json = user.toJson();
 
-        expect(json['cnpj'], TestData.validCnpj);
-        expect(json['senha'], TestData.validPassword);
-        expect(json['nomePreferido'], TestData.validUserName);
-        expect(json['ultimoLogin'], now.toIso8601String());
+        expect(json['cnpj'], equals(TestData.validCnpj));
+        expect(json['senha'], equals(TestData.validPassword));
+        expect(json['nomePreferido'], equals(TestData.validUserName));
+        expect(json['ultimoLogin'], equals(now.toIso8601String()));
       });
 
       test('deve converter JSON para User corretamente', () {
@@ -56,10 +56,10 @@ void main() {
 
         final user = User.fromJson(json);
 
-        expect(user.cnpj, TestData.validCnpj);
-        expect(user.senha, TestData.validPassword);
-        expect(user.nomePreferido, TestData.validUserName);
-        expect(user.ultimoLogin, now);
+        expect(user.cnpj, equals(TestData.validCnpj));
+        expect(user.senha, equals(TestData.validPassword));
+        expect(user.nomePreferido, equals(TestData.validUserName));
+        expect(user.ultimoLogin, equals(now));
       });
 
       test('deve lidar com campos opcionais nulos no JSON', () {
@@ -70,8 +70,8 @@ void main() {
 
         final user = User.fromJson(json);
 
-        expect(user.cnpj, TestData.validCnpj);
-        expect(user.senha, TestData.validPassword);
+        expect(user.cnpj, equals(TestData.validCnpj));
+        expect(user.senha, equals(TestData.validPassword));
         expect(user.nomePreferido, isNull);
         expect(user.ultimoLogin, isNull);
       });

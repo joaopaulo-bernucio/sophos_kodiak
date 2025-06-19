@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sophos_kodiak/app.dart';
-import 'helpers/test_helpers.dart';
+import 'helpers/widget_test_helpers.dart';
 
 void main() {
   group('Smoke Tests', () {
     testWidgets('App deve inicializar sem erros', (WidgetTester tester) async {
       await tester.pumpWidget(const App());
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
-      expectWidgetPresent(MaterialApp);
-      expectTextPresent('SOPHOS');
-      expectTextPresent('KODIAK');
+      expect(find.byType(MaterialApp), findsOneWidget);
+      expect(find.text('SOPHOS'), findsOneWidget);
+      expect(find.text('KODIAK'), findsOneWidget);
     });
 
     testWidgets('App deve ter configuração básica correta', (

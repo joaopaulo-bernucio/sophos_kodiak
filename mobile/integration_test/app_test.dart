@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sophos_kodiak/app.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sophos_kodiak/services/user_storage_service.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Fluxo Completo de Login', () {
     setUp(() async {
-      // Limpar dados antes de cada teste
-      SharedPreferences.setMockInitialValues({});
+      // Limpar dados reais antes de cada teste
+      await UserStorageService.clearUserData();
     });
 
     testWidgets('deve completar fluxo de login com sucesso', (

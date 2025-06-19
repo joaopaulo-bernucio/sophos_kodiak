@@ -32,10 +32,22 @@ class UserStorageService {
       if (userJsonString == null) {
         return null;
       }
-      final userJson = jsonDecode(userJsonString) as Map<String, dynamic>;
-      return User.fromJson(userJson);
+
+      final dynamic userJsonDynamic = jsonDecode(userJsonString);
+      if (userJsonDynamic is! Map<String, dynamic>) {
+        throw const FormatException('JSON não é um objeto válido');
+      }
+
+      return User.fromJson(userJsonDynamic);
+    } on FormatException catch (e) {
+      _logger.w('Dados de usuário corrompidos, limpando: $e');
+      // Limpar dados corrompidos automaticamente
+      await clearUserData();
+      return null;
     } catch (e) {
       _logger.e('Erro ao recuperar usuário: $e');
+      // Também limpar dados em caso de erro inesperado
+      await clearUserData();
       return null;
     }
   }
@@ -43,9 +55,34 @@ class UserStorageService {
   static Future<bool> hasUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final hasData = prefs.containsKey(_userKey);
       final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
-      return hasData && rememberMe;
+      if (!rememberMe) {
+        return false;
+      }
+
+      final userJsonString = prefs.getString(_userKey);
+      if (userJsonString == null) {
+        return false;
+      }
+
+      // Verificar se os dados são válidos
+      try {
+        final dynamic userJsonDynamic = jsonDecode(userJsonString);
+        if (userJsonDynamic is! Map<String, dynamic>) {
+          throw const FormatException('JSON não é um objeto válido');
+        }
+        User.fromJson(userJsonDynamic); // Validar se pode criar o usuário
+        return true;
+      } on FormatException {
+        // Dados corrompidos, limpar automaticamente
+        await clearUserData();
+        return false;
+      } catch (e) {
+        // Outros erros também indicam dados corrompidos
+        _logger.w('Dados de usuário inválidos, limpando: $e');
+        await clearUserData();
+        return false;
+      }
     } catch (e) {
       _logger.e('Erro ao verificar dados do usuário: $e');
       return false;

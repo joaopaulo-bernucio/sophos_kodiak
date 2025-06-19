@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
-import '../../helpers/test_helpers.dart';
+import '../../helpers/widget_test_helpers.dart';
 
 void main() {
   group('Login Page Tests', () {
@@ -10,7 +10,7 @@ void main() {
     ) async {
       // Arrange & Act
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Assert - Verificar elementos básicos da tela de login
       expect(find.byType(LoginPage), findsOneWidget);
@@ -27,7 +27,7 @@ void main() {
     ) async {
       // Arrange & Act
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Assert - Verificar campos específicos
       final textFields = find.byType(TextField);
@@ -39,7 +39,7 @@ void main() {
     ) async {
       // Arrange & Act
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Assert - Verificar se há pelo menos um botão
       expect(find.byType(ElevatedButton), findsAtLeast(1));
@@ -50,13 +50,17 @@ void main() {
     ) async {
       // Arrange
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Act - Inserir texto no primeiro campo (CNPJ)
       final textFields = find.byType(TextField);
       if (textFields.evaluate().isNotEmpty) {
-        await enterText(tester, textFields.first, '12.345.678/0001-90');
-        await waitForUI(tester);
+        await WidgetTestHelpers.enterText(
+          tester,
+          textFields.first,
+          '12.345.678/0001-90',
+        );
+        await WidgetTestHelpers.pumpAndSettle(tester);
 
         // Assert - Verificar se o texto foi inserido
         expect(find.text('12.345.678/0001-90'), findsOneWidget);
@@ -68,7 +72,7 @@ void main() {
     ) async {
       // Arrange & Act
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Assert - Verificar elementos visuais
       expect(find.byType(Scaffold), findsOneWidget);
@@ -80,19 +84,19 @@ void main() {
     ) async {
       // Arrange
       await tester.pumpWidget(createTestableWidget(const LoginPage()));
-      await waitForUI(tester);
+      await WidgetTestHelpers.pumpAndSettle(tester);
 
       // Act - Tentar tocar em elementos interativos
       final buttons = find.byType(ElevatedButton);
       if (buttons.evaluate().isNotEmpty) {
-        await tapWidget(tester, buttons.first);
-        await waitForUI(tester);
+        await WidgetTestHelpers.tapWidget(tester, buttons.first);
+        await WidgetTestHelpers.pumpAndSettle(tester);
       }
 
       final textFields = find.byType(TextField);
       if (textFields.evaluate().isNotEmpty) {
-        await tapWidget(tester, textFields.first);
-        await waitForUI(tester);
+        await WidgetTestHelpers.tapWidget(tester, textFields.first);
+        await WidgetTestHelpers.pumpAndSettle(tester);
       }
 
       // Assert - A página deve continuar funcional após interações

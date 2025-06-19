@@ -6,11 +6,11 @@ import '../../helpers/widget_test_helpers.dart';
 void main() {
   group('LoginPage Widget Tests', () {
     setUp(() async {
-      await WidgetTestHelpers.setupSharedPreferences();
+      await WidgetTestHelpers.setupUserData();
     });
 
     tearDown(() async {
-      await WidgetTestHelpers.clearSharedPreferences();
+      await WidgetTestHelpers.clearUserData();
     });
 
     group('UI Rendering', () {

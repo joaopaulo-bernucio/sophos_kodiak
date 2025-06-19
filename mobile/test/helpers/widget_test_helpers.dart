@@ -1,34 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sophos_kodiak/services/user_storage_service.dart';
+import 'package:sophos_kodiak/models/user.dart';
+import 'package:sophos_kodiak/app.dart';
 
 class WidgetTestHelpers {
-  /// Configura SharedPreferences com dados mock para testes
-  static Future<void> setupSharedPreferences({
-    Map<String, dynamic>? userData,
-    String? authToken,
-    Map<String, String>? customValues,
+  /// Configura dados de usuário reais para testes
+  static Future<void> setupUserData({
+    String? cnpj,
+    String? nomePreferido,
+    bool rememberMe = true,
   }) async {
-    final Map<String, Object> mockData = {
-      'user_data': userData != null
-          ? '{"cnpj": "${userData['cnpj'] ?? '12345678000100'}", "nomePreferido": "${userData['nomePreferido'] ?? 'Test User'}"}'
-          : '{"cnpj": "12345678000100", "nomePreferido": "Test User"}',
-      'auth_token': authToken ?? 'mock_auth_token_12345',
-      'is_logged_in': true,
-      ...?customValues,
-    };
+    final user = User(
+      cnpj: cnpj ?? '12345678000100',
+      senha: 'password123',
+      nomePreferido: nomePreferido ?? 'Test User',
+      ultimoLogin: DateTime.now(),
+    );
 
-    SharedPreferences.setMockInitialValues(mockData);
+    await UserStorageService.saveUser(user, rememberMe: rememberMe);
   }
 
-  /// Limpa todos os dados do SharedPreferences
-  static Future<void> clearSharedPreferences() async {
-    SharedPreferences.setMockInitialValues({});
+  /// Limpa todos os dados do usuário
+  static Future<void> clearUserData() async {
+    await UserStorageService.clearUserData();
   }
 
   /// Configura um estado de usuário não logado
   static Future<void> setupLoggedOutState() async {
-    SharedPreferences.setMockInitialValues({'is_logged_in': false});
+    await UserStorageService.clearUserData();
   }
 
   /// Aguarda que todas as animações terminem
@@ -89,6 +89,43 @@ class WidgetTestHelpers {
   static void expectMultipleWidgets(Finder finder, int count) {
     expect(finder, findsNWidgets(count));
   }
+
+  /// Helper para aguardar que um widget apareça
+  static Future<void> waitForWidget(
+    WidgetTester tester,
+    Finder finder, {
+    Duration? timeout,
+  }) async {
+    await tester.pumpAndSettle();
+
+    final end = DateTime.now().add(timeout ?? const Duration(seconds: 5));
+
+    while (DateTime.now().isBefore(end)) {
+      await tester.pump(const Duration(milliseconds: 100));
+
+      if (tester.any(finder)) {
+        return;
+      }
+    }
+
+    throw Exception('Widget não encontrado após timeout');
+  }
+
+  /// Helper para limpar dados de teste
+  static Future<void> clearTestData() async {
+    await clearUserData();
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+}
+
+/// Helper para criar instâncias de widget de teste com MaterialApp
+Widget createTestableWidget(Widget child) {
+  return MaterialApp(home: child);
+}
+
+/// Helper para criar a aplicação completa para testes de integração
+Widget createTestableApp() {
+  return const App();
 }
 
 /// Cria um aplicativo de teste com MaterialApp para widgets

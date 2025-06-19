@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sophos_kodiak/app.dart';
-import '../helpers/test_helpers.dart';
+import '../helpers/widget_test_helpers.dart';
 
 void main() {
   group('App Widget', () {
@@ -35,7 +35,7 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-        await waitForUI(tester);
+        await WidgetTestHelpers.pumpAndSettle(tester);
 
         // Verificar se elementos da tela de login estão presentes
         expect(find.text('SOPHOS KODIAK'), findsOneWidget);

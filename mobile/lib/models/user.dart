@@ -12,9 +12,22 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    if (!json.containsKey('cnpj') || !json.containsKey('senha')) {
+      throw const FormatException(
+        'Campos obrigatórios ausentes no JSON do usuário',
+      );
+    }
+
+    final cnpj = json['cnpj'];
+    final senha = json['senha'];
+
+    if (cnpj is! String || senha is! String) {
+      throw const FormatException('Campos cnpj e senha devem ser strings');
+    }
+
     return User(
-      cnpj: json['cnpj'] as String,
-      senha: json['senha'] as String,
+      cnpj: cnpj,
+      senha: senha,
       nomePreferido: json['nomePreferido'] as String?,
       ultimoLogin: json['ultimoLogin'] != null
           ? DateTime.parse(json['ultimoLogin'] as String)

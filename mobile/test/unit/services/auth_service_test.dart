@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/services/auth_service.dart';
-import 'package:sophos_kodiak/models/user.dart';
 import '../../helpers/test_data.dart';
 
 void main() {
@@ -10,10 +8,15 @@ void main() {
   group('AuthService', () {
     late AuthService authService;
 
-    setUp(() {
-      // Inicializa o mock do SharedPreferences com valores vazios
-      SharedPreferences.setMockInitialValues({});
+    setUp(() async {
       authService = AuthService();
+      // Limpar dados reais para garantir isolamento entre testes
+      await authService.limparDados();
+    });
+
+    tearDown(() async {
+      // Limpa dados após cada teste para garantir isolamento
+      await authService.limparDados();
     });
 
     group('Login', () {
@@ -192,6 +195,35 @@ void main() {
         final currentUser = await authService.obterUsuarioAtual();
         expect(currentUser, isNull);
       });
+
+      test('deve persistir estado de login após login bem-sucedido', () async {
+        // Fazer login
+        await authService.login(TestData.validCnpj, TestData.validPassword);
+
+        // Verificar estado persistido
+        expect(await authService.estaLogado(), isTrue);
+
+        final currentUser = await authService.obterUsuarioAtual();
+        expect(currentUser, isNotNull);
+        expect(currentUser!.cnpj, equals(TestData.validCnpj));
+      });
+
+      test(
+        'deve manter dados do usuário entre instâncias do serviço',
+        () async {
+          // Login com primeira instância
+          await authService.login(TestData.validCnpj, TestData.validPassword);
+
+          // Criar nova instância do serviço
+          final novoAuthService = AuthService();
+
+          // Verificar que dados persistem
+          expect(await novoAuthService.estaLogado(), isTrue);
+
+          final usuario = await novoAuthService.obterUsuarioAtual();
+          expect(usuario!.cnpj, equals(TestData.validCnpj));
+        },
+      );
     });
 
     group('Logout', () {
@@ -205,6 +237,19 @@ void main() {
         await authService.logout();
 
         expect(true, isTrue); // Se chegou aqui, não houve exceção
+      });
+
+      test('deve limpar estado após logout', () async {
+        // Fazer login primeiro
+        await authService.login(TestData.validCnpj, TestData.validPassword);
+        expect(await authService.estaLogado(), isTrue);
+
+        // Fazer logout
+        await authService.logout();
+
+        // Verificar que estado foi limpo
+        expect(await authService.estaLogado(), isFalse);
+        expect(await authService.obterUsuarioAtual(), isNull);
       });
     });
 
@@ -224,6 +269,36 @@ void main() {
           );
         },
       );
+
+      test('deve atualizar nome preferido com usuário logado', () async {
+        // Fazer login primeiro
+        await authService.login(TestData.validCnpj, TestData.validPassword);
+
+        // Atualizar nome preferido
+        const novoNome = 'João Atualizado';
+        await authService.atualizarNomePreferido(novoNome);
+
+        // Verificar atualização
+        final usuario = await authService.obterUsuarioAtual();
+        expect(usuario!.nomePreferido, equals(novoNome));
+      });
+
+      test('deve manter outros dados ao atualizar nome preferido', () async {
+        // Fazer login
+        final usuarioOriginal = await authService.login(
+          TestData.validCnpj,
+          TestData.validPassword,
+        );
+
+        // Atualizar nome
+        await authService.atualizarNomePreferido('Nome Atualizado');
+
+        // Verificar que outros dados foram mantidos
+        final usuarioAtualizado = await authService.obterUsuarioAtual();
+        expect(usuarioAtualizado!.cnpj, equals(usuarioOriginal.cnpj));
+        expect(usuarioAtualizado.senha, equals(usuarioOriginal.senha));
+        expect(usuarioAtualizado.nomePreferido, equals('Nome Atualizado'));
+      });
     });
 
     group('Operações de Usuário', () {
@@ -246,6 +321,25 @@ void main() {
           expect(ultimoLogin, isNull);
         },
       );
+
+      test('deve registrar último login após login bem-sucedido', () async {
+        final antesLogin = DateTime.now();
+
+        await authService.login(TestData.validCnpj, TestData.validPassword);
+
+        final aposLogin = DateTime.now();
+        final ultimoLogin = await authService.obterUltimoLogin();
+
+        expect(ultimoLogin, isNotNull);
+        expect(
+          ultimoLogin!.isAfter(antesLogin.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
+        expect(
+          ultimoLogin.isBefore(aposLogin.add(const Duration(seconds: 1))),
+          isTrue,
+        );
+      });
     });
 
     group('AuthException', () {
@@ -284,13 +378,11 @@ void main() {
       test('deve manter consistência em múltiplas operações', () async {
         // Login válido
         await authService.login(TestData.validCnpj, TestData.validPassword);
+        expect(await authService.estaLogado(), isTrue);
 
         // Logout
         await authService.logout();
-
-        // Verificar estado
-        final isLoggedIn = await authService.estaLogado();
-        expect(isLoggedIn, isFalse);
+        expect(await authService.estaLogado(), isFalse);
 
         // Tentar login novamente
         final user = await authService.login(
@@ -298,7 +390,83 @@ void main() {
           TestData.validPassword,
         );
         expect(user.cnpj, equals(TestData.validCnpj));
+        expect(await authService.estaLogado(), isTrue);
       });
+
+      test('deve validar credenciais com caracteres especiais', () async {
+        // Testa CNPJ com caracteres especiais inválidos
+        expect(
+          () => authService.login('12.345.678/0001-9@', TestData.validPassword),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('deve lidar com strings vazias após trim', () async {
+        expect(
+          () => authService.login('   ', '   '),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              'CNPJ é obrigatório',
+            ),
+          ),
+        );
+      });
+    });
+
+    group('Integração com UserStorageService', () {
+      test('deve salvar usuário com remember me ativado após login', () async {
+        // Login
+        await authService.login(TestData.validCnpj, TestData.validPassword);
+
+        // Verificar que usuário foi salvo com remember me
+        expect(await authService.estaLogado(), isTrue);
+
+        // Verificar dados persistidos
+        final usuario = await authService.obterUsuarioAtual();
+        expect(usuario, isNotNull);
+        expect(usuario!.cnpj, equals(TestData.validCnpj));
+      });
+
+      test('deve preservar nome preferido existente ao fazer login', () async {
+        final usuarioExistente = TestData.createValidUser(
+          nomePreferido: 'Nome Existente',
+        );
+
+        // Salvar usuário existente
+        await authService.salvarUsuario(usuarioExistente);
+
+        // Fazer login novamente
+        final usuarioLogado = await authService.login(
+          TestData.validCnpj,
+          TestData.validPassword,
+        );
+
+        // Nome preferido deve ser preservado
+        expect(usuarioLogado.nomePreferido, equals('Nome Existente'));
+      });
+
+      test(
+        'deve manter consistência entre operações de auth e storage',
+        () async {
+          // Login
+          await authService.login(TestData.validCnpj, TestData.validPassword);
+
+          // Atualizar nome via AuthService
+          await authService.atualizarNomePreferido('Nome Via Auth');
+
+          // Verificar via UserStorageService diretamente
+          final usuario = await authService.obterUsuarioAtual();
+          expect(usuario!.nomePreferido, equals('Nome Via Auth'));
+
+          // Logout via AuthService
+          await authService.logout();
+
+          // Verificar que dados foram limpos
+          expect(await authService.estaLogado(), isFalse);
+        },
+      );
     });
   });
 }

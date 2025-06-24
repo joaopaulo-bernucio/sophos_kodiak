@@ -1,17 +1,14 @@
 #!/bin/bash
-# Script para executar testes com análise real do código
-# Este script desabilita todos os mocks para permitir análise real
 
 echo "🔍 TESTE DE ANÁLISE REAL DO CÓDIGO SOPHOS KODIAK"
 echo "================================================="
 echo ""
 
-# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -29,13 +26,11 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Verificar se estamos no diretório correto
 if [[ ! -f "pytest.ini" ]]; then
     print_error "Execute este script do diretório backend/"
     exit 1
 fi
 
-# Ativar ambiente virtual se existir
 if [[ -f ".venv/bin/activate" ]]; then
     print_status "💡 Ativando ambiente virtual..."
     source .venv/bin/activate
@@ -62,18 +57,12 @@ fi
 
 print_status "🔧 Configurando ambiente para análise real do código..."
 
-# Configurar variáveis para testes reais (sem mocks)
 export ANALYZE_REAL_CODE=true
 export VALIDATE_ACTUAL_LOGIC=true
 export TEST_REAL_SCENARIOS=true
 export ENABLE_REAL_API_TESTS=true
 export ENABLE_DATABASE_TESTS=true
 export FLASK_ENV=testing
-
-# NÃO usar mocks (comentar as linhas abaixo se quiser forçar mocks)
-# export ENABLE_MOCK_RESPONSES=false
-# export SKIP_EXTERNAL_APIS=false
-# export USE_MEMORY_CACHE=false
 
 print_success "Ambiente configurado para análise real"
 print_status "Flask ENV: ${FLASK_ENV}"
@@ -82,7 +71,6 @@ print_status "Análise real: ${ANALYZE_REAL_CODE}"
 echo ""
 print_status "🧪 Executando testes para analisar código real..."
 
-# Executar testes que analisam o código real
 pytest -v \
     --tb=short \
     -m "not external" \

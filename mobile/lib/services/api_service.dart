@@ -97,7 +97,7 @@ class PerguntaResponse {
 
 class ApiService {
   static const String _baseUrl =
-      'http://ip-do-endpoint-mefeus:5000'; //http://10.0.2.2:5000
+      'http://10.0.2.2:5000'; // IP do host para emulador Android
   static const Duration _timeout = Duration(seconds: 30);
   final http.Client _client;
   ApiService({http.Client? client}) : _client = client ?? http.Client();
@@ -105,6 +105,10 @@ class ApiService {
   /// Método auxiliar para tratar erros de conexão
   ApiException _handleConnectionError(dynamic error) {
     final errorString = error.toString().toLowerCase();
+
+    // Log do erro completo para debugging
+    print('ApiService Error: $error');
+    print('Error Type: ${error.runtimeType}');
 
     // Verifica diferentes tipos de erro de conexão
     if (error is http.ClientException ||
@@ -319,6 +323,34 @@ class ApiService {
       }
     } catch (e) {
       throw _handleConnectionError(e);
+    }
+  }
+
+  /// Testa a conectividade básica com o servidor
+  Future<Map<String, dynamic>> testarConectividade() async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$_baseUrl/debug/connection'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {
+          'conectado': true,
+          'dados': jsonDecode(response.body),
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'conectado': false,
+          'erro': 'Status code: ${response.statusCode}',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {'conectado': false, 'erro': e.toString(), 'statusCode': null};
     }
   }
 

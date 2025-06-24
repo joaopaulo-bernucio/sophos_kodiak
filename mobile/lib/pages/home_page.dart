@@ -134,16 +134,16 @@ class _MenuGrid extends StatelessWidget {
           onTap: () => Navigator.pushNamed(context, '/charts'),
         ),
         _MenuCard(
+          icon: Icons.network_check,
+          title: 'Teste Rede',
+          subtitle: 'Diagnosticar conexão',
+          onTap: () => Navigator.pushNamed(context, '/network-test'),
+        ),
+        _MenuCard(
           icon: Icons.settings,
           title: 'Configurações',
           subtitle: 'Ajustes do sistema',
           onTap: () => _showFeatureDialog(context, 'Configurações'),
-        ),
-        _MenuCard(
-          icon: Icons.help,
-          title: 'Ajuda',
-          subtitle: 'Suporte e documentação',
-          onTap: () => _showFeatureDialog(context, 'Ajuda'),
         ),
       ],
     );

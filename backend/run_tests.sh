@@ -1,5 +1,4 @@
 #!/bin/bash
-# Script para executar testes do backend Sophos Kodiak de forma organizada
 
 set -e
 
@@ -7,14 +6,12 @@ echo "🧪 TESTES DO BACKEND SOPHOS KODIAK"
 echo "=================================="
 echo ""
 
-# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Função para imprimir status
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -31,22 +28,18 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Verificar se estamos no diretório correto
 if [[ ! -f "pytest.ini" ]]; then
     print_error "Execute este script do diretório backend/"
     exit 1
 fi
 
-# Função para carregar configurações de CI
 load_ci_config() {
     if [[ "$CI" == "true" ]] || [[ -n "$GITHUB_ACTIONS" ]]; then
         print_status "🔧 Carregando configurações de CI..."
         if [[ -f ".env.ci" ]]; then
-            # Carregar variáveis do arquivo .env.ci
             export $(grep -v '^#' .env.ci | grep -v '^$' | xargs)
             print_success "Configurações de CI carregadas de .env.ci"
 
-            # Validar configurações críticas
             if [[ -z "$DATABASE_URL" ]]; then
                 print_warning "DATABASE_URL não definida, usando padrão de CI"
                 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
@@ -56,7 +49,6 @@ load_ci_config() {
                 export GEMINI_API_KEY="test_gemini_api_key_for_github_actions_testing_only"
             fi
 
-            # Verificar se deve usar análise real do código
             if [[ "$ANALYZE_REAL_CODE" == "true" ]]; then
                 print_status "🔍 Modo de análise real do código ATIVADO"
                 print_status "   - API Gemini: resposta real (ou fallback inteligente)"
@@ -70,7 +62,6 @@ load_ci_config() {
             print_status "✅ Configuração CI aplicada: FLASK_ENV=$FLASK_ENV, DB=$DB_NAME"
         else
             print_warning "Arquivo .env.ci não encontrado, usando configurações padrão do CI"
-            # Configurações padrão para CI
             export FLASK_ENV="testing"
             export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
             export GEMINI_API_KEY="test_gemini_api_key_for_github_actions_testing_only"
@@ -78,8 +69,12 @@ load_ci_config() {
         fi
     else
         print_status "Executando em ambiente local (não-CI)"
-
-        # Verificar se o usuário quer forçar análise real local
+        # Carrega variáveis do .env se existir
+        if [[ -f ".env" ]]; then
+            print_status "Carregando variáveis do .env para testes locais"
+            export $(grep -v '^#' .env | grep -v '^$' | xargs)
+            print_success "Variáveis do .env carregadas"
+        fi
         if [[ "$ANALYZE_REAL_CODE" == "true" ]]; then
             print_status "🔍 Análise real do código forçada localmente"
             print_status "   - Use: export ANALYZE_REAL_CODE=true && ./run_tests.sh"
@@ -88,10 +83,8 @@ load_ci_config() {
     fi
 }
 
-# Carregar configurações de CI se necessário
 load_ci_config
 
-# Ativar ambiente virtual se existir
 if [[ -f ".venv/bin/activate" ]]; then
     print_status "Ativando ambiente virtual..."
     source .venv/bin/activate
@@ -104,7 +97,6 @@ else
     print_warning "Ambiente virtual não encontrado, usando Python do sistema"
 fi
 
-# Verificar se pytest está disponível
 if ! command -v pytest &> /dev/null; then
     print_error "pytest não encontrado. Instale com: pip install pytest"
     print_status "Tentando instalar pytest automaticamente..."
@@ -116,7 +108,6 @@ if ! command -v pytest &> /dev/null; then
     fi
 fi
 
-# Função para executar testes com timing
 run_tests() {
     local test_name="$1"
     local test_command="$2"
@@ -147,11 +138,9 @@ run_tests() {
     fi
 }
 
-# Função para validar testes de performance
 validate_performance_tests() {
     print_status "🔍 Validando Testes de Performance"
 
-    # Verificar marcadores de performance
     print_status "Verificando marcadores de performance..."
     local performance_tests
     performance_tests=$(pytest --collect-only -m performance -q 2>/dev/null | grep -c "::test_" || echo "0")
@@ -165,30 +154,25 @@ validate_performance_tests() {
         print_success "Encontrados $performance_tests testes de performance"
     fi
 
-    # Verificar se existem testes de benchmark
     local benchmark_tests
     benchmark_tests=$(find tests/ -name "*benchmark*" -o -name "*performance*" | wc -l)
     print_success "Encontrados $benchmark_tests arquivos de benchmark/performance"
 
-    # Verificar configuração do pytest.ini
     if grep -q "performance:" pytest.ini; then
         print_success "Marcador 'performance' configurado no pytest.ini"
     else
         print_warning "Marcador 'performance' não encontrado no pytest.ini"
     fi
 
-    # Listar testes encontrados
     print_status "Testes de Performance Disponíveis:"
     pytest --collect-only -m performance -q 2>/dev/null || print_warning "Erro ao listar testes"
 
     return 0
 }
 
-# Função para executar testes de performance localmente
 run_performance_local() {
     print_status "🏃 Executando Testes de Performance Localmente"
 
-    # Verificar dependências
     print_status "Verificando dependências..."
     if ! python -c "import pytest; print(f'pytest: {pytest.__version__}')" 2>/dev/null; then
         print_error "pytest não disponível"
@@ -199,46 +183,38 @@ run_performance_local() {
         print_warning "psutil não disponível, alguns testes podem falhar"
     fi
 
-    # Executar validação primeiro
     if ! validate_performance_tests; then
         print_error "Validação de performance falhou"
         return 1
     fi
 
-    # Executar testes de performance (apenas os rápidos)
     print_status "Executando Testes de Performance (modo rápido)"
     if ! pytest -m "performance and not slow" --tb=short -v --maxfail=3 --durations=10 -x; then
         print_warning "Alguns testes de performance falharam (esperado se não houver DB configurado)"
     fi
 
-    # Executar testes de benchmark básicos
     print_status "Executando Benchmarks Básicos"
 
-    # Tentar testes simples primeiro
     print_status "Testando performance simples..."
     if ! pytest tests/performance/test_simple_performance.py::TestSimplePerformance::test_json_serialization_performance -v -s --tb=line; then
         print_warning "Teste simples falhou"
     fi
 
-    # Tentar teste JSON original com tratamento de erro
     print_status "Testando benchmark JSON original..."
     if ! pytest tests/performance/test_benchmarks.py::TestBenchmarks::test_benchmark_json_processing -v -s --tb=line; then
         print_warning "Benchmark JSON falhou, tentando com medição manual"
     fi
 
-    # Tentar teste manual de memória
     print_status "Testando benchmark manual..."
     if ! pytest tests/performance/test_benchmarks.py::TestManualBenchmarks::test_manual_memory_usage -v -s --tb=line; then
         print_warning "Benchmark manual falhou"
     fi
 
-    # Executar teste de importação específico (sem graphs.py)
     print_status "Testando performance de importação (sem módulos problemáticos)..."
     if ! pytest tests/performance/test_performance_ci.py::TestSystemPerformance::test_import_time_performance -v -s --tb=line; then
         print_warning "Teste de importação falhou"
     fi
 
-    # Verificar se pytest-benchmark está causando conflitos
     print_status "Verificando pytest-benchmark"
     python -c "
 try:
@@ -256,7 +232,6 @@ except Exception as e:
     return 0
 }
 
-# Processar argumentos
 QUICK_MODE=false
 FULL_MODE=false
 SMOKE_ONLY=false
@@ -369,7 +344,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Determinar quais testes executar
 if [[ "$AUTO_DISCOVER" == true ]]; then
     print_status "Modo: Descoberta Automática de Testes"
     TESTS_TO_RUN="auto_discover"
@@ -410,15 +384,12 @@ fi
 
 echo ""
 
-# Configurar pytest arguments base
 PYTEST_ARGS="--tb=short -v"
 
-# Aplicar configurações específicas para CI
 if [[ "$CI" == "true" ]] || [[ -n "$GITHUB_ACTIONS" ]]; then
     print_status "🔧 Aplicando configurações específicas para CI..."
     PYTEST_ARGS="$PYTEST_ARGS --timeout=${REQUEST_TIMEOUT:-10} --maxfail=3"
 
-    # Adicionar argumentos específicos para CI se REQUEST_TIMEOUT foi definido
     if [[ -n "$REQUEST_TIMEOUT" ]]; then
         PYTEST_ARGS="$PYTEST_ARGS --durations=5"
     fi
@@ -430,14 +401,12 @@ if [[ "$SKIP_OPTIONAL" == true ]]; then
     PYTEST_ARGS="$PYTEST_ARGS -m 'not external'"
 fi
 
-# Validar ambiente antes de executar testes
 print_status "🔍 Validando ambiente de execução..."
 print_status "Flask ENV: ${FLASK_ENV:-não definido}"
 print_status "Database URL: ${DATABASE_URL:-não definido}"
 print_status "CI Mode: ${CI:-false}"
 print_status "Pytest Args: $PYTEST_ARGS"
 
-# Executar testes baseado no modo
 SUCCESS_COUNT=0
 TOTAL_COUNT=0
 
@@ -460,7 +429,6 @@ case "$TESTS_TO_RUN" in
 
     performance)
         TOTAL_COUNT=1
-        # Adicionar flags específicas para testes de performance
         PERF_ARGS="$PYTEST_ARGS --maxfail=5 --tb=line --durations=10"
         print_warning "Testes de performance podem ter falhas esperadas devido a configuração"
         run_tests "⚡ Testes de Performance" "pytest -m performance $PERF_ARGS" && ((SUCCESS_COUNT++))
@@ -489,7 +457,6 @@ case "$TESTS_TO_RUN" in
     performance_safe)
         TOTAL_COUNT=3
         print_status "Executando testes de performance seguros (evitando problemas conhecidos)"
-        # Executar apenas testes que sabemos que funcionam
         run_tests "📊 Performance Simples" "pytest tests/performance/test_simple_performance.py $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
         run_tests "🔧 Benchmarks Manuais" "pytest tests/performance/test_benchmarks.py::TestManualBenchmarks $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
         run_tests "⚙️ Performance CI (sem importação)" "pytest tests/performance/test_performance_ci.py -k 'not test_import_time_performance and not test_burst_load_handling' $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
@@ -500,13 +467,11 @@ case "$TESTS_TO_RUN" in
         print_status "🔍 Executando análise real do código (sem mocks)"
         print_status "Este modo analisa o comportamento real da aplicação"
 
-        # Configurar variáveis para análise real
         export ANALYZE_REAL_CODE=true
         export VALIDATE_ACTUAL_LOGIC=true
         export TEST_REAL_SCENARIOS=true
         export ENABLE_REAL_API_TESTS=true
 
-        # Remover argumentos que pulam testes externos
         REAL_PYTEST_ARGS=$(echo "$PYTEST_ARGS" | sed "s/-m '[^']*'//g")
 
         run_tests "🚀 Smoke Tests (Real)" "pytest -m smoke $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
@@ -538,7 +503,6 @@ case "$TESTS_TO_RUN" in
     auto_discover)
         print_status "🔍 Descobrindo todos os arquivos de teste..."
 
-        # Encontrar todos os arquivos de teste
         ALL_TEST_FILES=($(find tests/ -name "test_*.py" -type f | sort))
 
         if [[ ${#ALL_TEST_FILES[@]} -eq 0 ]]; then
@@ -554,7 +518,6 @@ case "$TESTS_TO_RUN" in
 
         TOTAL_COUNT=${#ALL_TEST_FILES[@]}
 
-        # Executar cada arquivo de teste individualmente
         for test_file in "${ALL_TEST_FILES[@]}"; do
             test_name="📝 $(basename "$test_file" .py | sed 's/test_//' | tr '_' ' ' | sed 's/\b\w/\U&/g')"
             run_tests "$test_name" "pytest $test_file $PYTEST_ARGS" && ((SUCCESS_COUNT++))
@@ -578,11 +541,9 @@ case "$TESTS_TO_RUN" in
         ;;
 esac
 
-# Verificar cobertura de arquivos de teste
 echo ""
 print_status "🔍 Verificando cobertura de arquivos de teste..."
 
-# Listar todos os arquivos de teste disponíveis
 TEST_FILES=(
     "tests/test_smoke.py"
     "tests/test_critical_infrastructure.py"
@@ -601,7 +562,6 @@ for test_file in "${TEST_FILES[@]}"; do
     if [[ -f "$test_file" ]]; then
         AVAILABLE_TESTS="$AVAILABLE_TESTS $test_file"
 
-        # Verificar se o arquivo foi executado no modo atual
         case "$TESTS_TO_RUN" in
             smoke)
                 if [[ "$test_file" != "tests/test_smoke.py" ]]; then
@@ -629,7 +589,6 @@ for test_file in "${TEST_FILES[@]}"; do
                 fi
                 ;;
             full)
-                # No modo full, todos devem estar cobertos
                 ;;
         esac
     else
@@ -637,7 +596,6 @@ for test_file in "${TEST_FILES[@]}"; do
     fi
 done
 
-# Relatório de cobertura
 echo ""
 print_status "📋 Relatório de Cobertura de Testes:"
 echo "Arquivos de teste disponíveis: $(echo $AVAILABLE_TESTS | wc -w)"
@@ -653,7 +611,6 @@ else
     print_success "Todos os testes relevantes para o modo '$TESTS_TO_RUN' foram executados"
 fi
 
-# Verificar se há testes adicionais não catalogados
 UNCATALOGUED_TESTS=$(find tests/ -name "test_*.py" -type f | grep -v -E "($(echo "${TEST_FILES[@]}" | tr ' ' '|'))" || true)
 
 if [[ -n "$UNCATALOGUED_TESTS" ]]; then
@@ -665,7 +622,6 @@ if [[ -n "$UNCATALOGUED_TESTS" ]]; then
     print_status "💡 Considere adicionar estes testes ao script run_tests.sh"
 fi
 
-# Relatório final
 echo ""
 echo "========================================"
 echo "📊 RELATÓRIO FINAL"

@@ -4,6 +4,7 @@ import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/chatbot_page.dart';
 import 'pages/charts_page.dart';
+import 'pages/network_test_page.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -22,6 +23,7 @@ class App extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/chatbot': (context) => const ChatbotPage(),
         '/charts': (context) => const ChartsPage(),
+        '/network-test': (context) => const NetworkTestPage(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/settings') {

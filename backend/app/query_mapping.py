@@ -1,16 +1,8 @@
-"""
-Mapeamento aprimorado de consultas em linguagem natural para SQL.
-Este módulo resolve problemas de ambiguidade, duplicação e organização
-encontrados na versão anterior.
-"""
-
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
 
-
 class QueryCategory(Enum):
-    """Categorias de consultas para melhor organização."""
     TOTALS = "totais"
     LISTS = "listagens"
     DETAILS = "detalhes"
@@ -18,29 +10,21 @@ class QueryCategory(Enum):
     STATISTICS = "estatisticas"
     ANALYTICS = "analises"
 
-
 @dataclass
 class QueryMapping:
-    """Classe para representar um mapeamento de consulta."""
     keywords: List[str]
     query_id: str
     sql_query: str
     category: QueryCategory
     description: str
 
-
 class QueryMappingManager:
-    """Gerenciador de mapeamentos de consultas com busca otimizada."""
-
     def __init__(self):
         self.mappings: List[QueryMapping] = []
         self._keyword_index: Dict[str, QueryMapping] = {}
         self._initialize_mappings()
 
     def _initialize_mappings(self):
-        """Inicializa todos os mapeamentos de consultas."""
-
-        # ===== TOTAIS E QUANTITATIVOS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "quantos funcionários", "quantas funcionárias", "quantos funcionário", "quantas funcionária",
@@ -110,7 +94,6 @@ class QueryMappingManager:
             description="Conta o total de clientes"
         ))
 
-        # ===== VALORES E RECEITAS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "receita de contratos", "receita contratos", "valor contratado", "valor de contratos",
@@ -134,7 +117,6 @@ class QueryMappingManager:
             description="Soma o valor total de todas as vendas"
         ))
 
-        # ===== LISTAGENS COMPLETAS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "listar funcionários", "mostrar funcionários", "todos os funcionários", "nomes dos funcionários",
@@ -211,7 +193,6 @@ class QueryMappingManager:
             description="Lista todos os contratos com informações do cliente"
         ))
 
-        # ===== REGISTROS MAIS RECENTES =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "último projeto", "projeto mais recente", "última iniciativa", "projeto finalizado mais novo",
@@ -273,7 +254,6 @@ class QueryMappingManager:
             description="Retorna os 5 clientes mais recentes"
         ))
 
-        # ===== DETALHES COM JOINS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "detalhes de vendas", "vendas com detalhes", "vendas detalhadas", "informações de vendas",
@@ -344,7 +324,6 @@ class QueryMappingManager:
             description="Lista funcionários com seus departamentos"
         ))
 
-        # ===== ESTATÍSTICAS DE VENDAS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "média de vendas", "média de valor", "valor médio de vendas", "média vendas",
@@ -383,7 +362,6 @@ class QueryMappingManager:
             description="Vendas agrupadas por funcionário"
         ))
 
-        # ===== CONTRATOS POR STATUS - RESOLVENDO CONFLITO =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "status de contratos", "contratos por status", "distribuição de contratos por status",
@@ -403,7 +381,6 @@ class QueryMappingManager:
             description="Distribuição de contratos por status"
         ))
 
-        # ===== CONTRATOS ATIVOS - QUERY ESPECÍFICA =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "contratos ativos", "quantos contratos ativos", "total contratos ativos",
@@ -421,7 +398,6 @@ class QueryMappingManager:
             description="Lista detalhada dos contratos ativos"
         ))
 
-        # ===== PROJETOS POR STATUS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "projetos por status", "quantos projetos por status", "projetos agrupados por status",
@@ -440,7 +416,6 @@ class QueryMappingManager:
             description="Distribuição de projetos por status"
         ))
 
-        # ===== PROJETOS ESPECÍFICOS POR STATUS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "projetos concluídos", "projetos concluidos", "quantos projetos concluídos",
@@ -463,7 +438,6 @@ class QueryMappingManager:
             description="Conta projetos em andamento"
         ))
 
-        # ===== OUTRAS ESTATÍSTICAS =====
         self._add_mapping(QueryMapping(
             keywords=[
                 "salário médio", "média salarial", "média de salários", "salário medio", "média salário"
@@ -508,28 +482,16 @@ class QueryMappingManager:
             self._keyword_index[keyword.lower()] = mapping
 
     def find_query(self, user_input: str) -> Optional[QueryMapping]:
-        """
-        Encontra o mapeamento mais adequado para a entrada do usuário.
-
-        Args:
-            user_input: Texto de entrada do usuário
-
-        Returns:
-            QueryMapping correspondente ou None se não encontrado
-        """
         user_input = user_input.lower().strip()
 
-        # Busca exata primeiro
         if user_input in self._keyword_index:
             return self._keyword_index[user_input]
 
-        # Busca por substring - encontra a melhor correspondência
         best_match = None
         best_score = 0
 
         for keyword, mapping in self._keyword_index.items():
             if keyword in user_input or user_input in keyword:
-                # Calcula score baseado no comprimento da correspondência
                 score = len(keyword) if keyword in user_input else len(user_input)
                 if score > best_score:
                     best_score = score
@@ -538,17 +500,11 @@ class QueryMappingManager:
         return best_match
 
     def get_queries_by_category(self, category: QueryCategory) -> List[QueryMapping]:
-        """Retorna todas as consultas de uma categoria específica."""
         return [mapping for mapping in self.mappings if mapping.category == category]
 
     def get_all_keywords(self) -> List[str]:
-        """Retorna todas as palavras-chave disponíveis."""
         return list(self._keyword_index.keys())
 
-
-# Instância global para uso fácil
 query_manager = QueryMappingManager()
-
-# Mantém compatibilidade com o código existente
 query_mappings = [(mapping.keywords, mapping.query_id, mapping.sql_query)
                  for mapping in query_manager.mappings]

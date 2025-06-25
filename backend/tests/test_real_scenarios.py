@@ -1,43 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Testes de cenários reais do backend Sophos Kodiak.
-
-Este módulo simula cenários de uso real da aplicação, incluindo
-carga de trabalho típica, múltiplos usuários simultâneos e
-situações complexas que podem ocorrer em produção.
-
-Cenários testados:
-- Uso intenso da aplicação
-- Múltiplos usuários simultâneos
-- Sequências complexas de operações
-- Recuperação de falhas
-- Performance sob carga
-
-Uso:
-    # Executar todos os cenários reais
-    pytest tests/test_real_scenarios.py -v
-
-    # Executar apenas testes de concorrência
-    pytest tests/test_real_scenarios.py::TestConcurrentUsers -v
-"""
-
 import pytest
 import time
-import threading
 import json
 import random
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Any
 
 
 class TestConcurrentUsers:
-    """
-    Testes simulando múltiplos usuários simultâneos.
-    """
 
     def test_multiple_simultaneous_requests(self, client):
-        """Testa múltiplas requisições simultâneas ao endpoint principal."""
         num_threads = 5
         requests_per_thread = 3
 
@@ -69,7 +39,7 @@ class TestConcurrentUsers:
                     'pergunta': pergunta,
                     'status_code': response.status_code,
                     'response_time': response_time,
-                    'success': response.status_code in [200, 400, 500]  # 400/500 são aceitáveis em teste
+                    'success': response.status_code in [200, 400, 500]
                 }
 
             except Exception as e:
@@ -100,7 +70,6 @@ class TestConcurrentUsers:
                 except Exception as e:
                     errors.append({'error': f"Future exception: {e}", 'success': False})
 
-        # Verificar resultados
         total_requests = num_threads * requests_per_thread
         success_count = len(results)
 
@@ -115,16 +84,13 @@ class TestConcurrentUsers:
             print(f"  Tempo médio de resposta: {avg_response_time:.3f}s")
             print(f"  Tempo máximo de resposta: {max_response_time:.3f}s")
 
-        # Pelo menos 80% das requisições devem ser bem-sucedidas
         success_rate = success_count / total_requests
         assert success_rate >= 0.8, f"Taxa de sucesso muito baixa: {success_rate:.1%}"
 
-        # Tempo médio de resposta deve ser razoável
         if results:
             assert avg_response_time < 10.0, f"Tempo médio muito alto: {avg_response_time:.3f}s"
 
     def test_concurrent_api_endpoints(self, client):
-        """Testa acesso simultâneo aos endpoints de API."""
         api_endpoints = [
             '/api/query/total_vendas_por_mes',
             '/api/query/funcionarios_por_departamento',
@@ -146,7 +112,7 @@ class TestConcurrentUsers:
                     'endpoint': endpoint,
                     'status_code': response.status_code,
                     'response_time': response_time,
-                    'success': response.status_code in [200, 404]  # 404 é aceitável se endpoint não existir
+                    'success': response.status_code in [200, 404]
                 }
 
             except Exception as e:
@@ -156,7 +122,6 @@ class TestConcurrentUsers:
                     'success': False
                 }
 
-        # Executar chamadas simultâneas para cada endpoint
         for endpoint in api_endpoints:
             with ThreadPoolExecutor(max_workers=num_concurrent) as executor:
                 futures = [executor.submit(test_endpoint, endpoint) for _ in range(num_concurrent)]
@@ -168,14 +133,12 @@ class TestConcurrentUsers:
                     except Exception as e:
                         results.append({'endpoint': endpoint, 'error': str(e), 'success': False})
 
-        # Analisar resultados
         successful_results = [r for r in results if r.get('success', False)]
 
         print(f"\nResultados de endpoints API:")
         print(f"  Total de chamadas: {len(results)}")
         print(f"  Sucessos: {len(successful_results)}")
 
-        # Agrupar por endpoint
         by_endpoint = {}
         for result in results:
             endpoint = result.get('endpoint', 'unknown')
@@ -187,13 +150,10 @@ class TestConcurrentUsers:
             successes = sum(1 for r in endpoint_results if r.get('success', False))
             print(f"  {endpoint}: {successes}/{len(endpoint_results)} sucessos")
 
-        # Pelo menos 70% das chamadas devem ser bem-sucedidas
         success_rate = len(successful_results) / len(results) if results else 0
         assert success_rate >= 0.7, f"Taxa de sucesso muito baixa para APIs: {success_rate:.1%}"
 
     def test_mixed_workload_simulation(self, client):
-        """Simula carga de trabalho mista com diferentes tipos de requisições."""
-        # Diferentes tipos de carga
         workloads = [
             {'type': 'pergunta', 'weight': 60, 'data': {'pergunta': 'Quantos funcionários temos?'}},
             {'type': 'pergunta', 'weight': 20, 'data': {'pergunta': 'Total de projetos em andamento'}},
@@ -208,10 +168,9 @@ class TestConcurrentUsers:
             local_results = []
 
             for _ in range(num_requests // concurrent_users):
-                # Escolher tipo de requisição baseado no peso
                 rand = random.randint(1, 100)
                 cumulative_weight = 0
-                selected_workload = workloads[0]  # fallback
+                selected_workload = workloads[0]
 
                 for workload in workloads:
                     cumulative_weight += workload['weight']
@@ -226,7 +185,7 @@ class TestConcurrentUsers:
                         response = client.post('/pergunta',
                                              json=selected_workload['data'],
                                              content_type='application/json')
-                    else:  # api
+                    else:
                         response = client.get(selected_workload['endpoint'])
 
                     response_time = time.time() - start_time
@@ -238,7 +197,6 @@ class TestConcurrentUsers:
                         'success': response.status_code in [200, 400, 404, 500]
                     })
 
-                    # Pequena pausa entre requisições
                     time.sleep(0.1)
 
                 except Exception as e:
@@ -250,7 +208,6 @@ class TestConcurrentUsers:
 
             return local_results
 
-        # Executar carga de trabalho com múltiplos usuários
         all_results = []
         with ThreadPoolExecutor(max_workers=concurrent_users) as executor:
             futures = [executor.submit(execute_workload) for _ in range(concurrent_users)]
@@ -262,7 +219,6 @@ class TestConcurrentUsers:
                 except Exception as e:
                     print(f"Erro na carga de trabalho: {e}")
 
-        # Analisar resultados
         successful_requests = [r for r in all_results if r.get('success', False)]
 
         print(f"\nSimulação de carga mista:")
@@ -273,7 +229,6 @@ class TestConcurrentUsers:
             avg_time = sum(r['response_time'] for r in successful_requests) / len(successful_requests)
             print(f"  Tempo médio: {avg_time:.3f}s")
 
-        # Analisar por tipo
         by_type = {}
         for result in all_results:
             req_type = result.get('type', 'unknown')
@@ -287,19 +242,13 @@ class TestConcurrentUsers:
             rate = stats['success'] / stats['total'] if stats['total'] > 0 else 0
             print(f"  {req_type}: {stats['success']}/{stats['total']} ({rate:.1%})")
 
-        # Taxa geral de sucesso deve ser boa
         success_rate = len(successful_requests) / len(all_results) if all_results else 0
         assert success_rate >= 0.75, f"Taxa de sucesso insuficiente: {success_rate:.1%}"
 
 
 class TestComplexScenarios:
-    """
-    Testes de cenários complexos e sequenciais.
-    """
 
     def test_comprehensive_data_flow(self, client):
-        """Testa fluxo completo de consulta de dados."""
-        # Sequência de perguntas que simula uso real
         pergunta_sequence = [
             "Quantos funcionários temos?",
             "Listar departamentos",
@@ -330,7 +279,6 @@ class TestComplexScenarios:
                     'success': response.status_code in [200, 400, 500]
                 }
 
-                # Verificar se resposta é JSON válido
                 if response.status_code == 200:
                     try:
                         data = json.loads(response.data)
@@ -341,7 +289,6 @@ class TestComplexScenarios:
 
                 results.append(result)
 
-                # Pausa entre perguntas para simular usuário real
                 time.sleep(0.5)
 
             except Exception as e:
@@ -352,7 +299,6 @@ class TestComplexScenarios:
                     'success': False
                 })
 
-        # Analisar resultados da sequência
         successful_steps = [r for r in results if r.get('success', False)]
 
         print(f"\nFluxo completo de dados:")
@@ -364,20 +310,16 @@ class TestComplexScenarios:
             time_str = f"{result.get('response_time', 0):.3f}s" if 'response_time' in result else "N/A"
             print(f"  {status} {result['sequence']}. {result['pergunta']} ({time_str})")
 
-        # Pelo menos 80% dos passos devem ser bem-sucedidos
         success_rate = len(successful_steps) / len(results)
         assert success_rate >= 0.8, f"Muitos passos falharam: {success_rate:.1%}"
 
-        # Tempo total não deve ser excessivo
         total_time = sum(r.get('response_time', 0) for r in results)
         assert total_time < 30.0, f"Tempo total muito alto: {total_time:.1f}s"
 
     def test_error_recovery_scenarios(self, client):
-        """Testa recuperação de diferentes tipos de erros."""
-        # Cenários que podem causar diferentes tipos de erro
         error_scenarios = [
-            {'pergunta': '', 'expected_recoverable': True},  # Pergunta vazia
-            {'pergunta': 'x' * 10000, 'expected_recoverable': True},  # Pergunta muito longa
+            {'pergunta': '', 'expected_recoverable': True},
+            {'pergunta': 'x' * 10000, 'expected_recoverable': True},
             {'pergunta': 'Pergunta com caracteres especiais: @#$%^&*()', 'expected_recoverable': True},
             {'pergunta': 'Query SQL injection attempt; DROP TABLE funcionarios;', 'expected_recoverable': True},
             {'pergunta': '<script>alert("xss")</script>', 'expected_recoverable': True}
@@ -387,12 +329,10 @@ class TestComplexScenarios:
 
         for i, scenario in enumerate(error_scenarios):
             try:
-                # Tentar a requisição que pode causar erro
                 response = client.post('/pergunta',
                                      json={'pergunta': scenario['pergunta']},
                                      content_type='application/json')
 
-                # Verificar se sistema está funcionando após o erro
                 recovery_response = client.post('/pergunta',
                                               json={'pergunta': 'Quantos funcionários temos?'},
                                               content_type='application/json')
@@ -416,27 +356,22 @@ class TestComplexScenarios:
                     'expected_recoverable': scenario['expected_recoverable']
                 })
 
-        # Analisar recuperação
         print(f"\nTeste de recuperação de erros:")
         for result in recovery_results:
             recovered = result.get('recovered', False)
             status = "✅" if recovered else "❌"
             print(f"  {status} Cenário {result['scenario']}: {result.get('pergunta', 'Erro')}")
 
-        # Todos os cenários recuperáveis devem permitir recuperação
         failed_recoveries = [r for r in recovery_results
                            if r.get('expected_recoverable', False) and not r.get('recovered', False)]
 
         assert len(failed_recoveries) == 0, f"Falhas de recuperação: {len(failed_recoveries)}"
 
     def test_data_consistency_across_endpoints(self, client):
-        """Verifica consistência de dados entre diferentes endpoints."""
-        # Obter dados do endpoint principal
         main_response = client.post('/pergunta',
                                    json={'pergunta': 'Quantos funcionários temos?'},
                                    content_type='application/json')
 
-        # Obter dados de endpoints de API (se disponíveis)
         api_responses = {}
         api_endpoints = [
             '/api/query/funcionarios_por_departamento',
@@ -462,7 +397,6 @@ class TestComplexScenarios:
             except Exception as e:
                 api_responses[endpoint] = {'error': str(e), 'success': False}
 
-        # Verificar se pelo menos alguns endpoints estão funcionando
         working_endpoints = [ep for ep, resp in api_responses.items() if resp.get('success', False)]
 
         print(f"\nConsistência entre endpoints:")
@@ -473,7 +407,6 @@ class TestComplexScenarios:
             status = "✅" if response.get('success', False) else "❌"
             print(f"  {status} {endpoint}: {response.get('status_code', 'Erro')}")
 
-        # Pelo menos o endpoint principal ou alguns APIs devem funcionar
         main_working = main_response.status_code in [200, 400, 500]
         api_working = len(working_endpoints) > 0
 
@@ -481,15 +414,11 @@ class TestComplexScenarios:
 
 
 class TestPerformanceUnderLoad:
-    """
-    Testes de performance sob diferentes cargas.
-    """
 
     @pytest.mark.performance
     def test_sustained_load_performance(self, client):
-        """Testa performance sob carga sustentada."""
         duration_seconds = 30
-        request_interval = 0.5  # Requisição a cada 500ms
+        request_interval = 0.5
 
         pergunta_test = "Quantos funcionários temos?"
         results = []
@@ -514,7 +443,6 @@ class TestPerformanceUnderLoad:
                     'success': response.status_code in [200, 400, 500]
                 })
 
-                # Aguardar próxima requisição
                 time.sleep(max(0, request_interval - req_time))
 
             except Exception as e:
@@ -524,7 +452,6 @@ class TestPerformanceUnderLoad:
                     'success': False
                 })
 
-        # Analisar performance
         successful_results = [r for r in results if r.get('success', False)]
 
         if successful_results:
@@ -540,7 +467,6 @@ class TestPerformanceUnderLoad:
             print(f"  Tempo mínimo: {min_time:.3f}s")
             print(f"  Tempo máximo: {max_time:.3f}s")
 
-            # Performance deve se manter estável
             success_rate = len(successful_results) / len(results)
             assert success_rate >= 0.8, f"Taxa de sucesso baixa sob carga: {success_rate:.1%}"
             assert avg_time < 5.0, f"Tempo médio muito alto: {avg_time:.3f}s"
@@ -551,10 +477,9 @@ class TestPerformanceUnderLoad:
 
     @pytest.mark.performance
     def test_burst_load_handling(self, app):
-        """Testa como o sistema lida com rajadas de requisições."""
         burst_size = 10
         num_bursts = 3
-        burst_interval = 5  # segundos entre rajadas
+        burst_interval = 5
 
         all_results = []
 
@@ -563,10 +488,8 @@ class TestPerformanceUnderLoad:
 
             burst_results = []
 
-            # Criar clientes separados para cada thread para evitar conflitos de contexto
             def make_burst_request(request_id):
                 try:
-                    # Criar cliente independente para cada requisição
                     with app.test_client() as local_client:
                         start_time = time.time()
                         response = local_client.post('/pergunta',
@@ -589,13 +512,10 @@ class TestPerformanceUnderLoad:
                         'success': False
                     }
 
-            # Executar rajada de requisições com timeout maior
-            with ThreadPoolExecutor(max_workers=min(burst_size, 5)) as executor:  # Limitar workers
-                # Submeter todas as requisições da rajada
+            with ThreadPoolExecutor(max_workers=min(burst_size, 5)) as executor:
                 futures = [executor.submit(make_burst_request, i) for i in range(burst_size)]
 
-                # Coletar resultados com timeout
-                for future in as_completed(futures, timeout=45):  # Timeout aumentado
+                for future in as_completed(futures, timeout=45):
                     try:
                         result = future.result(timeout=10)
                         burst_results.append(result)
@@ -608,7 +528,6 @@ class TestPerformanceUnderLoad:
 
             all_results.extend(burst_results)
 
-            # Análise da rajada
             successful_in_burst = [r for r in burst_results if r.get('success', False)]
             print(f"  Rajada {burst_num + 1}: {len(successful_in_burst)}/{burst_size} sucessos")
 
@@ -616,11 +535,9 @@ class TestPerformanceUnderLoad:
                 avg_time = sum(r['response_time'] for r in successful_in_burst) / len(successful_in_burst)
                 print(f"  Tempo médio da rajada: {avg_time:.3f}s")
 
-            # Aguardar antes da próxima rajada
             if burst_num < num_bursts - 1:
                 time.sleep(burst_interval)
 
-        # Análise geral
         total_successful = [r for r in all_results if r.get('success', False)]
         total_requests = len(all_results)
 
@@ -630,13 +547,10 @@ class TestPerformanceUnderLoad:
 
         success_rate = len(total_successful) / total_requests if total_requests > 0 else 0
 
-        # Sistema deve lidar bem com rajadas
         assert success_rate >= 0.7, f"Sistema não lidou bem com rajadas: {success_rate:.1%}"
 
     @pytest.mark.performance
     def test_memory_stability_under_load(self, client):
-        """Testa estabilidade de memória sob carga (básico)."""
-        # Executar várias requisições para detectar vazamentos evidentes
         num_requests = 50
         pergunta_test = "Quantos funcionários temos no departamento de vendas?"
 
@@ -655,24 +569,20 @@ class TestPerformanceUnderLoad:
                 response_time = time.time() - start_time
                 request_times.append(response_time)
 
-                # Verificar se tempos estão aumentando drasticamente (indicador de problema)
                 if len(request_times) >= 10:
                     recent_avg = sum(request_times[-10:]) / 10
                     overall_avg = sum(request_times) / len(request_times)
 
-                    # Se tempo médio recente for muito maior que geral, pode indicar problema
                     if recent_avg > overall_avg * 2 and recent_avg > 5.0:
                         print(f"⚠️  Possível degradação de performance detectada")
                         print(f"     Média geral: {overall_avg:.3f}s, Média recente: {recent_avg:.3f}s")
 
-                # Pequena pausa entre requisições
                 if i % 10 == 0:
                     time.sleep(0.1)
 
             except Exception as e:
                 print(f"Erro na requisição {i + 1}: {e}")
 
-        # Análise de estabilidade
         if request_times:
             avg_time = sum(request_times) / len(request_times)
             first_10_avg = sum(request_times[:10]) / 10 if len(request_times) >= 10 else avg_time
@@ -684,12 +594,10 @@ class TestPerformanceUnderLoad:
             print(f"  Primeiras 10 requisições: {first_10_avg:.3f}s")
             print(f"  Últimas 10 requisições: {last_10_avg:.3f}s")
 
-            # Performance não deve degradar drasticamente
             degradation_ratio = last_10_avg / first_10_avg if first_10_avg > 0 else 1
             if degradation_ratio > 2.0:
                 print(f"⚠️  Degradação significativa detectada: {degradation_ratio:.1f}x")
 
-            # Falhar teste se degradação for muito severa
             assert degradation_ratio < 3.0, f"Degradação de performance muito severa: {degradation_ratio:.1f}x"
 
         else:

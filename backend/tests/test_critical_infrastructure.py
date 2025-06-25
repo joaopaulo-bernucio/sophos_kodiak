@@ -1,27 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Testes de infraestrutura crítica do backend Sophos Kodiak.
-
-Este módulo testa componentes críticos da infraestrutura sem uso de mocks,
-garantindo que todas as dependências fundamentais estejam funcionando corretamente.
-
-Componentes testados:
-- Conectividade real com banco de dados PostgreSQL
-- Disponibilidade e funcionalidade da API Gemini
-- Execução real de todas as queries SQL do sistema
-- Integridade das tabelas e estrutura do banco
-
-Uso:
-    # Executar todos os testes críticos
-    pytest tests/test_critical_infrastructure.py -v
-
-    # Executar apenas testes de banco
-    pytest tests/test_critical_infrastructure.py::TestDatabaseCritical -v
-
-    # Executar com mais detalhes
-    pytest tests/test_critical_infrastructure.py -v -s
-"""
-
 import pytest
 import os
 import time
@@ -30,17 +6,11 @@ import requests
 from datetime import datetime
 from typing import Dict, List, Any
 
-# Marcar todos os testes como críticos
 pytestmark = pytest.mark.critical
 
 
 class TestDatabaseCritical:
-    """
-    Testes críticos de conectividade e funcionalidade do banco de dados.
-    """
-
     def test_database_connection_real(self, env_vars):
-        """Testa conexão real com o banco PostgreSQL."""
         try:
             conn = psycopg2.connect(
                 host=env_vars['DB_HOST'],
@@ -50,8 +20,6 @@ class TestDatabaseCritical:
                 password=env_vars['DB_PASSWORD'],
                 connect_timeout=30
             )
-
-            # Teste básico de funcionalidade
             cur = conn.cursor()
             cur.execute("SELECT version();")
             version = cur.fetchone()
@@ -68,7 +36,6 @@ class TestDatabaseCritical:
             pytest.fail(f"Erro inesperado na conexão: {e}")
 
     def test_database_tables_exist(self, env_vars):
-        """Verifica se todas as tabelas necessárias existem."""
         expected_tables = [
             'funcionarios',
             'departamentos',
@@ -88,8 +55,6 @@ class TestDatabaseCritical:
             )
 
             cur = conn.cursor()
-
-            # Verificar existência de cada tabela
             for table in expected_tables:
                 cur.execute("""
                     SELECT EXISTS (
@@ -110,7 +75,6 @@ class TestDatabaseCritical:
 
     @pytest.mark.performance
     def test_database_performance_basic(self, env_vars):
-        """Testa performance básica do banco de dados."""
         try:
             start_time = time.time()
 
@@ -123,11 +87,7 @@ class TestDatabaseCritical:
             )
 
             connection_time = time.time() - start_time
-
-            # Conexão deve ser rápida (menos de 5 segundos)
             assert connection_time < 5.0, f"Conexão muito lenta: {connection_time:.2f}s"
-
-            # Teste de query simples
             cur = conn.cursor()
             query_start = time.time()
             cur.execute("SELECT 1;")
@@ -144,7 +104,6 @@ class TestDatabaseCritical:
             pytest.fail(f"Erro no teste de performance: {e}")
 
     def test_database_concurrent_connections(self, env_vars):
-        """Testa múltiplas conexões simultâneas."""
         import threading
         import queue
 
@@ -173,18 +132,13 @@ class TestDatabaseCritical:
             except Exception as e:
                 results.put((thread_id, False, str(e)))
 
-        # Criar e iniciar threads
         threads = []
         for i in range(num_connections):
             thread = threading.Thread(target=test_connection, args=(i,))
             threads.append(thread)
             thread.start()
-
-        # Aguardar conclusão
         for thread in threads:
             thread.join(timeout=10)
-
-        # Verificar resultados
         success_count = 0
         while not results.empty():
             thread_id, success, data = results.get()
@@ -198,12 +152,7 @@ class TestDatabaseCritical:
 
 
 class TestSQLQueriesExecution:
-    """
-    Testes de execução real de todas as queries SQL do sistema.
-    """
-
     def test_all_query_mappings_execute(self, env_vars):
-        """Executa todas as queries SQL dos mapeamentos para validar sintaxe."""
         try:
             from app.query_mapping import query_manager
 
@@ -216,17 +165,12 @@ class TestSQLQueriesExecution:
             )
 
             failed_queries = []
-
             for mapping in query_manager.mappings:
-                # Usar uma nova transação para cada query
                 try:
                     with conn:
                         with conn.cursor() as cur:
-                            # Executar query (apenas validação de sintaxe)
                             cur.execute(mapping.sql_query)
                             result = cur.fetchall()
-
-                            # Query deve retornar algo ou pelo menos não dar erro
                             assert result is not None
 
                 except Exception as e:
@@ -249,7 +193,6 @@ class TestSQLQueriesExecution:
             pytest.skip("Módulo query_mapping não disponível")
 
     def test_api_endpoints_queries_execute(self, env_vars):
-        """Testa execução das queries dos endpoints de API."""
         api_queries = {
             'total_vendas_por_mes': """
                 SELECT
@@ -302,8 +245,6 @@ class TestSQLQueriesExecution:
                     cur.execute(sql)
                     result = cur.fetchall()
                     execution_time = time.time() - start_time
-
-                    # Verificações básicas
                     assert result is not None
                     assert execution_time < 10.0, f"Query {query_name} muito lenta: {execution_time:.2f}s"
 
@@ -329,15 +270,8 @@ class TestSQLQueriesExecution:
 
 
 class TestGeminiAPIIntegration:
-    """
-    Testes de integração real com a API Gemini (quando disponível).
-    """
-
     def test_gemini_api_availability(self, env_vars):
-        """Testa se a API Gemini está disponível e respondendo."""
         api_key = env_vars.get('GEMINI_API_KEY')
-
-        # Pular teste se não tiver API key real
         if not api_key or api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
             pytest.skip("API key do Gemini não disponível para teste real")
 
@@ -346,8 +280,6 @@ class TestGeminiAPIIntegration:
 
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-2.5-flash')
-
-            # Teste simples
             response = model.generate_content("Teste de conectividade")
 
             assert response is not None
@@ -364,7 +296,6 @@ class TestGeminiAPIIntegration:
 
     @pytest.mark.performance
     def test_gemini_api_performance(self, env_vars):
-        """Testa performance básica da API Gemini."""
         api_key = env_vars.get('GEMINI_API_KEY')
 
         if not api_key or api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
@@ -375,8 +306,6 @@ class TestGeminiAPIIntegration:
 
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-2.5-flash')
-
-            # Teste de latência
             start_time = time.time()
             response = model.generate_content("Responda apenas: OK")
             response_time = time.time() - start_time
@@ -393,7 +322,6 @@ class TestGeminiAPIIntegration:
                 pytest.fail(f"Erro na API Gemini: {e}")
 
     def test_gemini_api_context_handling(self, env_vars):
-        """Testa se a API Gemini processa contexto adequadamente."""
         api_key = env_vars.get('GEMINI_API_KEY')
 
         if not api_key or api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
@@ -404,8 +332,6 @@ class TestGeminiAPIIntegration:
 
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-2.5-flash')
-
-            # Teste com contexto simples similar ao usado na aplicação
             context = """
             Você é o Assistente Virtual Sophos da STOLF LTDA.
             Contexto: Empresa de marketing com funcionários e projetos.
@@ -416,9 +342,7 @@ class TestGeminiAPIIntegration:
             response = model.generate_content(context)
 
             assert response is not None
-            assert len(response.text) > 10  # Resposta substantiva
-
-            # Verificar se a resposta faz sentido no contexto
+            assert len(response.text) > 10
             response_lower = response.text.lower()
             assert any(word in response_lower for word in ['funcionário', 'funcionarios', '10', 'dez'])
 
@@ -432,12 +356,7 @@ class TestGeminiAPIIntegration:
 
 
 class TestApplicationIntegrity:
-    """
-    Testes de integridade geral da aplicação.
-    """
-
     def test_application_imports_correctly(self):
-        """Verifica se todos os módulos principais são importáveis."""
         try:
             from app.app import app
             assert app is not None
@@ -446,14 +365,11 @@ class TestApplicationIntegrity:
             pytest.fail(f"Erro ao importar aplicação principal: {e}")
 
     def test_query_mapping_module_integrity(self):
-        """Verifica integridade do módulo de mapeamento de queries."""
         try:
             from app.query_mapping import query_manager, QueryCategory, QueryMapping
 
             assert query_manager is not None
             assert len(query_manager.mappings) > 0
-
-            # Verificar se todas as categorias existem
             for category in QueryCategory:
                 queries_in_category = query_manager.get_queries_by_category(category)
                 assert isinstance(queries_in_category, list)
@@ -462,7 +378,6 @@ class TestApplicationIntegrity:
             pytest.fail(f"Erro ao importar módulo query_mapping: {e}")
 
     def test_environment_variables_configuration(self, env_vars):
-        """Verifica se as variáveis de ambiente estão configuradas adequadamente."""
         required_vars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'GEMINI_API_KEY']
 
         for var in required_vars:
@@ -471,7 +386,6 @@ class TestApplicationIntegrity:
             assert len(str(value)) > 0, f"Variável de ambiente {var} está vazia"
 
     def test_critical_dependencies_available(self):
-        """Verifica se dependências críticas estão disponíveis."""
         critical_imports = [
             ('psycopg2', 'Conexão com PostgreSQL'),
             ('flask', 'Framework web'),
@@ -485,7 +399,6 @@ class TestApplicationIntegrity:
                 pytest.fail(f"Dependência crítica não disponível: {module_name} ({description})")
 
     def test_optional_dependencies_status(self):
-        """Verifica status de dependências opcionais."""
         optional_imports = [
             ('spacy', 'Processamento de linguagem natural'),
             ('google.generativeai', 'API Gemini'),
@@ -499,26 +412,17 @@ class TestApplicationIntegrity:
                 dependency_status[module_name] = True
             except ImportError:
                 dependency_status[module_name] = False
-
-        # Log do status (não falha o teste)
         print(f"\nStatus das dependências opcionais:")
         for module, available in dependency_status.items():
             status = "✅ Disponível" if available else "❌ Não disponível"
             print(f"  {module}: {status}")
-
-        # Pelo menos uma das dependências de NLP deve estar disponível
         nlp_available = dependency_status.get('spacy', False)
         if not nlp_available:
             print("⚠️  Aviso: spaCy não disponível, funcionalidade de NLP pode ser limitada")
 
 
 class TestDataIntegrity:
-    """
-    Testes de integridade dos dados no banco.
-    """
-
     def test_database_basic_data_consistency(self, env_vars):
-        """Verifica consistência básica dos dados."""
         try:
             conn = psycopg2.connect(
                 host=env_vars['DB_HOST'],
@@ -529,8 +433,6 @@ class TestDataIntegrity:
             )
 
             cur = conn.cursor()
-
-            # Verificar se referências estão consistentes (se houver dados)
             consistency_checks = [
                 ("Funcionários-Departamentos", """
                     SELECT COUNT(*) FROM funcionarios f
@@ -566,7 +468,6 @@ class TestDataIntegrity:
             pytest.fail(f"Erro ao verificar integridade dos dados: {e}")
 
     def test_database_schema_integrity(self, env_vars):
-        """Verifica integridade do schema do banco."""
         try:
             conn = psycopg2.connect(
                 host=env_vars['DB_HOST'],
@@ -575,10 +476,7 @@ class TestDataIntegrity:
                 user=env_vars['DB_USER'],
                 password=env_vars['DB_PASSWORD']
             )
-
             cur = conn.cursor()
-
-            # Verificar se as colunas essenciais existem
             essential_columns = {
                 'funcionarios': ['id', 'nome', 'cargo', 'salario'],
                 'departamentos': ['id', 'nome'],

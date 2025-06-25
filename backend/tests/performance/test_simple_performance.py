@@ -1,8 +1,3 @@
-"""
-Testes de performance simples que não dependem de fixtures complexas.
-Estes testes sempre funcionam independente das dependências instaladas.
-"""
-
 import pytest
 import time
 import json
@@ -12,10 +7,8 @@ import os
 
 @pytest.mark.performance
 class TestSimplePerformance:
-    """Testes de performance simples e confiáveis."""
 
     def test_json_serialization_performance(self):
-        """Testa performance de serialização JSON."""
         test_data = {
             'pergunta': 'Quantos funcionários temos no departamento de vendas?',
             'contexto': 'análise de recursos humanos',
@@ -24,13 +17,12 @@ class TestSimplePerformance:
                 'timestamp': time.time(),
                 'user_id': 'test_user',
                 'session_id': 'test_session',
-                'large_data': list(range(100))  # Adicionar mais dados
+                'large_data': list(range(100))
             }
         }
 
         start_time = time.time()
 
-        # Serializar e deserializar múltiplas vezes
         for _ in range(100):
             serialized = json.dumps(test_data)
             result = json.loads(serialized)
@@ -44,12 +36,10 @@ class TestSimplePerformance:
         assert result['pergunta'] == test_data['pergunta']
 
     def test_string_processing_performance(self):
-        """Testa performance de processamento de strings."""
         text = "funcionários do departamento de vendas e marketing" * 50
 
         start_time = time.time()
 
-        # Operações típicas de processamento de texto
         for _ in range(100):
             words = text.lower().split()
             filtered = [w for w in words if len(w) > 3]
@@ -65,14 +55,11 @@ class TestSimplePerformance:
         assert result > 0
 
     def test_list_operations_performance(self):
-        """Testa performance de operações com listas."""
         start_time = time.time()
 
-        # Criar e processar listas
         data = list(range(1000))
 
         for _ in range(10):
-            # Operações típicas
             filtered = [x for x in data if x % 2 == 0]
             mapped = [x * 2 for x in filtered]
             sorted_data = sorted(mapped, reverse=True)
@@ -87,12 +74,10 @@ class TestSimplePerformance:
         assert result > 0
 
     def test_python_imports_performance(self):
-        """Testa performance de importações Python."""
         import importlib
 
         start_time = time.time()
 
-        # Lista de módulos padrão para importar
         modules_to_test = [
             'json', 'time', 'os', 'sys', 're',
             'datetime', 'collections', 'itertools'
@@ -101,10 +86,9 @@ class TestSimplePerformance:
         for module_name in modules_to_test:
             try:
                 module = importlib.import_module(module_name)
-                # Acessar algo do módulo para garantir carregamento completo
                 _ = dir(module)
             except ImportError:
-                pass  # Módulo não disponível
+                pass
 
         duration = time.time() - start_time
 
@@ -114,16 +98,13 @@ class TestSimplePerformance:
         assert duration < 2.0, f"Imports muito lentos: {duration:.6f}s"
 
     def test_basic_computation_performance(self):
-        """Testa performance de computações básicas."""
         start_time = time.time()
 
-        # Computações matemáticas simples
         result = 0
         for i in range(10000):
             result += i * 2
             result = result % 1000000
 
-        # Operações com strings
         text_result = ""
         for i in range(1000):
             text_result += f"item_{i}_"
@@ -143,20 +124,14 @@ class TestSimplePerformance:
 
 @pytest.mark.performance
 class TestMemoryUsage:
-    """Testes simples de uso de memória."""
 
     def test_memory_usage_basic(self):
-        """Teste básico de uso de memória sem dependências externas."""
-        # Usar recurso interno do Python para monitorar memória
         import gc
 
-        # Forçar garbage collection
         gc.collect()
 
-        # Criar estruturas de dados
         initial_objects = len(gc.get_objects())
 
-        # Criar dados temporários
         temp_data = []
         for i in range(1000):
             temp_data.append({
@@ -165,14 +140,11 @@ class TestMemoryUsage:
                 'list': list(range(10))
             })
 
-        # Verificar crescimento de objetos
         after_objects = len(gc.get_objects())
 
-        # Limpar dados
         temp_data.clear()
         temp_data = None
 
-        # Forçar garbage collection
         gc.collect()
 
         final_objects = len(gc.get_objects())
@@ -183,15 +155,12 @@ class TestMemoryUsage:
         print(f"Crescimento máximo: {after_objects - initial_objects}")
         print(f"Objetos remanescentes: {final_objects - initial_objects}")
 
-        # Verificar que não há vazamento excessivo
         remaining_objects = final_objects - initial_objects
         assert remaining_objects < 100, f"Possível vazamento: {remaining_objects} objetos"
 
     def test_sys_info_performance(self):
-        """Coleta informações de sistema para baseline."""
         start_time = time.time()
 
-        # Coletar informações do sistema
         info = {
             'python_version': sys.version,
             'platform': sys.platform,

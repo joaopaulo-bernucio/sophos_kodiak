@@ -1,11 +1,5 @@
-# Este arquivo contém todas as dependências necessárias para o projeto,
-# incluindo dependências de produção e de teste.
-#
 # Para instalar todas as dependências:
 # pip install -r requirements.txt
-#
-# Para ambiente de produção, considere usar pip freeze > requirements.lock
-# após instalar e testar as versões específicas.
 
 # ===============================
 # CORE WEB FRAMEWORK

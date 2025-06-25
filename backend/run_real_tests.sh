@@ -43,7 +43,6 @@ else
     print_warning "Ambiente virtual não encontrado, tentando python do sistema"
 fi
 
-# Verificar se pytest está disponível
 if ! command -v pytest &> /dev/null; then
     print_error "pytest não encontrado. Instale com: pip install pytest"
     print_status "💡 Tentando instalar pytest automaticamente..."

@@ -204,7 +204,7 @@ pytest -m "data_quality or infrastructure" -v
 ```bash
 # Banco de dados (obrigatório)
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=6543
 DB_NAME=sophos_kodiak
 DB_USER=postgres
 DB_PASSWORD=senha

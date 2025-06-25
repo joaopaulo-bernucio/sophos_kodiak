@@ -87,8 +87,7 @@ def create_app(config=None):
         app_instance.config.update(config)
     try:
         from flask_cors import CORS
-        # Configuração CORS - mais restritiva para produção
-        cors_origins = ["*"]  # Para desenvolvimento
+        cors_origins = ["*"]
         if os.getenv('FLASK_ENV') == 'production':
             cors_origins = [
                 "https://sk-sk.cxbwajafbngqhhej.brazilsouth.azurecontainer.io",
@@ -954,11 +953,9 @@ def main():
         historico_conversa.append(f"IA: {resposta}")
 
 if __name__ == '__main__':
-    # Configuração específica para Azure Container Instances
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-    # Para produção no Azure, definir debug=False por padrão
     if 'azurecontainer' in os.environ.get('WEBSITE_HOSTNAME', ''):
         debug = False
 

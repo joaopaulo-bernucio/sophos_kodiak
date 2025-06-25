@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Configurações gerais para os testes do backend Sophos Kodiak.
-
-Este arquivo contém fixtures, configurações e utilidades compartilhadas
-entre todos os testes do backend Flask.
-"""
-
 import pytest
 import os
 import json
@@ -15,10 +7,8 @@ import time
 from pathlib import Path
 from flask import Flask
 
-# Carregar variáveis do arquivo .env (se existir)
 try:
     from dotenv import load_dotenv
-    # Tenta carregar .env do diretório backend
     env_path = Path(__file__).parent.parent / '.env'
     if env_path.exists():
         load_dotenv(env_path)
@@ -28,32 +18,18 @@ try:
 except ImportError:
     print("⚠️  python-dotenv não instalado, usando apenas variáveis de ambiente do sistema")
 
-# Configurar logging para testes
 logging.basicConfig(level=logging.INFO)
-
-# Adicionar o diretório do backend ao path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-# Configurar ambiente de teste com fallbacks seguros
 def get_test_env_var(key, local_default, ci_default):
-    """
-    Pega variável de ambiente com diferentes defaults para local vs CI.
-
-    Args:
-        key: Nome da variável de ambiente
-        local_default: Valor padrão para desenvolvimento local
-        ci_default: Valor padrão para CI/CD
-    """
-    # Se estamos em CI (GitHub Actions, GitLab CI, etc.)
     if os.getenv('CI') or os.getenv('GITHUB_ACTIONS') or os.getenv('GITLAB_CI'):
         return os.getenv(key, ci_default)
     else:
         return os.getenv(key, local_default)
 
-# Configurar ambiente de teste
 os.environ['FLASK_ENV'] = 'testing'
-os.environ['USE_MOCK_GEMINI'] = 'true'  # Forçar uso de mock em testes
+os.environ['USE_MOCK_GEMINI'] = 'true'
 os.environ['DB_HOST'] = get_test_env_var('DB_HOST',
                                         local_default=os.getenv('DB_HOST', 'localhost'),
                                         ci_default='localhost')
@@ -83,11 +59,10 @@ try:
 except ImportError:
     psycopg2 = None
 
-# Imports condicionais para dependências opcionais
 genai = None
 GOOGLE_GENAI_AVAILABLE = False
 try:
-    import google.generativeai as genai  # type: ignore
+    import google.generativeai as genai
     GOOGLE_GENAI_AVAILABLE = True
 except ImportError:
     pass
@@ -95,49 +70,30 @@ except ImportError:
 psutil = None
 PSUTIL_AVAILABLE = False
 try:
-    import psutil  # type: ignore
+    import psutil
     PSUTIL_AVAILABLE = True
 except ImportError:
     pass
 
-
 def pytest_collection_modifyitems(config, items):
-    """Modificar itens de teste coletados."""
     for item in items:
-        # Adicionar marker para testes de API
         if "test_pergunta" in item.name or "test_endpoint" in item.name:
             item.add_marker(pytest.mark.api)
-        # Adicionar marker para testes de NLP
         elif "test_nlp" in item.name or "test_query_mapping" in item.name:
             item.add_marker(pytest.mark.nlp)
 
-
 @pytest.fixture(scope="session")
 def nlp_model():
-    """
-    Fixture que carrega o modelo spaCy uma vez para toda a sessão de testes.
-
-    Returns:
-        spacy.Language: Modelo spaCy carregado ou None se não disponível
-    """
     if spacy is None:
         pytest.skip("spaCy não está disponível")
-
     try:
         nlp = spacy.load("pt_core_news_sm")
         return nlp
     except Exception:
         pytest.skip("Modelo spaCy pt_core_news_sm não está disponível")
 
-
 @pytest.fixture
 def app():
-    """
-    Fixture que fornece a instância da aplicação Flask.
-
-    Returns:
-        Flask: Instância da aplicação configurada para testes
-    """
     try:
         from app.app import app as flask_app
         flask_app.config.update({
@@ -150,35 +106,20 @@ def app():
     except ImportError:
         pytest.skip("Não foi possível importar a aplicação Flask")
 
-
 @pytest.fixture
 def client(app):
-    """
-    Fixture que fornece um cliente de teste Flask.
-
-    Returns:
-        FlaskClient: Cliente para fazer requisições de teste
-    """
     app.config.update({
         'TESTING': True,
         'WTF_CSRF_ENABLED': False,
         'JSON_AS_ASCII': False,
         'JSON_SORT_KEYS': False
     })
-
     with app.test_client() as client:
         with app.app_context():
             yield client
 
-
 @pytest.fixture
 def env_vars():
-    """
-    Fixture que configura variáveis de ambiente para testes.
-
-    Returns:
-        dict: Dicionário com as variáveis de ambiente configuradas
-    """
     return {
         'DB_HOST': os.getenv('DB_HOST', 'localhost'),
         'DB_PORT': os.getenv('DB_PORT', '5432'),
@@ -189,43 +130,18 @@ def env_vars():
         'FLASK_ENV': 'testing'
     }
 
-
-# ============================================================
-# Funções auxiliares para testes
-# ============================================================
-
 def assert_json_response(response, expected_status=200):
-    """
-    Função auxiliar para validar respostas JSON.
-
-    Args:
-        response: Resposta Flask
-        expected_status: Status code esperado
-    """
     assert response.status_code == expected_status, f"Status esperado {expected_status}, recebido {response.status_code}"
     assert 'application/json' in response.content_type, f"Content-Type esperado JSON, recebido {response.content_type}"
-
     try:
         data = json.loads(response.data)
         return data
     except json.JSONDecodeError as e:
         pytest.fail(f"Resposta não é JSON válido: {e}")
 
-
 def make_api_request(client, endpoint, method='GET', data=None, headers=None):
-    """
-    Função auxiliar para fazer requisições API padronizadas.
-
-    Args:
-        client: Cliente Flask de teste
-        endpoint: Endpoint da API
-        method: Método HTTP
-        data: Dados para enviar
-        headers: Headers da requisição
-    """
     if headers is None:
         headers = {'Content-Type': 'application/json'}
-
     if method.upper() == 'POST':
         if data:
             return client.post(endpoint, json=data, headers=headers)
@@ -240,12 +156,7 @@ def make_api_request(client, endpoint, method='GET', data=None, headers=None):
     else:
         raise ValueError(f"Método HTTP não suportado: {method}")
 
-
 class TestDataFactory:
-    """
-    Factory para criar dados de teste padronizados.
-    """
-
     @staticmethod
     def create_funcionario(id=1, nome="João Silva", departamento="TI"):
         return {
@@ -285,42 +196,22 @@ class TestDataFactory:
             'sucesso': False
         }
 
+pytest.mark.api = pytest.mark.api
+pytest.mark.nlp = pytest.mark.nlp
+pytest.mark.integration = pytest.mark.integration
+pytest.mark.unit = pytest.mark.unit
 
-# ============================================================
-# Markers para pytest
-# ============================================================
-
-# Registrar markers customizados
-pytest.mark.api = pytest.mark.api  # Testes de API
-pytest.mark.nlp = pytest.mark.nlp  # Testes de NLP
-pytest.mark.integration = pytest.mark.integration  # Testes de integração
-pytest.mark.unit = pytest.mark.unit  # Testes unitários
-
-
-# ======================================
-# FIXTURES PARA TESTES DE QUERY MAPPING
-# ======================================
 
 @pytest.fixture
 def fresh_query_manager():
-    """
-    Fixture que retorna uma nova instância do QueryMappingManager.
-
-    Útil para testes que precisam de um estado limpo do gerenciador,
-    sem interferir na instância global.
-    """
     try:
         from app.query_mapping import QueryMappingManager
         return QueryMappingManager()
     except ImportError:
         pytest.skip("QueryMappingManager não disponível")
 
-
 @pytest.fixture
 def sample_query_mapping():
-    """
-    Fixture que retorna um QueryMapping de exemplo para testes.
-    """
     try:
         from app.query_mapping import QueryMapping, QueryCategory
         return QueryMapping(
@@ -333,18 +224,8 @@ def sample_query_mapping():
     except ImportError:
         pytest.skip("QueryMapping não disponível")
 
-
 @pytest.fixture
 def query_test_cases():
-    """
-    Fixture que retorna casos de teste para validação de queries SQL.
-
-    Returns:
-        List[Dict]: Lista de casos de teste com estrutura:
-        - input: entrada do usuário
-        - expected_id: ID esperado do mapeamento
-        - expected_category: categoria esperada
-    """
     try:
         from app.query_mapping import QueryCategory
         return [
@@ -377,12 +258,8 @@ def query_test_cases():
     except ImportError:
         pytest.skip("QueryCategory não disponível")
 
-
 @pytest.fixture
 def expected_table_names():
-    """
-    Fixture que retorna os nomes de tabelas esperados no sistema.
-    """
     return [
         'funcionarios',
         'projetos',
@@ -392,18 +269,8 @@ def expected_table_names():
         'contratos_marketing'
     ]
 
-
 @pytest.fixture
 def sql_security_test_cases():
-    """
-    Fixture que retorna casos de teste para validação de segurança SQL.
-
-    Returns:
-        List[Dict]: Lista com estrutura:
-        - description: descrição do teste
-        - query: query SQL a ser testada
-        - should_be_safe: se a query deveria ser considerada segura
-    """
     return [
         {
             "description": "Query básica segura",
@@ -436,15 +303,8 @@ def sql_security_test_cases():
         }
     ]
 
-
 @pytest.fixture(scope="session")
 def global_query_manager():
-    """
-    Fixture de sessão que retorna a instância global do query_manager.
-
-    Scope 'session' significa que será criada uma vez por sessão de testes
-    e reutilizada em todos os testes que a requisitarem.
-    """
     try:
         from app.query_mapping import query_manager
         return query_manager
@@ -452,18 +312,8 @@ def global_query_manager():
         pytest.skip("query_manager não disponível")
 
 
-# ======================================
-# FIXTURES PARA TESTES DE NLP
-# ======================================
-
 @pytest.fixture
 def nlp_test_texts():
-    """
-    Fixture que retorna textos de teste para processamento NLP.
-
-    Returns:
-        Dict: Dicionário com categorias de textos de teste
-    """
     return {
         'simples': [
             "funcionários",
@@ -497,15 +347,8 @@ def nlp_test_texts():
         ]
     }
 
-
 @pytest.fixture
 def expected_lemmas():
-    """
-    Fixture que retorna lemmas esperados para textos específicos.
-
-    Returns:
-        Dict: Mapeamento de texto para lemmas esperados
-    """
     return {
         "funcionários trabalham": {"funcionário", "trabalhar"},
         "projetos concluídos": {"projeto", "concluído"},
@@ -514,18 +357,8 @@ def expected_lemmas():
         "salário médio": {"salário", "médio"}
     }
 
-
 @pytest.fixture
 def nlp_integration_cases():
-    """
-    Fixture que retorna casos de teste para integração NLP.
-
-    Returns:
-        List[Dict]: Lista de casos de teste com estrutura:
-        - input: texto de entrada
-        - expected_category: categoria esperada
-        - min_lemmas: número mínimo de lemmas esperados
-    """
     return [
         {
             "input": "quantos funcionários",
@@ -549,32 +382,18 @@ def nlp_integration_cases():
         }
     ]
 
-
 @pytest.fixture
 def performance_test_data():
-    """
-    Fixture que retorna dados para testes de performance.
-
-    Returns:
-        Dict: Dados para testes de performance
-    """
     return {
         'texto_curto': "funcionários",
         'texto_medio': "funcionários do departamento de vendas trabalham com clientes",
         'texto_longo': " ".join(["funcionários trabalham departamento vendas clientes projetos"] * 20),
         'repeticoes': 10,
-        'timeout_maximo': 1.0  # 1 segundo
+        'timeout_maximo': 1.0
     }
-
 
 @pytest.fixture(scope="session")
 def spacy_model_available():
-    """
-    Fixture de sessão que verifica se o modelo spaCy está disponível.
-
-    Returns:
-        bool: True se o modelo está disponível, False caso contrário
-    """
     try:
         import spacy
         model = spacy.load("pt_core_news_sm")
@@ -582,15 +401,8 @@ def spacy_model_available():
     except Exception:
         return False
 
-
 @pytest.fixture
 def fallback_test_cases():
-    """
-    Fixture que retorna casos de teste para fallback quando spaCy não está disponível.
-
-    Returns:
-        List[Dict]: Casos de teste para fallback
-    """
     return [
         {
             "input": "funcionários trabalham",
@@ -610,18 +422,8 @@ def fallback_test_cases():
     ]
 
 
-# ======================================
-# FIXTURES PARA NOVOS TESTES
-# ======================================
-
 @pytest.fixture(scope="session")
 def database_connection(env_vars):
-    """
-    Fixture que fornece conexão real com banco de dados para testes críticos.
-
-    Returns:
-        psycopg2.connection: Conexão com banco ou None se não disponível
-    """
     try:
         import psycopg2
 
@@ -634,7 +436,6 @@ def database_connection(env_vars):
             connect_timeout=10
         )
 
-        # Testar conexão
         cur = conn.cursor()
         cur.execute("SELECT 1;")
         cur.fetchone()
@@ -652,15 +453,8 @@ def database_connection(env_vars):
     except Exception as e:
         pytest.skip(f"Banco de dados não disponível: {e}")
 
-
 @pytest.fixture
 def real_query_execution(database_connection):
-    """
-    Fixture que permite execução real de queries SQL.
-
-    Returns:
-        Callable: Função para executar queries
-    """
     def execute_query(sql, params=None):
         if database_connection is None:
             pytest.skip("Conexão com banco não disponível")
@@ -675,21 +469,13 @@ def real_query_execution(database_connection):
 
     return execute_query
 
-
 @pytest.fixture
 def gemini_api_client(env_vars):
-    """
-    Fixture que fornece cliente real da API Gemini quando disponível.
-
-    Returns:
-        object: Cliente Gemini ou None se não disponível
-    """
     if not GOOGLE_GENAI_AVAILABLE:
         pytest.skip("Biblioteca google-generativeai não disponível")
 
     api_key = env_vars.get('GEMINI_API_KEY')
 
-    # Pular se não tiver API key real
     if not api_key or api_key in ['test_api_key', 'fake_gemini_key_for_tests', 'test_gemini_api_key']:
         pytest.skip("API key do Gemini não disponível para teste real")
 
@@ -702,15 +488,8 @@ def gemini_api_client(env_vars):
     except Exception as e:
         pytest.skip(f"Erro ao configurar Gemini: {e}")
 
-
 @pytest.fixture
 def performance_monitor():
-    """
-    Fixture para monitoramento básico de performance.
-
-    Returns:
-        Dict: Métricas de performance
-    """
     import time
 
     start_time = time.time()
@@ -728,7 +507,6 @@ def performance_monitor():
         'start_memory': start_memory
     }
 
-    # Calcular métricas finais
     end_time = time.time()
     execution_time = end_time - start_time
 
@@ -751,28 +529,11 @@ def performance_monitor():
 
 @pytest.fixture
 def concurrent_test_helper():
-    """
-    Fixture que fornece utilitários para testes concorrentes.
-
-    Returns:
-        Dict: Funções auxiliares para concorrência
-    """
     import threading
     import queue
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     def run_concurrent_tasks(tasks, max_workers=5, timeout=30):
-        """
-        Executa tarefas em paralelo.
-
-        Args:
-            tasks: Lista de funções para executar
-            max_workers: Número máximo de threads
-            timeout: Timeout em segundos
-
-        Returns:
-            List: Resultados das tarefas
-        """
         results = []
         errors = []
 
@@ -794,18 +555,6 @@ def concurrent_test_helper():
         }
 
     def create_load_test(client, endpoint, data, num_requests=10):
-        """
-        Cria teste de carga para um endpoint.
-
-        Args:
-            client: Cliente Flask de teste
-            endpoint: URL do endpoint
-            data: Dados para enviar
-            num_requests: Número de requisições
-
-        Returns:
-            List: Funções de teste
-        """
         def make_request():
             return client.post(endpoint, json=data, content_type='application/json')
 
@@ -816,15 +565,8 @@ def concurrent_test_helper():
         'create_load_test': create_load_test
     }
 
-
 @pytest.fixture
 def smoke_test_data():
-    """
-    Fixture que fornece dados padronizados para smoke tests.
-
-    Returns:
-        Dict: Dados de teste
-    """
     return {
         'valid_questions': [
             'Quantos funcionários temos?',
@@ -851,14 +593,7 @@ def smoke_test_data():
 
 @pytest.fixture
 def data_quality_checker(database_connection):
-    """
-    Fixture que fornece funções para verificação de qualidade dos dados.
-
-    Returns:
-        Dict: Funções de verificação
-    """
     def check_table_exists(table_name):
-        """Verifica se tabela existe."""
         if not database_connection:
             return False
 
@@ -875,7 +610,6 @@ def data_quality_checker(database_connection):
             cur.close()
 
     def get_table_count(table_name):
-        """Obtém contagem de registros de uma tabela."""
         if not database_connection:
             return 0
 
@@ -889,15 +623,6 @@ def data_quality_checker(database_connection):
             cur.close()
 
     def check_data_consistency(table_configs):
-        """
-        Verifica consistência entre tabelas.
-
-        Args:
-            table_configs: Lista de configurações de verificação
-
-        Returns:
-            Dict: Resultados da verificação
-        """
         results = {}
 
         for config in table_configs:
@@ -935,12 +660,6 @@ def data_quality_checker(database_connection):
 
 @pytest.fixture
 def real_scenarios_data():
-    """
-    Fixture que fornece dados para testes de cenários reais.
-
-    Returns:
-        Dict: Dados e configurações para cenários
-    """
     return {
         'user_interactions': [
             {
@@ -969,28 +688,20 @@ def real_scenarios_data():
         'performance_thresholds': {
             'max_response_time': 10.0,
             'max_error_rate': 0.2,
-            'max_memory_increase': 100  # MB
+            'max_memory_increase': 100
         }
     }
 
-
-# ======================================
-# MARKERS PARA CATEGORIZAÇÃO DE TESTES
-# ======================================
-
-# Registrar novos markers
-pytest.mark.critical = pytest.mark.critical  # Testes críticos
-pytest.mark.smoke = pytest.mark.smoke  # Smoke tests
-pytest.mark.infrastructure = pytest.mark.infrastructure  # Testes de infraestrutura
-pytest.mark.data_quality = pytest.mark.data_quality  # Testes de qualidade dos dados
-pytest.mark.real_scenarios = pytest.mark.real_scenarios  # Cenários reais
-pytest.mark.performance = pytest.mark.performance  # Testes de performance
-pytest.mark.concurrent = pytest.mark.concurrent  # Testes de concorrência
-pytest.mark.security = pytest.mark.security  # Testes de segurança
-
+pytest.mark.critical = pytest.mark.critical
+pytest.mark.smoke = pytest.mark.smoke
+pytest.mark.infrastructure = pytest.mark.infrastructure
+pytest.mark.data_quality = pytest.mark.data_quality
+pytest.mark.real_scenarios = pytest.mark.real_scenarios
+pytest.mark.performance = pytest.mark.performance
+pytest.mark.concurrent = pytest.mark.concurrent
+pytest.mark.security = pytest.mark.security
 
 def pytest_configure(config):
-    """Configurar pytest com novos markers."""
     config.addinivalue_line(
         "markers", "critical: marca testes críticos de infraestrutura"
     )

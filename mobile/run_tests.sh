@@ -85,7 +85,7 @@ run_widget_tests() {
 run_integration_tests() {
     echo ""
     echo "🔄 Executando Testes de Integração..."
-    flutter test integration_test/ --reporter compact
+    flutter test test/integration_test/ --reporter compact
 }
 
 run_coverage_tests() {

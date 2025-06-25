@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
 import '../../helpers/widget_test_helpers.dart';
 
 void main() {
   group('LoginPage Widget Tests', () {
+    setUpAll(() async {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     setUp(() async {
-      await WidgetTestHelpers.setupUserData();
+      await WidgetTestHelpers.clearUserData();
     });
 
     tearDown(() async {

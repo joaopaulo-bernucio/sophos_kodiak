@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/app.dart';
 import '../helpers/widget_test_helpers.dart';
 
 void main() {
   group('App Widget', () {
+    setUpAll(() async {
+      // Configura SharedPreferences para todos os testes
+      SharedPreferences.setMockInitialValues({});
+    });
     group('Configuração Inicial', () {
       testWidgets('deve criar MaterialApp corretamente', (
         WidgetTester tester,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sophos_kodiak/services/user_storage_service.dart';
 import 'package:sophos_kodiak/models/user.dart';
 import 'package:sophos_kodiak/app.dart';
@@ -10,6 +11,8 @@ class WidgetTestHelpers {
     String? nomePreferido,
     bool rememberMe = true,
   }) async {
+    SharedPreferences.setMockInitialValues({});
+
     final user = User(
       cnpj: cnpj ?? '12345678000100',
       senha: 'password123',
@@ -21,10 +24,12 @@ class WidgetTestHelpers {
   }
 
   static Future<void> clearUserData() async {
+    SharedPreferences.setMockInitialValues({});
     await UserStorageService.clearUserData();
   }
 
   static Future<void> setupLoggedOutState() async {
+    SharedPreferences.setMockInitialValues({});
     await UserStorageService.clearUserData();
   }
 
@@ -99,6 +104,7 @@ class WidgetTestHelpers {
   }
 
   static Future<void> clearTestData() async {
+    SharedPreferences.setMockInitialValues({});
     await clearUserData();
     await Future.delayed(const Duration(milliseconds: 100));
   }

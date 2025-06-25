@@ -34,8 +34,8 @@ os.environ['DB_HOST'] = get_test_env_var('DB_HOST',
                                         local_default=os.getenv('DB_HOST', 'localhost'),
                                         ci_default='localhost')
 os.environ['DB_PORT'] = get_test_env_var('DB_PORT',
-                                        local_default=os.getenv('DB_PORT', '5432'),
-                                        ci_default='5432')
+                                        local_default=os.getenv('DB_PORT', '6543'),
+                                        ci_default='6543')
 os.environ['DB_NAME'] = get_test_env_var('DB_NAME',
                                         local_default=os.getenv('DB_NAME', 'test_db'),
                                         ci_default='test_db')
@@ -122,7 +122,7 @@ def client(app):
 def env_vars():
     return {
         'DB_HOST': os.getenv('DB_HOST', 'localhost'),
-        'DB_PORT': os.getenv('DB_PORT', '5432'),
+        'DB_PORT': os.getenv('DB_PORT', '6543'),
         'DB_NAME': os.getenv('DB_NAME', 'test_db'),
         'DB_USER': os.getenv('DB_USER', 'postgres'),
         'DB_PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),

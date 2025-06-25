@@ -41,7 +41,7 @@ if missing and os.getenv('FLASK_ENV') != 'testing':
 elif missing and os.getenv('FLASK_ENV') == 'testing':
     test_defaults = {
         'DB_HOST': 'localhost',
-        'DB_PORT': '5432',
+        'DB_PORT': '6543',
         'DB_NAME': 'test_db',
         'DB_USER': 'postgres',
         'DB_PASSWORD': 'postgres',
@@ -207,7 +207,7 @@ def get_db_connection():
     try:
         connection_params = {
             'host': os.getenv('DB_HOST', 'localhost'),
-            'port': int(os.getenv('DB_PORT', 5432)),
+            'port': int(os.getenv('DB_PORT', 6543)),
             'dbname': os.getenv('DB_NAME', 'postgres'),
             'user': os.getenv('DB_USER', 'postgres'),
             'password': os.getenv('DB_PASSWORD', 'postgres'),

@@ -7,6 +7,8 @@ import '../services/auth_service.dart';
 import '../services/chat_history_service.dart';
 import '../services/message_service.dart';
 import '../models/chat_message.dart';
+import '../widgets/markdown_renderer.dart';
+import '../widgets/typewriter_markdown.dart';
 import 'chat_history_page.dart';
 
 class CancelRequestException implements Exception {
@@ -862,22 +864,8 @@ class _MessageBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: message.isAnimating
-            ? TypewriterText(
-                text: message.text,
-                style: AppTextStyles.primaryText.copyWith(
-                  color: message.isUser
-                      ? AppColors.primaryDark
-                      : AppColors.textPrimary,
-                ),
-              )
-            : Text(
-                message.text,
-                style: AppTextStyles.primaryText.copyWith(
-                  color: message.isUser
-                      ? AppColors.primaryDark
-                      : AppColors.textPrimary,
-                ),
-              ),
+            ? TypewriterMarkdown(text: message.text, isUser: message.isUser)
+            : MarkdownRenderer(text: message.text, isUser: message.isUser),
       ),
     );
   }

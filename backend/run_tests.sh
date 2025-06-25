@@ -42,7 +42,7 @@ load_ci_config() {
 
             if [[ -z "$DATABASE_URL" ]]; then
                 print_warning "DATABASE_URL não definida, usando padrão de CI"
-                export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
+                export DATABASE_URL="postgresql://postgres:postgres@localhost:6543/test_db"
             fi
 
             if [[ -z "$GEMINI_API_KEY" ]]; then
@@ -63,7 +63,7 @@ load_ci_config() {
         else
             print_warning "Arquivo .env.ci não encontrado, usando configurações padrão do CI"
             export FLASK_ENV="testing"
-            export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
+            export DATABASE_URL="postgresql://postgres:postgres@localhost:6543/test_db"
             export GEMINI_API_KEY="test_gemini_api_key_for_github_actions_testing_only"
             export CI="true"
         fi

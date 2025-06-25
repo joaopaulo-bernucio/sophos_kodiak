@@ -141,12 +141,9 @@ void main() {
         );
 
         expect(updatedUser.cnpj, newCnpj);
-        expect(updatedUser.senha, originalUser.senha); // Deve manter original
+        expect(updatedUser.senha, originalUser.senha);
         expect(updatedUser.nomePreferido, newNome);
-        expect(
-          updatedUser.ultimoLogin,
-          originalUser.ultimoLogin,
-        ); // Deve manter original
+        expect(updatedUser.ultimoLogin, originalUser.ultimoLogin);
       });
 
       test('deve manter valores originais quando não especificado', () {

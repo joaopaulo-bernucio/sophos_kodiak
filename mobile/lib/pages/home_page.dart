@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import 'chatbot_page.dart';
 
-/// Página de menu principal do aplicativo Sophos Kodiak
-///
-/// Esta página exibe as principais opções de navegação do sistema,
-/// mantendo o tema escuro consistente com o resto do aplicativo.
 class HomePage extends StatelessWidget {
   final String? userName;
 
@@ -13,12 +9,10 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Recebe o nome do usuário passado como argumento
     final String? userNameFromArgs =
         ModalRoute.of(context)?.settings.arguments as String?;
     final String? finalUserName = userName ?? userNameFromArgs;
 
-    // Verifica se há página anterior no histórico de navegação
     final bool canPop = Navigator.canPop(context);
 
     return Scaffold(
@@ -28,7 +22,6 @@ class HomePage extends StatelessWidget {
         elevation: 0,
         title: const Text('Página Principal', style: AppTextStyles.title),
         centerTitle: true,
-        // Só exibe o botão de voltar se houver página anterior
         leading: canPop
             ? IconButton(
                 icon: const Icon(
@@ -38,7 +31,6 @@ class HomePage extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
               )
             : null,
-        // Desabilita o botão de voltar automático do Flutter quando não há histórico
         automaticallyImplyLeading: canPop,
       ),
       body: _MenuContent(userName: finalUserName),
@@ -46,7 +38,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-/// Widget que contém o conteúdo principal da página principal
 class _MenuContent extends StatelessWidget {
   final String? userName;
 
@@ -76,7 +67,6 @@ class _MenuContent extends StatelessWidget {
   }
 }
 
-/// Seção de boas-vindas da página principal
 class _WelcomeSection extends StatelessWidget {
   const _WelcomeSection();
 
@@ -102,7 +92,6 @@ class _WelcomeSection extends StatelessWidget {
   }
 }
 
-/// Grid com as opções da página principal
 class _MenuGrid extends StatelessWidget {
   final String? userName;
 
@@ -114,7 +103,7 @@ class _MenuGrid extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: AppDimensions.paddingMedium,
       mainAxisSpacing: AppDimensions.paddingMedium,
-      childAspectRatio: 1.1, // Aspect ratio mais adequado para evitar overflow
+      childAspectRatio: 1.1,
       children: [
         _MenuCard(
           icon: Icons.smart_toy,
@@ -149,7 +138,6 @@ class _MenuGrid extends StatelessWidget {
     );
   }
 
-  /// Exibe um diálogo informando que a funcionalidade está em desenvolvimento
   void _showFeatureDialog(BuildContext context, String feature) {
     showDialog(
       context: context,
@@ -171,7 +159,6 @@ class _MenuGrid extends StatelessWidget {
   }
 }
 
-/// Card individual do menu
 class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String title;

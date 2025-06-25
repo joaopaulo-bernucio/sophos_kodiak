@@ -1,12 +1,7 @@
 #!/bin/bash
 
-# Script para Executar Todos os Testes - Sophos Kodiak
-# Autor: Equipe Sophos Kodiak
-# Data: $(date +%Y-%m-%d)
+set -e
 
-set -e  # Para no primeiro erro
-
-# Função para mostrar ajuda
 show_help() {
     echo "Uso: $0 [OPÇÃO]"
     echo ""
@@ -20,7 +15,6 @@ show_help() {
     echo "Sem argumentos: Executa todos os testes"
 }
 
-# Processar argumentos
 case "${1:-all}" in
     --help|-h)
         show_help
@@ -51,7 +45,6 @@ esac
 echo "🧪 Executando Testes do Sophos Kodiak Mobile"
 echo "=============================================="
 
-# Verificar se Flutter está instalado
 if ! command -v flutter &> /dev/null; then
     echo "❌ Flutter não está instalado ou não está no PATH"
     exit 1
@@ -65,7 +58,6 @@ echo ""
 echo "� Instalando dependências..."
 flutter pub get
 
-# Função para executar testes unitários
 run_unit_tests() {
     echo ""
     echo "🧪 Executando Testes Unitários..."
@@ -76,7 +68,6 @@ run_unit_tests() {
     flutter test test/unit/services/ --reporter compact
 }
 
-# Função para executar testes de widget
 run_widget_tests() {
     echo ""
     echo "🔧 Executando Smoke Tests..."
@@ -91,14 +82,12 @@ run_widget_tests() {
     flutter test test/widget/pages/ --reporter compact
 }
 
-# Função para executar testes de integração
 run_integration_tests() {
     echo ""
     echo "🔄 Executando Testes de Integração..."
     flutter test integration_test/ --reporter compact
 }
 
-# Função para executar testes com cobertura
 run_coverage_tests() {
     echo ""
     echo "📊 Gerando Relatório de Cobertura..."
@@ -108,7 +97,6 @@ run_coverage_tests() {
     process_coverage_report
 }
 
-# Função para processar relatório de cobertura
 process_coverage_report() {
     if [ -f "coverage/lcov.info" ]; then
         echo "  → Cobertura gerada em coverage/lcov.info"
@@ -122,7 +110,6 @@ process_coverage_report() {
             echo "    brew install lcov          (macOS)"
         fi
 
-        # Mostrar resumo básico da cobertura
         if command -v lcov &> /dev/null; then
             echo "  → Resumo da cobertura:"
             lcov --summary coverage/lcov.info 2>/dev/null | grep -E "(lines|functions)" || echo "    Dados de cobertura processados com sucesso"
@@ -133,7 +120,6 @@ process_coverage_report() {
     fi
 }
 
-# Executar testes baseado no tipo selecionado
 case "$TEST_TYPE" in
     unit)
         run_unit_tests
@@ -158,7 +144,6 @@ esac
 echo ""
 echo "✅ Testes concluídos!"
 
-# Contar arquivos de teste
 UNIT_TESTS=$(find test/unit -name "*_test.dart" | wc -l)
 WIDGET_TESTS=$(find test/widget -name "*_test.dart" | wc -l)
 INTEGRATION_TESTS=$(find integration_test -name "*_test.dart" 2>/dev/null | wc -l || echo "0")

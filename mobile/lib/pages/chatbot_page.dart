@@ -89,18 +89,14 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     }
   }
 
-  /// Carrega mensagens da sessão atual (do dia) ou adiciona mensagem de boas-vindas.
   Future<void> _loadCurrentSessionMessages() async {
-    // Primeiro adiciona mensagem de boas-vindas
     _addWelcomeMessage();
 
-    // Depois tenta carregar mensagens do histórico
     try {
       final List<ChatMessage> currentMessages =
           await ChatHistoryService.getCurrentSessionMessages();
 
       if (currentMessages.isNotEmpty) {
-        // Remove mensagem de boas-vindas se houver mensagens anteriores
         setState(() {
           _messages.clear();
           _messages.addAll(currentMessages);
@@ -108,7 +104,6 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Erro ao carregar mensagens da sessão atual: $e');
-      // Mantém apenas a mensagem de boas-vindas se houver erro
     }
   }
 
@@ -126,8 +121,6 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     );
 
     _messages.add(welcomeMsg);
-
-    // Salva mensagem de boas-vindas no histórico
     _saveMessageToHistory(welcomeMsg);
   }
 
@@ -167,10 +160,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       _isWaitingResponse = true;
       _messageController.clear();
     });
-
-    // Salva a mensagem do usuário no histórico
     _saveMessageToHistory(userMessage);
-
     _scrollToBottom();
 
     try {
@@ -187,15 +177,13 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
           _messages.add(botMessage);
           _isWaitingResponse = false;
         });
-
-        // Salva a resposta do bot no histórico
         _saveMessageToHistory(botMessage);
         _scrollToBottom();
       }
     } on ApiException catch (apiError) {
       if (mounted) {
         final errorMessage = ChatMessage(
-          text: '', // Texto vazio pois será renderizado como widget de erro
+          text: '',
           isUser: false,
           timestamp: DateTime.now(),
           isAnimating: false,
@@ -207,14 +195,12 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
           _messages.add(errorMessage);
           _isWaitingResponse = false;
         });
-
-        // Nota: Mensagens de erro não são salvas no histórico para manter simplicidade
         _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
         final errorMessage = ChatMessage(
-          text: '', // Texto vazio pois será renderizado como widget de erro
+          text: '',
           isUser: false,
           timestamp: DateTime.now(),
           isAnimating: false,
@@ -226,20 +212,16 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
           _messages.add(errorMessage);
           _isWaitingResponse = false;
         });
-
-        // Nota: Mensagens de erro não são salvas no histórico para manter simplicidade
         _scrollToBottom();
       }
     }
   }
 
-  /// Salva uma mensagem no histórico local.
   Future<void> _saveMessageToHistory(ChatMessage message) async {
     try {
       await ChatHistoryService.saveMessage(message);
     } catch (e) {
       debugPrint('Erro ao salvar mensagem no histórico: $e');
-      // Não interfere na experiência do usuário se houver erro no salvamento
     }
   }
 
@@ -450,7 +432,6 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                       'userName': _currentUserName ?? 'Usuário',
                     },
                   ).then((_) {
-                    // Recarrega o nome do usuário quando volta da página de configurações
                     _loadCurrentUserName();
                   });
                 },
@@ -722,7 +703,6 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Se for uma mensagem de erro, renderiza o widget de erro customizado
     if (message.isError && message.apiError != null) {
       return Align(
         alignment: Alignment.centerLeft,
@@ -768,7 +748,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  /// Cria uma mensagem de erro amigável baseada no tipo de erro da API
   Widget _buildErrorMessage(BuildContext context, ApiException error) {
     IconData icon;
     Color iconColor;

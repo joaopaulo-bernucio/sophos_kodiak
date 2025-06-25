@@ -10,9 +10,7 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-
         expect(find.byType(MaterialApp), findsOneWidget);
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
@@ -24,7 +22,6 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
@@ -36,8 +33,6 @@ void main() {
       ) async {
         await tester.pumpWidget(const App());
         await WidgetTestHelpers.pumpAndSettle(tester);
-
-        // Verificar se elementos da tela de login estão presentes
         expect(find.text('SOPHOS KODIAK'), findsOneWidget);
       });
     });
@@ -47,11 +42,9 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
-
         expect(materialApp.routes?.containsKey('/login'), isTrue);
         expect(materialApp.routes?.containsKey('/home'), isTrue);
         expect(materialApp.routes?.containsKey('/chatbot'), isTrue);
@@ -62,12 +55,10 @@ void main() {
     group('Tema da Aplicação', () {
       testWidgets('deve ter tema configurado', (WidgetTester tester) async {
         await tester.pumpWidget(const App());
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
         expect(materialApp.theme, isNotNull);
-        // Verificar que uma cor primary está configurada (não necessariamente deepPurple exato)
         expect(materialApp.theme!.colorScheme.primary, isNotNull);
       });
     });
@@ -77,13 +68,10 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
         expect(materialApp.onGenerateRoute, isNotNull);
-
-        // Simular geração de rota para settings
         final settings = RouteSettings(
           name: '/settings',
           arguments: {
@@ -92,7 +80,6 @@ void main() {
             'userName': 'João Silva',
           },
         );
-
         final route = materialApp.onGenerateRoute!(settings);
         expect(route, isNotNull);
       });
@@ -101,11 +88,9 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
-
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
-
         final settings = RouteSettings(name: '/rota-inexistente');
         final route = materialApp.onGenerateRoute!(settings);
         expect(route, isNull);
@@ -116,8 +101,6 @@ void main() {
       testWidgets('deve renderizar sem erros', (WidgetTester tester) async {
         await tester.pumpWidget(const App());
         await tester.pumpAndSettle();
-
-        // Se chegou até aqui sem erros, o teste passou
         expect(find.byType(MaterialApp), findsOneWidget);
       });
 
@@ -126,12 +109,8 @@ void main() {
       ) async {
         await tester.pumpWidget(const App());
         await tester.pumpAndSettle();
-
-        // Simular hot reload
         await tester.pumpWidget(const App());
         await tester.pumpAndSettle();
-
-        // Verificar que a aplicação ainda funciona
         expect(find.byType(MaterialApp), findsOneWidget);
         expect(find.text('SOPHOS KODIAK'), findsOneWidget);
       });
@@ -140,13 +119,9 @@ void main() {
     group('Performance', () {
       testWidgets('deve carregar rapidamente', (WidgetTester tester) async {
         final stopwatch = Stopwatch()..start();
-
         await tester.pumpWidget(const App());
         await tester.pumpAndSettle();
-
         stopwatch.stop();
-
-        // Verificar que carregou em tempo razoável (menos de 2 segundos)
         expect(stopwatch.elapsedMilliseconds, lessThan(2000));
       });
     });

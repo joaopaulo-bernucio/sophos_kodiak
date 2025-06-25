@@ -3,13 +3,6 @@ import 'package:fl_chart/fl_chart.dart';
 import '../constants/app_constants.dart';
 import '../services/api_service.dart';
 
-/// Página principal de gráficos e relatórios do Kodiak
-///
-/// Esta página permite visualizar dados analíticos em diferentes formatos:
-/// - Vendas por mês (gráfico de barras)
-/// - Funcionários por departamento (gráfico de pizza)
-/// - Projetos por status (gráfico de barras horizontais)
-/// - Receita por cliente (lista ranqueada)
 class ChartsPage extends StatefulWidget {
   const ChartsPage({super.key});
 
@@ -21,14 +14,10 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
   String? _errorMessage;
-  bool _isDisposed = false; // Flag para controlar se o widget foi descartado
-
-  // Controladores de animação para transições suaves
+  bool _isDisposed = false;
   late TabController _tabController;
   late AnimationController _refreshController;
   late Animation<double> _refreshAnimation;
-
-  // Dados dos gráficos
   List<Map<String, dynamic>> _vendasData = [];
   List<Map<String, dynamic>> _funcionariosData = [];
   List<Map<String, dynamic>> _projetosData = [];
@@ -45,30 +34,24 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     _refreshAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _refreshController, curve: Curves.elasticOut),
     );
-
     _carregarDados();
   }
 
   @override
   void dispose() {
-    _isDisposed = true; // Marca como descartado
-
+    _isDisposed = true;
     _tabController.dispose();
-
-    // Para qualquer animação em andamento antes de descartar
     if (_refreshController.isAnimating) {
       _refreshController.stop();
     }
     _refreshController.dispose();
-
     _apiService.dispose();
     super.dispose();
   }
 
-  /// Carrega todos os dados dos gráficos com tratamento robusto de erros
   Future<void> _carregarDados() async {
     if (_isLoading || _isDisposed) {
-      return; // Previne múltiplas chamadas e execução após dispose
+      return;
     }
 
     setState(() {
@@ -76,13 +59,11 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
       _errorMessage = null;
     });
 
-    // Só inicia a animação se o widget ainda está ativo e o controller não foi descartado
     if (mounted && !_isDisposed && !_refreshController.isAnimating) {
       _refreshController.forward();
     }
 
     try {
-      // Carrega todos os dados em paralelo para melhor performance
       final results = await Future.wait([
         _apiService.buscarVendasPorMes(),
         _apiService.buscarFuncionariosPorDepartamento(),
@@ -110,7 +91,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         setState(() {
           _isLoading = false;
         });
-        // Só chama reset se o controller ainda não foi descartado
         if (!_isDisposed &&
             !_refreshController.isAnimating &&
             !_refreshController.isDismissed) {
@@ -120,7 +100,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     }
   }
 
-  /// Trata diferentes tipos de erro para exibir mensagens amigáveis
   String _tratarErro(dynamic erro) {
     if (erro is ApiException) {
       switch (erro.statusCode) {
@@ -137,7 +116,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     return 'Erro ao carregar dados: ${erro.toString()}';
   }
 
-  /// Mostra uma mensagem de erro com opção de retry
   void _mostrarErro(String mensagem) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -174,7 +152,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Constrói a AppBar com ações de refresh e navegação
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: AppColors.background,
@@ -186,7 +163,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        // Verifica se mounted e se o widget não foi descartado antes de usar o AnimatedBuilder
         Builder(
           builder: (context) {
             if (!mounted || _isDisposed) {
@@ -233,7 +209,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Indicador de carregamento com animação suave
   Widget _buildLoadingIndicator() {
     return const Center(
       child: Column(
@@ -250,7 +225,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Constrói o conteúdo principal com as abas
   Widget _buildContent() {
     if (_errorMessage != null) {
       return _buildErrorState();
@@ -266,7 +240,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Estado de erro com opção de retry
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -315,7 +288,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Mostra informações sobre os gráficos
   void _mostrarInformacoes() {
     showDialog(
       context: context,
@@ -363,11 +335,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   }
 }
 
-//==============================================================================
-// WIDGETS DAS ABAS DE GRÁFICOS
-//==============================================================================
-
-/// Aba de gráficos de vendas com métricas e visualizações
 class _VendasTab extends StatelessWidget {
   final List<Map<String, dynamic>> vendasData;
 
@@ -382,7 +349,6 @@ class _VendasTab extends StatelessWidget {
       );
     }
 
-    // Calcula estatísticas das vendas
     final totalVendas = _calcularTotalVendas();
     final mediaVendas = totalVendas / vendasData.length;
     final melhorMes = _encontrarMelhorMes();
@@ -392,7 +358,6 @@ class _VendasTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Cards de métricas
           Row(
             children: [
               Expanded(
@@ -417,8 +382,6 @@ class _VendasTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Gráfico de vendas por mês
           _ChartContainer(
             title: 'Vendas por Mês',
             subtitle: melhorMes.isNotEmpty ? 'Melhor mês: $melhorMes' : null,
@@ -457,11 +420,6 @@ class _VendasTab extends StatelessWidget {
   }
 }
 
-//==============================================================================
-// WIDGETS DAS ABAS DE GRÁFICOS
-//==============================================================================
-
-/// Aba de gráficos de funcionários
 class _FuncionariosTab extends StatelessWidget {
   final List<Map<String, dynamic>> funcionariosData;
 
@@ -476,7 +434,6 @@ class _FuncionariosTab extends StatelessWidget {
       );
     }
 
-    // Calcula total de funcionários
     final totalFuncionarios = funcionariosData.fold(0, (total, item) {
       return total + ((item['quantidade'] ?? 0) as int);
     });
@@ -486,7 +443,6 @@ class _FuncionariosTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Cards de métricas
           Row(
             children: [
               Expanded(
@@ -511,8 +467,6 @@ class _FuncionariosTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Gráfico de funcionários por departamento
           _ChartContainer(
             title: 'Funcionários por Departamento',
             subtitle: 'Distribuição atual da equipe',
@@ -524,7 +478,6 @@ class _FuncionariosTab extends StatelessWidget {
   }
 }
 
-/// Aba de gráficos de projetos e receita
 class _ProjetosTab extends StatelessWidget {
   final List<Map<String, dynamic>> projetosData;
   final List<Map<String, dynamic>> receitaData;
@@ -540,7 +493,6 @@ class _ProjetosTab extends StatelessWidget {
       );
     }
 
-    // Calcula estatísticas
     final totalProjetos = projetosData.fold(0, (total, item) {
       return total + ((item['quantidade'] ?? 0) as int);
     });
@@ -554,7 +506,6 @@ class _ProjetosTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Cards de métricas
           Row(
             children: [
               Expanded(
@@ -579,8 +530,6 @@ class _ProjetosTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Gráfico de projetos por status
           if (projetosData.isNotEmpty) ...[
             _ChartContainer(
               title: 'Projetos por Status',
@@ -589,8 +538,6 @@ class _ProjetosTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
-
-          // Lista de receita por cliente
           if (receitaData.isNotEmpty)
             _ChartContainer(
               title: 'Top 5 Clientes por Receita',
@@ -612,11 +559,6 @@ class _ProjetosTab extends StatelessWidget {
   }
 }
 
-//==============================================================================
-// WIDGETS DE COMPONENTES COMUNS
-//==============================================================================
-
-/// Card de métrica com indicadores visuais
 class _MetricCard extends StatelessWidget {
   final String title;
   final String value;
@@ -691,7 +633,6 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-/// Container personalizado para gráficos
 class _ChartContainer extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -740,7 +681,6 @@ class _ChartContainer extends StatelessWidget {
   }
 }
 
-/// Widget exibido quando não há dados para mostrar
 class _EmptyChart extends StatelessWidget {
   final String message;
   final IconData icon;
@@ -779,11 +719,6 @@ class _EmptyChart extends StatelessWidget {
   }
 }
 
-//==============================================================================
-// WIDGETS DE GRÁFICOS ESPECÍFICOS
-//==============================================================================
-
-/// Gráfico de barras otimizado para vendas por mês
 class _VendasBarChart extends StatelessWidget {
   final List<Map<String, dynamic>> dados;
 
@@ -829,7 +764,6 @@ class _VendasBarChart extends StatelessWidget {
                   final index = value.toInt();
                   if (index >= 0 && index < dados.length) {
                     final mes = dados[index]['mes'].toString();
-                    // Extrai apenas o mês (MM) de YYYY-MM
                     final mesFormatado = mes.length >= 7
                         ? mes.substring(5)
                         : mes;
@@ -933,7 +867,6 @@ class _VendasBarChart extends StatelessWidget {
   }
 }
 
-/// Gráfico de pizza interativo para funcionários por departamento
 class _FuncionariosPieChart extends StatelessWidget {
   final List<Map<String, dynamic>> dados;
 
@@ -945,7 +878,6 @@ class _FuncionariosPieChart extends StatelessWidget {
       height: 280,
       child: Row(
         children: [
-          // Gráfico de pizza
           Expanded(
             flex: 2,
             child: PieChart(
@@ -956,14 +888,11 @@ class _FuncionariosPieChart extends StatelessWidget {
                 startDegreeOffset: -90,
                 pieTouchData: PieTouchData(
                   enabled: true,
-                  touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                    // Aqui poderia adicionar interatividade futura
-                  },
+                  touchCallback: (FlTouchEvent event, pieTouchResponse) {},
                 ),
               ),
             ),
           ),
-          // Legenda
           Expanded(flex: 1, child: _buildLegenda()),
         ],
       ),
@@ -1054,15 +983,14 @@ class _FuncionariosPieChart extends StatelessWidget {
       AppColors.success,
       AppColors.warning,
       AppColors.error,
-      const Color(0xFF9C27B0), // Purple
-      const Color(0xFF00BCD4), // Cyan
-      const Color(0xFF795548), // Brown
+      const Color(0xFF9C27B0),
+      const Color(0xFF00BCD4),
+      const Color(0xFF795548),
     ];
     return cores[index % cores.length];
   }
 }
 
-/// Gráfico de barras horizontais para projetos por status
 class _ProjetosBarChart extends StatelessWidget {
   final List<Map<String, dynamic>> dados;
 
@@ -1225,7 +1153,6 @@ class _ProjetosBarChart extends StatelessWidget {
   }
 }
 
-/// Lista estilizada de receita por cliente com ranking
 class _ReceitaList extends StatelessWidget {
   final List<Map<String, dynamic>> dados;
 
@@ -1241,7 +1168,7 @@ class _ReceitaList extends StatelessWidget {
         final item = entry.value;
         final cliente = item['cliente'].toString();
         final receita = (item['receita'] ?? 0).toDouble();
-        final isTop = index < 3; // Top 3 destacados
+        final isTop = index < 3;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -1260,7 +1187,6 @@ class _ReceitaList extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Ranking badge
               Container(
                 width: 32,
                 height: 32,
@@ -1280,8 +1206,6 @@ class _ReceitaList extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Nome do cliente
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1305,8 +1229,6 @@ class _ReceitaList extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Valor da receita
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1338,11 +1260,11 @@ class _ReceitaList extends StatelessWidget {
   Color _getCorRanking(int index) {
     switch (index) {
       case 0:
-        return const Color(0xFFFFD700); // Ouro
+        return const Color(0xFFFFD700);
       case 1:
-        return const Color(0xFFC0C0C0); // Prata
+        return const Color(0xFFC0C0C0);
       case 2:
-        return const Color(0xFFCD7F32); // Bronze
+        return const Color(0xFFCD7F32);
       default:
         return AppColors.textSecondary;
     }

@@ -33,9 +33,7 @@ class AuthService {
       ultimoLogin: DateTime.now(),
     );
 
-    // Salvar usuário com remember me ativado
     await UserStorageService.saveUser(user, rememberMe: true);
-
     return user;
   }
 
@@ -59,16 +57,13 @@ class AuthService {
   }
 
   bool validarFormatoCnpj(String cnpj) {
-    // Verifica o formato básico
     final regex = RegExp(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$');
     if (!regex.hasMatch(cnpj)) {
       return false;
     }
 
-    // Remove formatação para validação adicional
     final numericCnpj = cnpj.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Verifica se todos os dígitos são iguais (inválido)
     if (RegExp(r'^(\d)\1{13}$').hasMatch(numericCnpj)) {
       return false;
     }

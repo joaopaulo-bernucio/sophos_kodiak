@@ -8,7 +8,6 @@ void main() {
     group('Constructor', () {
       test('deve criar mensagem do usuário corretamente', () {
         final message = TestData.createUserMessage();
-
         expect(message.text, equals(TestData.sampleQuestion));
         expect(message.isUser, isTrue);
         expect(message.timestamp, isNotNull);
@@ -19,7 +18,6 @@ void main() {
 
       test('deve criar mensagem do sistema corretamente', () {
         final message = TestData.createSystemMessage();
-
         expect(message.text, equals(TestData.sampleResponse));
         expect(message.isUser, isFalse);
         expect(message.timestamp, isNotNull);
@@ -41,7 +39,6 @@ void main() {
           isError: true,
           apiError: apiError,
         );
-
         expect(message.text, equals('Erro de conexão'));
         expect(message.isUser, isFalse);
         expect(message.isError, isTrue);
@@ -55,7 +52,6 @@ void main() {
           timestamp: DateTime.now(),
           isAnimating: true,
         );
-
         expect(message.text, equals('Digitando...'));
         expect(message.isAnimating, isTrue);
       });
@@ -71,9 +67,7 @@ void main() {
           isAnimating: false,
           isError: false,
         );
-
         final json = message.toJson();
-
         expect(json['text'], equals(TestData.sampleQuestion));
         expect(json['isUser'], isTrue);
         expect(json['timestamp'], equals(now.toIso8601String()));
@@ -90,9 +84,7 @@ void main() {
           'isAnimating': true,
           'isError': false,
         };
-
         final message = ChatMessage.fromJson(json);
-
         expect(message.text, equals(TestData.sampleResponse));
         expect(message.isUser, isFalse);
         expect(message.timestamp, equals(now));
@@ -107,14 +99,12 @@ void main() {
           'isUser': true,
           'timestamp': now.toIso8601String(),
         };
-
         final message = ChatMessage.fromJson(json);
-
         expect(message.text, equals(TestData.sampleQuestion));
         expect(message.isUser, isTrue);
         expect(message.timestamp, equals(now));
-        expect(message.isAnimating, isFalse); // Default value
-        expect(message.isError, isFalse); // Default value
+        expect(message.isAnimating, isFalse);
+        expect(message.isError, isFalse);
       });
 
       test(
@@ -127,10 +117,8 @@ void main() {
             'isAnimating': false,
             'isError': false,
           };
-
           final message = ChatMessage.fromJson(originalJson);
           final convertedJson = message.toJson();
-
           expect(convertedJson, equals(originalJson));
         },
       );
@@ -145,13 +133,11 @@ void main() {
           userFriendlyMessage: 'Timeout',
           type: ApiErrorType.timeout,
         );
-
         final updatedMessage = originalMessage.copyWith(
           text: newText,
           isError: true,
           apiError: apiError,
         );
-
         expect(updatedMessage.text, equals(newText));
         expect(updatedMessage.isUser, equals(originalMessage.isUser));
         expect(updatedMessage.timestamp, equals(originalMessage.timestamp));
@@ -161,9 +147,7 @@ void main() {
 
       test('deve manter valores originais quando não especificado', () {
         final originalMessage = TestData.createSystemMessage();
-
         final copiedMessage = originalMessage.copyWith();
-
         expect(copiedMessage.text, equals(originalMessage.text));
         expect(copiedMessage.isUser, equals(originalMessage.isUser));
         expect(copiedMessage.timestamp, equals(originalMessage.timestamp));
@@ -177,12 +161,10 @@ void main() {
           text: 'Erro',
           isError: true,
         );
-
         final fixedMessage = errorMessage.copyWith(
           text: 'Resposta corrigida',
           isError: false,
         );
-
         expect(fixedMessage.text, equals('Resposta corrigida'));
         expect(fixedMessage.isError, isFalse);
       });
@@ -205,7 +187,6 @@ void main() {
           isAnimating: false,
           isError: false,
         );
-
         expect(message1, equals(message2));
         expect(message1.hashCode, equals(message2.hashCode));
       });
@@ -213,7 +194,6 @@ void main() {
       test('deve considerar diferentes mensagens com textos diferentes', () {
         final message1 = TestData.createUserMessage(text: 'Pergunta 1');
         final message2 = TestData.createUserMessage(text: 'Pergunta 2');
-
         expect(message1, isNot(equals(message2)));
         expect(message1.hashCode, isNot(equals(message2.hashCode)));
       });
@@ -221,7 +201,6 @@ void main() {
       test('deve considerar diferentes mensagens com isUser diferentes', () {
         final message1 = TestData.createUserMessage();
         final message2 = TestData.createSystemMessage(text: message1.text);
-
         expect(message1, isNot(equals(message2)));
       });
 
@@ -233,7 +212,6 @@ void main() {
           final message2 = TestData.createUserMessage(
             timestamp: now.add(const Duration(seconds: 1)),
           );
-
           expect(message1, isNot(equals(message2)));
         },
       );
@@ -243,7 +221,6 @@ void main() {
       test('deve gerar string representativa da mensagem', () {
         final message = TestData.createUserMessage();
         final messageString = message.toString();
-
         expect(messageString, contains('ChatMessage('));
         expect(messageString, contains('text: ${TestData.sampleQuestion}'));
         expect(messageString, contains('isUser: true'));
@@ -258,7 +235,6 @@ void main() {
           isError: true,
         );
         final messageString = message.toString();
-
         expect(messageString, contains('isError: true'));
       });
 
@@ -268,7 +244,6 @@ void main() {
           isAnimating: true,
         );
         final messageString = message.toString();
-
         expect(messageString, contains('isAnimating: true'));
       });
     });
@@ -280,7 +255,6 @@ void main() {
           isUser: true,
           timestamp: DateTime.now(),
         );
-
         expect(message.text, isEmpty);
         expect(() => message.toJson(), returnsNormally);
       });
@@ -291,7 +265,6 @@ void main() {
           isUser: true,
           timestamp: DateTime.now(),
         );
-
         expect(message.text, equals(TestData.longQuestion));
         expect(message.text.length, greaterThan(100));
         expect(() => message.toJson(), returnsNormally);
@@ -299,12 +272,10 @@ void main() {
 
       test('deve manter consistência com múltiplas operações copyWith', () {
         final original = TestData.createUserMessage();
-
         final step1 = original.copyWith(isAnimating: true);
         final step2 = step1.copyWith(text: 'Novo texto');
         final step3 = step2.copyWith(isError: true);
         final finalMessage = step3.copyWith(isAnimating: false);
-
         expect(finalMessage.text, equals('Novo texto'));
         expect(finalMessage.isUser, equals(original.isUser));
         expect(finalMessage.timestamp, equals(original.timestamp));

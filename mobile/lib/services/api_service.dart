@@ -94,7 +94,7 @@ class PerguntaResponse {
 class ApiService {
   static const String _baseUrl =
       'http://sk-sk.cxbwajafbngqhhej.brazilsouth.azurecontainer.io:5000';
-  // Para rodar local no emulador Android: 'http://10.0.2.2:5000'
+  //'http://10.0.2.2:5000'
   static const Duration _timeout = Duration(seconds: 30);
 
   final http.Client _client;
@@ -118,7 +118,6 @@ class ApiService {
     return ApiException.unknown(error.toString());
   }
 
-  /// Envia a pergunta ao endpoint `/pergunta`
   Future<PerguntaResponse> enviarPergunta(String pergunta) async {
     if (pergunta.trim().isEmpty) {
       throw ApiException.invalidData('Pergunta não pode estar vazia');
@@ -149,7 +148,6 @@ class ApiService {
     }
   }
 
-  /// Helper genérico para endpoints GET que retornam listas JSON
   Future<List<Map<String, dynamic>>> _getList(
     String path,
     String errorMessage,
@@ -177,21 +175,16 @@ class ApiService {
           ? decoded['data']
           : decoded;
 
-      // Normaliza valores:
-      // 1) Strings numéricas → num
-      // 2) Doubles sem parte fracionária → int
       return (raw as List).map((item) {
         final map = Map<String, dynamic>.from(item as Map);
         map.forEach((key, value) {
           dynamic newValue = value;
 
-          // String → num
           if (value is String) {
             final num? parsed = num.tryParse(value);
             if (parsed != null) newValue = parsed;
           }
 
-          // num → int se for double sem fração
           if (newValue is num) {
             if (newValue is double && newValue == newValue.toInt()) {
               newValue = newValue.toInt();
@@ -222,7 +215,6 @@ class ApiService {
   Future<List<Map<String, dynamic>>> buscarReceitaPorCliente() =>
       _getList('/api/query/receita_por_cliente', 'Erro ao buscar receita');
 
-  /// Verifica health-check em `/health`
   Future<bool> verificarSaude() async {
     try {
       final response = await _client

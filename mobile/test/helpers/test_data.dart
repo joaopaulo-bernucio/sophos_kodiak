@@ -1,31 +1,25 @@
 import 'package:sophos_kodiak/models/user.dart';
 import 'package:sophos_kodiak/models/chat_message.dart';
 
-/// Classe para fornecer dados de teste válidos
 class TestData {
-  // Dados de usuário válidos
   static const String validCnpj = '12.345.678/0001-90';
   static const String validPassword = 'password123';
   static const String validUserName = 'João Silva';
 
-  // Dados de usuário inválidos
   static const String invalidCnpj = '11.111.111/1111-11';
   static const String invalidPassword = '123';
   static const String shortPassword = '1234567';
   static const String emptyCnpj = '';
   static const String emptyPassword = '';
 
-  // CNPJ sem formatação
   static const String unformattedCnpj = '12345678000190';
 
-  // Dados de chat
   static const String sampleQuestion = 'Qual é o total de vendas do mês?';
   static const String sampleResponse =
       'O total de vendas do mês é R\$ 150.000,00';
   static const String longQuestion =
       'Esta é uma pergunta muito longa que possui mais de 100 caracteres para testar como o sistema se comporta com entradas extensas e verificar se há limitações no processamento de texto.';
 
-  /// Cria um usuário válido para testes
   static User createValidUser({
     String? cnpj,
     String? senha,
@@ -40,7 +34,6 @@ class TestData {
     );
   }
 
-  /// Cria uma mensagem de chat do usuário para testes
   static ChatMessage createUserMessage({
     String? text,
     DateTime? timestamp,
@@ -54,7 +47,6 @@ class TestData {
     );
   }
 
-  /// Cria uma mensagem de chat do sistema para testes
   static ChatMessage createSystemMessage({
     String? text,
     DateTime? timestamp,
@@ -70,7 +62,6 @@ class TestData {
     );
   }
 
-  /// Cria uma lista de mensagens de chat para testes
   static List<ChatMessage> createChatHistory() {
     final now = DateTime.now();
     return [
@@ -93,7 +84,6 @@ class TestData {
     ];
   }
 
-  /// Dados para testes de formatação de CNPJ
   static Map<String, String> cnpjFormattingTests = {
     '12345678000190': '12.345.678/0001-90',
     '1234567800019': '12.345.678/0001-9',
@@ -104,7 +94,6 @@ class TestData {
     '': '',
   };
 
-  /// Lista de CNPJs inválidos para testes
   static List<String> invalidCnpjs = [
     '11.111.111/1111-11',
     '22.222.222/2222-22',
@@ -115,6 +104,5 @@ class TestData {
     '',
   ];
 
-  /// Lista de senhas inválidas para testes
   static List<String> invalidPasswords = ['', '123', '1234567', '       '];
 }

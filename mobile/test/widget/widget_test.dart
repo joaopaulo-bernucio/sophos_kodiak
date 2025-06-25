@@ -8,7 +8,6 @@ void main() {
     testWidgets('App deve inicializar sem erros', (WidgetTester tester) async {
       await tester.pumpWidget(const App());
       await WidgetTestHelpers.pumpAndSettle(tester);
-
       expect(find.byType(MaterialApp), findsOneWidget);
       expect(find.text('SOPHOS'), findsOneWidget);
       expect(find.text('KODIAK'), findsOneWidget);
@@ -18,7 +17,6 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const App());
-
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.title, equals('Sophos Kodiak'));
       expect(materialApp.debugShowCheckedModeBanner, isFalse);

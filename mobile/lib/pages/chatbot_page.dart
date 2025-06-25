@@ -9,6 +9,12 @@ import '../services/message_service.dart';
 import '../models/chat_message.dart';
 import 'chat_history_page.dart';
 
+class CancelRequestException implements Exception {
+  const CancelRequestException();
+}
+
+enum ButtonState { disabled, send, cancel }
+
 class ChatbotPage extends StatefulWidget {
   final String? userName;
 
@@ -29,6 +35,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
   bool _isDropdownVisible = false;
   bool _isWaitingResponse = false;
   String? _currentUserName;
+  Completer<void>? _currentRequestCompleter;
 
   final List<Map<String, String>> _suggestions = [
     {'title': 'Quantos funcionários', 'subtitle': 'a empresa possui?'},
@@ -157,6 +164,8 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       isAnimating: false,
     );
 
+    _currentRequestCompleter = Completer<void>();
+
     setState(() {
       _messages.add(userMessage);
       _isWaitingResponse = true;
@@ -166,8 +175,14 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     _scrollToBottom();
 
     try {
-      final response = await _getResponseFromApi(text);
-      if (mounted) {
+      final response = await Future.any([
+        _getResponseFromApi(text),
+        _currentRequestCompleter!.future.then(
+          (_) => throw const CancelRequestException(),
+        ),
+      ]);
+
+      if (mounted && !_currentRequestCompleter!.isCompleted) {
         final botMessage = ChatMessage(
           text: response,
           isUser: false,
@@ -182,8 +197,14 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         _saveMessageToHistory(botMessage);
         _scrollToBottom();
       }
-    } on ApiException catch (apiError) {
+    } on CancelRequestException {
       if (mounted) {
+        setState(() {
+          _isWaitingResponse = false;
+        });
+      }
+    } on ApiException catch (apiError) {
+      if (mounted && !_currentRequestCompleter!.isCompleted) {
         final errorMessage = ChatMessage(
           text: '',
           isUser: false,
@@ -200,7 +221,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         _scrollToBottom();
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && !_currentRequestCompleter!.isCompleted) {
         final errorMessage = ChatMessage(
           text: '',
           isUser: false,
@@ -216,6 +237,8 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         });
         _scrollToBottom();
       }
+    } finally {
+      _currentRequestCompleter = null;
     }
   }
 
@@ -224,6 +247,16 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       await ChatHistoryService.saveMessage(message);
     } catch (e) {
       debugPrint('Erro ao salvar mensagem no histórico: $e');
+    }
+  }
+
+  void _cancelCurrentRequest() {
+    if (_currentRequestCompleter != null &&
+        !_currentRequestCompleter!.isCompleted) {
+      _currentRequestCompleter!.complete();
+      setState(() {
+        _isWaitingResponse = false;
+      });
     }
   }
 
@@ -248,20 +281,16 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
   Future<void> _handleHistoryCleared() async {
     try {
-      // Inicia uma nova sessão para garantir que a sessão atual também seja limpa
       ChatHistoryService.startNewSession();
 
-      // Limpa o estado local das mensagens
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
       });
 
-      // Adiciona novamente a mensagem de boas-vindas
       _addWelcomeMessage();
       _scrollToBottom();
 
-      // Mostra feedback visual de que o estado foi atualizado
       if (mounted) {
         MessageService.showSuccess(
           context,
@@ -270,7 +299,6 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Erro ao lidar com limpeza do histórico: $e');
-      // Em caso de erro, força a recriação do estado
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
@@ -281,18 +309,13 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
   Future<void> _checkHistoryState() async {
     try {
-      // Verifica se ainda há histórico disponível
       final hasHistory = await ChatHistoryService.hasHistory();
       final currentMessages =
           await ChatHistoryService.getCurrentSessionMessages();
 
-      // Se não há histórico mas temos mensagens locais (exceto a de boas-vindas)
-      // isso indica que o histórico foi limpo externamente
       if (!hasHistory && _messages.length > 1) {
         await _handleHistoryCleared();
-      }
-      // Se há mensagens no histórico que não estão no estado local, sincroniza
-      else if (currentMessages.length != _messages.length) {
+      } else if (currentMessages.length != _messages.length) {
         setState(() {
           _messages.clear();
           _messages.addAll(currentMessages);
@@ -526,7 +549,6 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                     ),
                   );
 
-                  // Se o histórico foi limpo, reinicia a conversa
                   if (result != null && result['historyCleared'] == true) {
                     await _handleHistoryCleared();
                   }
@@ -704,6 +726,16 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
   Widget _buildInputArea() {
     final hasText = _messageController.text.trim().isNotEmpty;
+
+    ButtonState buttonState;
+    if (_isWaitingResponse) {
+      buttonState = ButtonState.cancel;
+    } else if (hasText) {
+      buttonState = ButtonState.send;
+    } else {
+      buttonState = ButtonState.disabled;
+    }
+
     return Row(
       children: [
         Expanded(
@@ -743,39 +775,57 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                     onChanged: (value) => setState(() {}),
                     onTap: _scrollToBottom,
                     onSubmitted: (_) =>
-                        _messageController.text.trim().isNotEmpty
-                        ? _sendMessage()
-                        : null,
+                        buttonState == ButtonState.send ? _sendMessage() : null,
+                    enabled: !_isWaitingResponse,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: hasText
-                        ? AppColors.sendButtonBackground
-                        : AppColors.elementsBackground,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: hasText ? _sendMessage : null,
-                      child: Icon(
-                        Icons.arrow_upward_rounded,
-                        color: hasText
-                            ? AppColors.sendButtonIcon
-                            : AppColors.textSecondary,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
+                _buildSendButton(buttonState),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSendButton(ButtonState state) {
+    Color backgroundColor;
+    Color iconColor;
+    IconData icon;
+    VoidCallback? onTap;
+
+    switch (state) {
+      case ButtonState.disabled:
+        backgroundColor = AppColors.elementsBackground;
+        iconColor = AppColors.textSecondary;
+        icon = Icons.arrow_upward_rounded;
+        onTap = null;
+        break;
+      case ButtonState.send:
+        backgroundColor = AppColors.sendButtonBackground;
+        iconColor = AppColors.sendButtonIcon;
+        icon = Icons.arrow_upward_rounded;
+        onTap = _sendMessage;
+        break;
+      case ButtonState.cancel:
+        backgroundColor = AppColors.error;
+        iconColor = Colors.white;
+        icon = Icons.stop_rounded;
+        onTap = _cancelCurrentRequest;
+        break;
+    }
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
+      child: Center(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Icon(icon, color: iconColor, size: 28),
+        ),
+      ),
     );
   }
 }

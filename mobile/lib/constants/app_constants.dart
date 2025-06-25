@@ -17,6 +17,17 @@ class AppColors {
   static const Color error = Color(0xFFFF3333);
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);
+
+  // Cores específicas para mensagens contextuais
+  static const Color errorBackground = Color(0xFF4A1A1A);
+  static const Color errorBorder = Color(0xFFFF6B6B);
+  static const Color successBackground = Color(0xFF1A3A1A);
+  static const Color successBorder = Color(0xFF6BCF7F);
+  static const Color warningBackground = Color(0xFF3A2A1A);
+  static const Color warningBorder = Color(0xFFFFB74D);
+  static const Color infoBackground = Color(0xFF1A2A3A);
+  static const Color infoBorder = Color(0xFF64B5F6);
+  static const Color info = Color(0xFF2196F3);
 }
 
 class AppTextStyles {
@@ -60,6 +71,21 @@ class AppTextStyles {
     fontWeight: FontWeight.w800,
     color: AppColors.primaryDark,
   );
+
+  // Estilos específicos para mensagens contextuais
+  static const TextStyle messageTitle = TextStyle(
+    fontFamily: 'Roboto',
+    color: AppColors.textPrimary,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+  );
+
+  static const TextStyle messageContent = TextStyle(
+    fontFamily: 'Roboto',
+    color: AppColors.textPrimary,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+  );
 }
 
 class AppDimensions {
@@ -69,4 +95,9 @@ class AppDimensions {
 
   static const double borderRadius = 24.0;
   static const double loginBorderRadius = 12.0;
+
+  // Dimensões específicas para mensagens
+  static const double messageRadius = 16.0;
+  static const double messagePadding = 16.0;
+  static const double messageIconSize = 24.0;
 }

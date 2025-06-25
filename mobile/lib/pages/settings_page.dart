@@ -3,6 +3,7 @@ import 'package:logger/logger.dart';
 import 'package:sophos_kodiak/constants/app_constants.dart';
 import 'package:sophos_kodiak/pages/login_page.dart';
 import 'package:sophos_kodiak/services/user_storage_service.dart';
+import 'package:sophos_kodiak/services/message_service.dart';
 
 class SettingsPage extends StatefulWidget {
   final String cnpj;
@@ -56,29 +57,23 @@ class _SettingsPageState extends State<SettingsPage> {
             _currentUserName = newName.trim();
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nome atualizado com sucesso!'),
-              backgroundColor: Colors.green,
-            ),
+          MessageService.showSuccess(
+            context,
+            message: 'Nome atualizado com sucesso!',
           );
         } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro ao atualizar nome. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
+          MessageService.showError(
+            context,
+            message: 'Erro ao atualizar nome. Tente novamente.',
           );
         }
       } catch (e) {
         _logger.e('Error updating user name', error: e);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro ao atualizar nome. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
+          MessageService.showError(
+            context,
+            message: 'Erro ao atualizar nome. Tente novamente.',
           );
         }
       }

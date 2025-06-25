@@ -153,6 +153,16 @@ class ChatHistoryService {
       _logger.e('Erro ao remover ID de sessão: $e');
     }
   }
+
+  static Future<bool> hasHistory() async {
+    try {
+      final sessions = await getAllSessions();
+      return sessions.isNotEmpty;
+    } catch (e) {
+      _logger.e('Erro ao verificar se há histórico: $e');
+      return false;
+    }
+  }
 }
 
 class ChatSession {

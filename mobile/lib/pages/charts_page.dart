@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../constants/app_constants.dart';
 import '../services/api_service.dart';
+import '../services/message_service.dart';
 
 class ChartsPage extends StatefulWidget {
   const ChartsPage({super.key});
@@ -117,29 +118,11 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   }
 
   void _mostrarErro(String mensagem) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(mensagem)),
-            TextButton(
-              onPressed: _carregarDados,
-              child: const Text(
-                'Tentar Novamente',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.error,
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-      ),
+    MessageService.showError(
+      context,
+      message: mensagem,
+      title: 'Erro ao carregar dados',
+      duration: const Duration(seconds: 6),
     );
   }
 

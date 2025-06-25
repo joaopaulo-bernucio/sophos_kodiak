@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../models/chat_message.dart';
 import '../services/chat_history_service.dart';
+import '../services/message_service.dart';
 
 class ChatHistoryPage extends StatefulWidget {
   const ChatHistoryPage({super.key});
@@ -81,28 +82,24 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
       if (success) {
         await _loadHistory();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Histórico limpo com sucesso'),
-              backgroundColor: AppColors.success,
-            ),
+          MessageService.showSuccess(
+            context,
+            message: 'Histórico limpo com sucesso',
           );
+          // Notifica a página anterior que o histórico foi limpo
+          Navigator.of(context).pop({'historyCleared': true});
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro ao limpar histórico'),
-              backgroundColor: AppColors.error,
-            ),
+          MessageService.showError(
+            context,
+            message: 'Erro ao limpar histórico',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e'), backgroundColor: AppColors.error),
-        );
+        MessageService.showError(context, message: 'Erro: $e');
       }
     }
   }

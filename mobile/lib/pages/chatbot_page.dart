@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/user_storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/chat_history_service.dart';
+import '../services/message_service.dart';
 import '../models/chat_message.dart';
 import 'chat_history_page.dart';
 
@@ -72,6 +73,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       _loadCurrentUserName();
+      _checkHistoryState();
     }
   }
 
@@ -225,6 +227,85 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _startNewConversation() async {
+    try {
+      ChatHistoryService.startNewSession();
+      setState(() {
+        _messages.clear();
+        _isWaitingResponse = false;
+      });
+      _addWelcomeMessage();
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('Erro ao iniciar nova conversa: $e');
+      setState(() {
+        _messages.clear();
+        _isWaitingResponse = false;
+      });
+      _addWelcomeMessage();
+    }
+  }
+
+  Future<void> _handleHistoryCleared() async {
+    try {
+      // Inicia uma nova sessão para garantir que a sessão atual também seja limpa
+      ChatHistoryService.startNewSession();
+
+      // Limpa o estado local das mensagens
+      setState(() {
+        _messages.clear();
+        _isWaitingResponse = false;
+      });
+
+      // Adiciona novamente a mensagem de boas-vindas
+      _addWelcomeMessage();
+      _scrollToBottom();
+
+      // Mostra feedback visual de que o estado foi atualizado
+      if (mounted) {
+        MessageService.showSuccess(
+          context,
+          message: 'Conversa reiniciada - histórico foi limpo',
+        );
+      }
+    } catch (e) {
+      debugPrint('Erro ao lidar com limpeza do histórico: $e');
+      // Em caso de erro, força a recriação do estado
+      setState(() {
+        _messages.clear();
+        _isWaitingResponse = false;
+      });
+      _addWelcomeMessage();
+    }
+  }
+
+  Future<void> _checkHistoryState() async {
+    try {
+      // Verifica se ainda há histórico disponível
+      final hasHistory = await ChatHistoryService.hasHistory();
+      final currentMessages =
+          await ChatHistoryService.getCurrentSessionMessages();
+
+      // Se não há histórico mas temos mensagens locais (exceto a de boas-vindas)
+      // isso indica que o histórico foi limpo externamente
+      if (!hasHistory && _messages.length > 1) {
+        await _handleHistoryCleared();
+      }
+      // Se há mensagens no histórico que não estão no estado local, sincroniza
+      else if (currentMessages.length != _messages.length) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(currentMessages);
+        });
+        if (currentMessages.isEmpty) {
+          _addWelcomeMessage();
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao verificar estado do histórico: $e');
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -250,11 +331,9 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('Erro ao fazer logout: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao fazer logout, mas você foi desconectado'),
-            backgroundColor: AppColors.warning,
-          ),
+        MessageService.showWarning(
+          context,
+          message: 'Erro ao fazer logout, mas você foi desconectado',
         );
         Navigator.of(context).pushReplacementNamed('/login');
       }
@@ -413,7 +492,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         color: AppColors.elementsBackground,
         child: Container(
-          width: 180,
+          width: 200,
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -439,21 +518,26 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
               _buildDropdownItem(
                 icon: Icons.history,
                 text: 'Histórico',
-                onTap: () {
+                onTap: () async {
                   setState(() => _isDropdownVisible = false);
-                  Navigator.of(context).push(
+                  final result = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const ChatHistoryPage(),
                     ),
                   );
+
+                  // Se o histórico foi limpo, reinicia a conversa
+                  if (result != null && result['historyCleared'] == true) {
+                    await _handleHistoryCleared();
+                  }
                 },
               ),
               _buildDropdownItem(
-                icon: Icons.notifications,
-                text: 'Notificações',
-                onTap: () {
+                icon: Icons.add_comment,
+                text: 'Nova Conversa',
+                onTap: () async {
                   setState(() => _isDropdownVisible = false);
-                  // TODO: Implementar notificações
+                  await _startNewConversation();
                 },
               ),
               const Divider(color: Color(0xFF8A8A8A), height: 1),

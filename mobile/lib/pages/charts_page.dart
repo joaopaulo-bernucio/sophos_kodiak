@@ -19,15 +19,21 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _refreshController;
   late Animation<double> _refreshAnimation;
+
+  // Dados dos gráficos
   List<Map<String, dynamic>> _vendasData = [];
   List<Map<String, dynamic>> _funcionariosData = [];
   List<Map<String, dynamic>> _projetosData = [];
   List<Map<String, dynamic>> _receitaData = [];
+  Map<String, dynamic> _metricasGerais = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+    ); // Aumentando para 4 abas
     _refreshController = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
@@ -70,14 +76,16 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         _apiService.buscarFuncionariosPorDepartamento(),
         _apiService.buscarProjetosPorStatus(),
         _apiService.buscarReceitaPorCliente(),
+        _apiService.buscarMetricasGerais(),
       ]);
 
       if (mounted) {
         setState(() {
-          _vendasData = results[0];
-          _funcionariosData = results[1];
-          _projetosData = results[2];
-          _receitaData = results[3];
+          _vendasData = results[0] as List<Map<String, dynamic>>;
+          _funcionariosData = results[1] as List<Map<String, dynamic>>;
+          _projetosData = results[2] as List<Map<String, dynamic>>;
+          _receitaData = results[3] as List<Map<String, dynamic>>;
+          _metricasGerais = results[4] as Map<String, dynamic>;
         });
       }
     } catch (e) {
@@ -139,7 +147,7 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
-      title: const Text('Relatórios e Gráficos', style: AppTextStyles.title),
+      title: Text('Dashboard', style: AppTextStyles.title),
       centerTitle: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
@@ -184,9 +192,10 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         indicatorColor: AppColors.primary,
         indicatorWeight: 3,
         tabs: const [
+          Tab(icon: Icon(Icons.dashboard), text: 'Visão Geral'),
           Tab(icon: Icon(Icons.trending_up), text: 'Vendas'),
-          Tab(icon: Icon(Icons.people), text: 'Funcionários'),
           Tab(icon: Icon(Icons.work), text: 'Projetos'),
+          Tab(icon: Icon(Icons.group), text: 'Equipe'),
         ],
       ),
     );
@@ -215,9 +224,10 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
     return TabBarView(
       controller: _tabController,
       children: [
+        _VisaoGeralTab(metricasGerais: _metricasGerais),
         _VendasTab(vendasData: _vendasData),
-        _FuncionariosTab(funcionariosData: _funcionariosData),
         _ProjetosTab(projetosData: _projetosData, receitaData: _receitaData),
+        _FuncionariosTab(funcionariosData: _funcionariosData),
       ],
     );
   }
@@ -266,24 +276,29 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.elementsBackground,
-        title: const Text('Sobre os Gráficos', style: AppTextStyles.title),
+        title: const Text('Sobre o Dashboard', style: AppTextStyles.title),
         content: const SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Vendas: Mostra o total de vendas por mês',
+                'Visão Geral: Métricas consolidadas e performance executiva',
                 style: AppTextStyles.primaryText,
               ),
               SizedBox(height: 8),
               Text(
-                'Funcionários: Distribuição por departamento',
+                'Vendas: Análise temporal de vendas com gráficos de barras',
                 style: AppTextStyles.primaryText,
               ),
               SizedBox(height: 8),
               Text(
                 'Projetos: Status dos projetos e receita por cliente',
+                style: AppTextStyles.primaryText,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Equipe: Distribuição por departamento com orçamentos',
                 style: AppTextStyles.primaryText,
               ),
             ],
@@ -303,6 +318,255 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
   }
 }
 
+// ===============================
+// NOVA ABA: VISÃO GERAL
+// ===============================
+class _VisaoGeralTab extends StatelessWidget {
+  final Map<String, dynamic> metricasGerais;
+
+  const _VisaoGeralTab({required this.metricasGerais});
+
+  @override
+  Widget build(BuildContext context) {
+    if (metricasGerais.isEmpty) {
+      return const _EmptyChart(
+        message: 'Nenhuma métrica disponível',
+        icon: Icons.analytics_outlined,
+      );
+    }
+
+    final novosClientes = (metricasGerais['novos_clientes_ano'] ?? 0).toInt();
+    final projetosAtivos = (metricasGerais['projetos_ativos'] ?? 0).toInt();
+    final totalFuncionarios = (metricasGerais['total_funcionarios'] ?? 0)
+        .toInt();
+    final vendasMesAtual = (metricasGerais['vendas_mes_atual'] ?? 0).toDouble();
+    final vendasAnoAtual = (metricasGerais['vendas_ano_atual'] ?? 0).toDouble();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.1),
+                  AppColors.primary.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.dashboard, color: AppColors.primary, size: 32),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Dashboard Executivo',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Visão consolidada do desempenho da empresa',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Métricas principais em grid
+          _buildMetricasGrid(
+            novosClientes,
+            projetosAtivos,
+            totalFuncionarios,
+            vendasMesAtual,
+            vendasAnoAtual,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Comparativo de vendas
+          _buildComparativoVendas(vendasMesAtual, vendasAnoAtual),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricasGrid(
+    int novosClientes,
+    int projetosAtivos,
+    int totalFuncionarios,
+    double vendasMesAtual,
+    double vendasAnoAtual,
+  ) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 1.2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      children: [
+        _MetricCard(
+          title: 'Novos Clientes',
+          value: novosClientes.toString(),
+          change: 'Este ano',
+          isPositive: true,
+          icon: Icons.person_add,
+          color: AppColors.success,
+        ),
+        _MetricCard(
+          title: 'Projetos Ativos',
+          value: projetosAtivos.toString(),
+          change: 'Em andamento',
+          isPositive: true,
+          icon: Icons.work,
+          color: AppColors.primary,
+        ),
+        _MetricCard(
+          title: 'Funcionários',
+          value: totalFuncionarios.toString(),
+          change: 'Total ativo',
+          isPositive: true,
+          icon: Icons.group,
+          color: AppColors.info,
+        ),
+        _MetricCard(
+          title: 'Vendas do Mês',
+          value: _formatarMoeda(vendasMesAtual),
+          change: 'Mês atual',
+          isPositive: true,
+          icon: Icons.trending_up,
+          color: AppColors.warning,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparativoVendas(double vendasMes, double vendasAno) {
+    final mediaMensal = vendasAno / 12;
+    final performanceMes = vendasMes / mediaMensal;
+    final isAcimaDaMedia = performanceMes > 1;
+
+    return _ChartContainer(
+      title: 'Performance de Vendas',
+      subtitle: 'Comparativo do mês atual com a média anual',
+      child: Container(
+        height: 200,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildBarraPerformance(
+                      'Mês Atual',
+                      vendasMes,
+                      isAcimaDaMedia ? AppColors.success : AppColors.warning,
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: _buildBarraPerformance(
+                      'Média Mensal',
+                      mediaMensal,
+                      AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isAcimaDaMedia ? Icons.trending_up : Icons.trending_down,
+                  color: isAcimaDaMedia ? AppColors.success : AppColors.warning,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${(performanceMes * 100).toStringAsFixed(1)}% da média',
+                  style: TextStyle(
+                    color: isAcimaDaMedia
+                        ? AppColors.success
+                        : AppColors.warning,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBarraPerformance(String label, double valor, Color cor) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          _formatarMoeda(valor),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            width: 40,
+            decoration: BoxDecoration(
+              color: cor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  String _formatarMoeda(double valor) {
+    if (valor >= 1000000) {
+      return 'R\$ ${(valor / 1000000).toStringAsFixed(1)}M';
+    } else if (valor >= 1000) {
+      return 'R\$ ${(valor / 1000).toStringAsFixed(1)}K';
+    }
+    return 'R\$ ${valor.toStringAsFixed(2)}';
+  }
+}
+
 class _VendasTab extends StatelessWidget {
   final List<Map<String, dynamic>> vendasData;
 
@@ -318,7 +582,11 @@ class _VendasTab extends StatelessWidget {
     }
 
     final totalVendas = _calcularTotalVendas();
+    final totalTransacoes = _calcularTotalTransacoes();
     final mediaVendas = totalVendas / vendasData.length;
+    final ticketMedio = totalTransacoes > 0
+        ? (totalVendas / totalTransacoes).toDouble()
+        : 0.0;
     final melhorMes = _encontrarMelhorMes();
 
     return SingleChildScrollView(
@@ -340,11 +608,35 @@ class _VendasTab extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _MetricCard(
+                  title: 'Transações',
+                  value: totalTransacoes.toString(),
+                  change: 'Total',
+                  isPositive: true,
+                  icon: Icons.receipt,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
                   title: 'Média Mensal',
                   value: _formatarMoeda(mediaVendas),
                   change: '+8.2%',
                   isPositive: true,
                   icon: Icons.trending_up,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  title: 'Ticket Médio',
+                  value: _formatarMoeda(ticketMedio),
+                  change: 'Por venda',
+                  isPositive: true,
+                  icon: Icons.analytics,
                 ),
               ),
             ],
@@ -363,6 +655,12 @@ class _VendasTab extends StatelessWidget {
   double _calcularTotalVendas() {
     return vendasData.fold(0.0, (total, item) {
       return total + ((item['total_vendas'] ?? 0) as num).toDouble();
+    });
+  }
+
+  int _calcularTotalTransacoes() {
+    return vendasData.fold(0, (total, item) {
+      return total + ((item['num_vendas'] ?? 0) as int);
     });
   }
 
@@ -406,6 +704,10 @@ class _FuncionariosTab extends StatelessWidget {
       return total + ((item['quantidade'] ?? 0) as int);
     });
 
+    final totalOrcamento = funcionariosData.fold(0.0, (total, item) {
+      return total + ((item['orcamento'] ?? 0) as num).toDouble();
+    });
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
@@ -425,11 +727,11 @@ class _FuncionariosTab extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _MetricCard(
-                  title: 'Departamentos',
-                  value: funcionariosData.length.toString(),
-                  change: 'Ativos',
+                  title: 'Orçamento Total',
+                  value: _formatarMoeda(totalOrcamento),
+                  change: 'Departamentos',
                   isPositive: true,
-                  icon: Icons.business,
+                  icon: Icons.account_balance_wallet,
                 ),
               ),
             ],
@@ -437,11 +739,26 @@ class _FuncionariosTab extends StatelessWidget {
           const SizedBox(height: 20),
           _ChartContainer(
             title: 'Funcionários por Departamento',
+            subtitle: 'Distribuição da equipe e orçamentos',
             child: _FuncionariosPieChart(dados: funcionariosData),
+          ),
+          const SizedBox(height: 20),
+          _ChartContainer(
+            title: 'Departamentos Detalhados',
+            child: _DepartamentosDetalhes(dados: funcionariosData),
           ),
         ],
       ),
     );
+  }
+
+  String _formatarMoeda(double valor) {
+    if (valor >= 1000000) {
+      return 'R\$ ${(valor / 1000000).toStringAsFixed(1)}M';
+    } else if (valor >= 1000) {
+      return 'R\$ ${(valor / 1000).toStringAsFixed(1)}K';
+    }
+    return 'R\$ ${valor.toStringAsFixed(2)}';
   }
 }
 
@@ -464,6 +781,10 @@ class _ProjetosTab extends StatelessWidget {
       return total + ((item['quantidade'] ?? 0) as int);
     });
 
+    final valorTotalProjetos = projetosData.fold(0.0, (total, item) {
+      return total + ((item['valor_total'] ?? 0) as num).toDouble();
+    });
+
     final receitaTotal = receitaData.fold(0.0, (total, item) {
       return total + ((item['receita'] ?? 0) as num).toDouble();
     });
@@ -473,6 +794,7 @@ class _ProjetosTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Primeira linha de métricas
           Row(
             children: [
               Expanded(
@@ -487,11 +809,37 @@ class _ProjetosTab extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _MetricCard(
-                  title: 'Receita Total',
+                  title: 'Orçamento Total',
+                  value: _formatarMoeda(valorTotalProjetos),
+                  change: 'Projetos',
+                  isPositive: true,
+                  icon: Icons.account_balance,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Segunda linha de métricas
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  title: 'Receita Efetiva',
                   value: _formatarMoeda(receitaTotal),
                   change: '+22.1%',
                   isPositive: true,
                   icon: Icons.attach_money,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  title: 'Taxa de Conversão',
+                  value:
+                      '${valorTotalProjetos > 0 ? ((receitaTotal / valorTotalProjetos) * 100).toStringAsFixed(1) : '0'}%',
+                  change: 'Orçado vs Real',
+                  isPositive: receitaTotal > valorTotalProjetos * 0.8,
+                  icon: Icons.trending_up,
                 ),
               ),
             ],
@@ -500,6 +848,7 @@ class _ProjetosTab extends StatelessWidget {
           if (projetosData.isNotEmpty)
             _ChartContainer(
               title: 'Projetos por Status',
+              subtitle: 'Distribuição e valores orçados',
               child: _ProjetosBarChart(dados: projetosData),
             ),
           if (projetosData.isNotEmpty && receitaData.isNotEmpty)
@@ -507,6 +856,7 @@ class _ProjetosTab extends StatelessWidget {
           if (receitaData.isNotEmpty)
             _ChartContainer(
               title: 'Top Clientes por Receita',
+              subtitle: 'Ranking dos clientes mais lucrativos',
               child: _ReceitaList(dados: receitaData),
             ),
         ],
@@ -530,6 +880,7 @@ class _MetricCard extends StatelessWidget {
   final String change;
   final bool isPositive;
   final IconData icon;
+  final Color? color;
 
   const _MetricCard({
     required this.title,
@@ -537,26 +888,26 @@ class _MetricCard extends StatelessWidget {
     required this.change,
     required this.isPositive,
     required this.icon,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? AppColors.primary;
+
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         color: AppColors.elementsBackground,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          width: 1,
-        ),
+        border: Border.all(color: iconColor.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.primary, size: 20),
+              Icon(icon, color: iconColor, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1227,5 +1578,130 @@ class _ReceitaList extends StatelessWidget {
     if (total == 0) return '0%';
     final porcentagem = (receita / total * 100).toStringAsFixed(1);
     return '$porcentagem% do total';
+  }
+}
+
+class _DepartamentosDetalhes extends StatelessWidget {
+  final List<Map<String, dynamic>> dados;
+
+  const _DepartamentosDetalhes({required this.dados});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: dados.map((departamento) {
+        final nome = departamento['departamento']?.toString() ?? 'N/A';
+        final quantidade = (departamento['quantidade'] ?? 0).toInt();
+        final orcamento = (departamento['orcamento'] ?? 0).toDouble();
+        final orcamentoPorFuncionario = quantidade > 0
+            ? orcamento / quantidade
+            : 0.0;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      nome,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$quantidade pessoas',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Orçamento Total',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        _formatarMoeda(orcamento),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Por Funcionário',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        _formatarMoeda(orcamentoPorFuncionario),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatarMoeda(double valor) {
+    if (valor >= 1000000) {
+      return 'R\$ ${(valor / 1000000).toStringAsFixed(1)}M';
+    } else if (valor >= 1000) {
+      return 'R\$ ${(valor / 1000).toStringAsFixed(1)}K';
+    }
+    return 'R\$ ${valor.toStringAsFixed(2)}';
   }
 }

@@ -215,6 +215,54 @@ class ApiService {
   Future<List<Map<String, dynamic>>> buscarReceitaPorCliente() =>
       _getList('/api/graphs/receita_por_cliente', 'Erro ao buscar receita');
 
+  Future<Map<String, dynamic>> buscarMetricasGerais() async {
+    try {
+      final url = '$_baseUrl/api/graphs/metricas_gerais';
+      final response = await _client
+          .get(Uri.parse(url), headers: {'Accept': 'application/json'})
+          .timeout(_timeout);
+
+      if (response.statusCode == 404) {
+        throw ApiException.serverError('Endpoint não encontrado', 404);
+      }
+      if (response.statusCode != 200) {
+        String? serverMsg;
+        try {
+          serverMsg =
+              (jsonDecode(response.body) as Map<String, dynamic>)['error'];
+        } catch (_) {}
+        throw ApiException.serverError(serverMsg, response.statusCode);
+      }
+
+      final decoded = jsonDecode(response.body);
+      final raw = (decoded is Map && decoded.containsKey('data'))
+          ? decoded['data']
+          : decoded;
+
+      // Métricas gerais retorna um único objeto
+      final metricas = (raw as List).first as Map<String, dynamic>;
+
+      // Processar valores numéricos
+      metricas.forEach((key, value) {
+        dynamic newValue = value;
+        if (value is String) {
+          final num? parsed = num.tryParse(value);
+          if (parsed != null) newValue = parsed;
+        }
+        if (newValue is num) {
+          if (newValue is double && newValue == newValue.toInt()) {
+            newValue = newValue.toInt();
+          }
+        }
+        metricas[key] = newValue;
+      });
+
+      return metricas;
+    } catch (e) {
+      throw _handleConnectionError(e);
+    }
+  }
+
   Future<bool> verificarSaude() async {
     try {
       final response = await _client

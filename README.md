@@ -1,5 +1,3 @@
-# Sophos Kodiak
-
 **Assistente Virtual Inteligente para Análise de Dados e Recursos Empresariais**
 
 Sophos Kodiak é uma solução completa que combina um aplicativo móvel Flutter com um backend Python robusto para fornecer análises empresariais avançadas, visualizações de dados interativas e comunicação inteligente através de IA.
@@ -190,13 +188,5 @@ Ambos os ambientes suportam integração com **GitHub Actions** para CI/CD autom
 ## 📄 Licença
 
 Este projeto está licenciado sob a [MIT License](LICENSE).
-
-## 📞 Suporte
-
-Para dúvidas ou suporte, entre em contato através:
-- Issues do GitHub
-- Email: [seu-email@exemplo.com]
-
----
 
 **Sophos Kodiak** - Inteligência empresarial ao alcance das suas mãos 🚀

@@ -9,7 +9,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from unittest.mock import Mock
 
-# Constantes da aplicação
 CACHE_DURATION = 3600
 GEMINI_TIMEOUT = 30
 GEMINI_MAX_RETRIES = 3
@@ -72,21 +71,45 @@ if spacy:
             raise RuntimeError("Modelo spaCy pt_core_news_sm não encontrado")
         else:
             logging.warning("Usando mock do spaCy para testes")
-            nlp = Mock()
+
+            mock_token = Mock()
+            mock_token.lemma_ = 'test'
+            mock_token.is_alpha = True
+            mock_token.is_stop = False
+            mock_token.text = 'test'
+
+            mock_entity = Mock()
+            mock_entity.text = 'test'
+
             mock_doc = Mock()
             mock_doc.configure_mock(**{
-                '__iter__': lambda x: iter([]),
+                '__iter__': lambda x: iter([mock_token]),
                 'text': 'test',
+                'ents': [mock_entity]
             })
+
+            nlp = Mock()
             nlp.return_value = mock_doc
 else:
     logging.warning("spaCy não disponível, usando mock")
-    nlp = Mock()
+
+    mock_token = Mock()
+    mock_token.lemma_ = 'test'
+    mock_token.is_alpha = True
+    mock_token.is_stop = False
+    mock_token.text = 'test'
+
+    mock_entity = Mock()
+    mock_entity.text = 'test'
+
     mock_doc = Mock()
     mock_doc.configure_mock(**{
-        '__iter__': lambda x: iter([]),
+        '__iter__': lambda x: iter([mock_token]),
         'text': 'test',
+        'ents': [mock_entity]
     })
+
+    nlp = Mock()
     nlp.return_value = mock_doc
 
 def create_app(config=None):
@@ -347,33 +370,41 @@ def extrair_lemmas(texto):
             return set()
 
 def selecionar_queries(pergunta):
-    lemmas_pergunta = extrair_lemmas(pergunta)
-    matches = []
-    for mapping in query_manager.mappings:
-        chaves_lematizadas = set()
-        for frase in mapping.keywords:
-            doc_frase = nlp(frase.lower())
-            for token in doc_frase:
-                if token.is_alpha and not token.is_stop:
-                    chaves_lematizadas.add(token.lemma_)
-        if chaves_lematizadas & lemmas_pergunta:
-            matches.append((mapping.query_id, mapping.sql_query))
-    return matches
+    try:
+        lemmas_pergunta = extrair_lemmas(pergunta)
+        matches = []
+        for mapping in query_manager.mappings:
+            chaves_lematizadas = set()
+            for frase in mapping.keywords:
+                doc_frase = nlp(frase.lower())
+                for token in doc_frase:
+                    if token.is_alpha and not token.is_stop:
+                        chaves_lematizadas.add(token.lemma_)
+            if chaves_lematizadas & lemmas_pergunta:
+                matches.append((mapping.query_id, mapping.sql_query))
+        return matches
+    except Exception as e:
+        logging.warning(f"Erro em selecionar_queries: {e}")
+        return []
 
 def gerar_query_dinamica(pergunta):
-    doc = nlp(pergunta)
-    ents = [ent.text.lower() for ent in doc.ents]
-    if 'cliente' in ents and 'promissor' in ents:
-        sql = (
-            "SELECT c.nome_empresa, SUM(v.valor) AS total_vendido "
-            "FROM clientes c "
-            "JOIN projetos p ON p.cliente_id = c.id "
-            "JOIN vendas v ON v.projeto_id = p.id "
-            "GROUP BY c.nome_empresa "
-            "ORDER BY total_vendido DESC LIMIT 1;"
-        )
-        return [('cliente-promissor', sql)]
-    return []
+    try:
+        doc = nlp(pergunta)
+        ents = [ent.text.lower() for ent in doc.ents]
+        if 'cliente' in ents and 'promissor' in ents:
+            sql = (
+                "SELECT c.nome_empresa, SUM(v.valor) AS total_vendido "
+                "FROM clientes c "
+                "JOIN projetos p ON p.cliente_id = c.id "
+                "JOIN vendas v ON v.projeto_id = p.id "
+                "GROUP BY c.nome_empresa "
+                "ORDER BY total_vendido DESC LIMIT 1;"
+            )
+            return [('cliente-promissor', sql)]
+        return []
+    except Exception as e:
+        logging.warning(f"Erro em gerar_query_dinamica: {e}")
+        return []
 
 def executar_query(query_sql, params=None):
     conn = None
@@ -659,13 +690,28 @@ def responder_pergunta():
     try:
         historico_conversa.append(f"Usuário: {pergunta}")
         consultas = selecionar_queries(pergunta)
+
+        if not isinstance(consultas, list):
+            consultas = []
+
         if not consultas:
-            consultas = gerar_query_dinamica(pergunta)
-        sql_strings = [sql for (_label, sql) in consultas]
+            consultas_dinamicas = gerar_query_dinamica(pergunta)
+            if isinstance(consultas_dinamicas, list):
+                consultas = consultas_dinamicas
+            else:
+                consultas = []
+
+        sql_strings = []
+        if consultas and isinstance(consultas, list):
+            try:
+                sql_strings = [sql for (_label, sql) in consultas if sql]
+            except (ValueError, TypeError):
+                sql_strings = []
+
         sql_concat = ";\n".join(sql_strings) if sql_strings else None
         conn_disponivel = get_db_connection() is not None
         if not conn_disponivel:
-            resposta_sem_banco = ("Olá! Sou o Sophos, assistente virtual da Conttrotech. "
+            resposta_sem_banco = ("Olá! Sou o Sophos Kodiak, assistente virtual inteligente e profissional especializado em análise de dados e recursos empresariais. "
                                 "Atualmente estou com dificuldades para acessar os dados específicos, "
                                 "mas posso ajudá-lo com informações gerais sobre nossa agência de marketing. "
                                 "Como posso ajudá-lo?")
@@ -683,17 +729,21 @@ def responder_pergunta():
             })
         info_texto = ''
         sucesso_sql = False
-        if consultas:
+        if consultas and isinstance(consultas, list):
             todas_ok = True
-            for label, sql in consultas:
-                logging.info(f"Executando [{label}]: {sql}")
-                rows = executar_query(sql)
-                if rows is None or rows == []:
-                    todas_ok = False
-                else:
-                    sucesso_sql = True
-                info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
-            if not todas_ok:
+            try:
+                for label, sql in consultas:
+                    logging.info(f"Executando [{label}]: {sql}")
+                    rows = executar_query(sql)
+                    if rows is None or rows == []:
+                        todas_ok = False
+                    else:
+                        sucesso_sql = True
+                    info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
+                if not todas_ok:
+                    sucesso_sql = False
+            except (ValueError, TypeError) as e:
+                logging.warning(f"Erro ao processar consultas: {e}")
                 sucesso_sql = False
         else:
             info_texto = None
@@ -898,7 +948,7 @@ def metricas_gerais_legacy():
 
 def main():
     verificar_banco()
-    print("Sophos, assistente virtual da STOLF LTDA está pronto para responder às suas perguntas.")
+    print("Sophos Kodiak, assistente virtual inteligente e profissional especializado em análise de dados e recursos empresariais está pronto para responder às suas perguntas.")
     print("(Digite 'sair' ou 'exit' para encerrar.)\n")
     while True:
         try:
@@ -913,23 +963,42 @@ def main():
             break
         historico_conversa.append(f"Usuário: {pergunta}")
         consultas = selecionar_queries(pergunta)
+
+        if not isinstance(consultas, list):
+            consultas = []
+
         if not consultas:
-            consultas = gerar_query_dinamica(pergunta)
-        sql_strings = [sql for (_label, sql) in consultas]
+            consultas_dinamicas = gerar_query_dinamica(pergunta)
+            if isinstance(consultas_dinamicas, list):
+                consultas = consultas_dinamicas
+            else:
+                consultas = []
+
+        sql_strings = []
+        if consultas and isinstance(consultas, list):
+            try:
+                sql_strings = [sql for (_label, sql) in consultas if sql]
+            except (ValueError, TypeError):
+                sql_strings = []
+
         sql_concat = ";\n".join(sql_strings) if sql_strings else None
         info_texto = ''
         sucesso_sql = False
-        if consultas:
+        if consultas and isinstance(consultas, list):
             todas_ok = True
-            for label, sql in consultas:
-                logging.info(f"Executando [{label}]: {sql}")
-                rows = executar_query(sql)
-                if rows is None or rows == []:
-                    todas_ok = False
-                else:
-                    sucesso_sql = True
-                info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
-            if not todas_ok:
+            try:
+                for label, sql in consultas:
+                    logging.info(f"Executando [{label}]: {sql}")
+                    rows = executar_query(sql)
+                    if rows is None or rows == []:
+                        todas_ok = False
+                    else:
+                        sucesso_sql = True
+                    info_texto += f"Resultados ({label}):\n" + formatar_resultados(rows) + "\n"
+                if not todas_ok:
+                    sucesso_sql = False
+            except (ValueError, TypeError) as e:
+                logging.warning(f"Erro ao processar consultas: {e}")
                 sucesso_sql = False
         else:
             info_texto = None

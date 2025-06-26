@@ -12,11 +12,18 @@ permissions:
 
 env:
   PYTHON_VERSION: '3.11'
-  FLUTTER_VERSION: '3.32.4'
+  FLUTTER_VERSION: '3.32.3'
   POSTGRES_VERSION: '15.8'
-  # CI usa PostgreSQL local na porta 5432, produção usa Supabase na 6543
+  # CI sempre usa PostgreSQL local na porta 5432 para testes
   POSTGRES_PORT: '5432'
-  # Variáveis de produção (secrets)
+  # Configurações fixas para testes - NÃO usar secrets
+  CI_DB_HOST: 'localhost'
+  CI_DB_PORT: '5432'
+  CI_DB_NAME: 'test_db'
+  CI_DB_USER: 'postgres'
+  CI_DB_PASSWORD: 'postgres'
+  CI_DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/test_db'
+  # Variáveis de produção (secrets) - apenas para deploy
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   DB_NAME: ${{ secrets.DB_NAME }}
@@ -34,7 +41,7 @@ jobs:
   smoke-tests:
     name: 🚀 Smoke Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -107,10 +114,18 @@ jobs:
       if: matrix.component == 'backend'
       working-directory: ./backend
       env:
+        # FORÇAR uso do banco local de teste - NUNCA usar secrets em testes
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         GEMINI_API_KEY: ${{ env.GEMINI_API_KEY || 'test_key_for_ci' }}
         PYTHONPATH: ${{ github.workspace }}/backend
+        CI: true
+        GITHUB_ACTIONS: true
       run: pytest -m smoke -v --tb=short --maxfail=3
 
     # Frontend smoke tests
@@ -121,7 +136,8 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
-        cache-key: flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+        cache-key: flutter-smoke-${{ env.FLUTTER_VERSION }}-${{ runner.os }}
+        architecture: x64
 
     - name: Setup Java for Android
       if: matrix.component == 'frontend'
@@ -133,14 +149,32 @@ jobs:
 
     - name: Validate and get Flutter dependencies
       if: matrix.component == 'frontend'
+      timeout-minutes: 10
       run: |
+        # Verificar se Flutter foi instalado corretamente
+        echo "🔧 Verificando instalação do Flutter..."
+        flutter --version
+
         # Validar pubspec.yaml
+        echo "📋 Validando pubspec.yaml..."
         flutter pub deps --style=tree > /dev/null
         echo "✅ pubspec.yaml válido"
 
-        # Instalar dependências
-        flutter pub get
-        echo "✅ Dependências instaladas"
+        # Instalar dependências com retry em caso de falha
+        echo "📦 Instalando dependências..."
+        for i in {1..3}; do
+          if flutter pub get; then
+            echo "✅ Dependências instaladas com sucesso"
+            break
+          else
+            echo "⚠️ Tentativa $i falhou, tentando novamente..."
+            sleep 2
+            if [ $i -eq 3 ]; then
+              echo "❌ Falha ao instalar dependências após 3 tentativas"
+              exit 1
+            fi
+          fi
+        done
       working-directory: ./mobile
 
     - name: Analyze Flutter code
@@ -300,10 +334,18 @@ jobs:
     - name: Run comprehensive test suite
       working-directory: ./backend
       env:
+        # FORÇAR uso do banco local de teste - NUNCA usar secrets em testes
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
+        CI: true
+        GITHUB_ACTIONS: true
       run: |
         # Execute todos os testes principais com cobertura
         pytest \
@@ -346,7 +388,7 @@ jobs:
   comprehensive-flutter-tests:
     name: 📱 Comprehensive Flutter Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     needs: smoke-tests
 
     steps:
@@ -359,7 +401,8 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
-        cache-key: flutter-comprehensive-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+        cache-key: flutter-comprehensive-${{ env.FLUTTER_VERSION }}-${{ runner.os }}
+        architecture: x64
 
     - name: Setup Java for Android
       uses: actions/setup-java@v4
@@ -369,16 +412,34 @@ jobs:
         cache: 'gradle'
 
     - name: Validate and get Flutter dependencies
+      timeout-minutes: 10
       env:
         FLUTTER_TEST: true
       run: |
+        # Verificar se Flutter foi instalado corretamente
+        echo "🔧 Verificando instalação do Flutter..."
+        flutter --version
+
         # Validar pubspec.yaml
+        echo "📋 Validando pubspec.yaml..."
         flutter pub deps --style=tree > /dev/null
         echo "✅ pubspec.yaml válido"
 
-        # Instalar dependências
-        flutter pub get
-        echo "✅ Dependências instaladas"
+        # Instalar dependências com retry
+        echo "📦 Instalando dependências..."
+        for i in {1..3}; do
+          if flutter pub get; then
+            echo "✅ Dependências instaladas com sucesso"
+            break
+          else
+            echo "⚠️ Tentativa $i falhou, tentando novamente..."
+            sleep 2
+            if [ $i -eq 3 ]; then
+              echo "❌ Falha ao instalar dependências após 3 tentativas"
+              exit 1
+            fi
+          fi
+        done
 
         # Verificar arquivos de teste
         echo "📋 Arquivos de teste encontrados:"
@@ -528,10 +589,18 @@ jobs:
     - name: Run security tests
       working-directory: ./backend
       env:
+        # FORÇAR uso do banco local de teste - NUNCA usar secrets em testes
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        CI: true
+        GITHUB_ACTIONS: true
       run: |
         # Execute testes de segurança específicos
         pytest test/test_security.py -v --tb=short
@@ -628,10 +697,18 @@ jobs:
       if: github.event_name == 'pull_request'
       working-directory: ./backend
       env:
+        # FORÇAR uso do banco local de teste - NUNCA usar secrets em testes
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
+        CI: true
+        GITHUB_ACTIONS: true
       run: |
         # Execute testes de performance simples para baseline em PRs
         pytest test/performance/test_simple_performance.py -v --tb=short --maxfail=3
@@ -643,10 +720,18 @@ jobs:
       if: github.ref == 'refs/heads/main'
       working-directory: ./backend
       env:
+        # FORÇAR uso do banco local de teste - NUNCA usar secrets em testes
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
+        CI: true
+        GITHUB_ACTIONS: true
       run: |
         # Execute todos os testes de performance específicos
         pytest \
@@ -679,7 +764,7 @@ jobs:
   build-and-deploy:
     name: 🚀 Build & Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     needs: [comprehensive-tests, comprehensive-flutter-tests, security-scan]
     if: github.ref == 'refs/heads/main'
 
@@ -694,7 +779,8 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
-        cache-key: flutter-build-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+        cache-key: flutter-build-${{ env.FLUTTER_VERSION }}-${{ runner.os }}
+        architecture: x64
 
     - name: Setup Java for Android build
       uses: actions/setup-java@v4
@@ -704,25 +790,62 @@ jobs:
         cache: 'gradle'
 
     - name: Prepare Flutter build environment
+      timeout-minutes: 10
       run: |
-        # Instalar dependências
-        flutter pub get
+        # Verificar se Flutter foi instalado corretamente
+        echo "🔧 Verificando instalação do Flutter..."
+        flutter --version
+
+        # Instalar dependências com retry
+        echo "📦 Instalando dependências..."
+        for i in {1..3}; do
+          if flutter pub get; then
+            echo "✅ Dependências instaladas com sucesso"
+            break
+          else
+            echo "⚠️ Tentativa $i falhou, tentando novamente..."
+            sleep 2
+            if [ $i -eq 3 ]; then
+              echo "❌ Falha ao instalar dependências após 3 tentativas"
+              exit 1
+            fi
+          fi
+        done
 
         # Validar configuração de build
+        echo "🏥 Validando configuração de build..."
         flutter doctor -v
 
         # Verificar configuração do Android
         if [ -f "android/app/build.gradle" ]; then
           echo "✅ Configuração Android encontrada"
+        else
+          echo "⚠️ Configuração Android não encontrada"
         fi
       working-directory: ./mobile
 
     - name: Build Flutter APK
+      timeout-minutes: 15
       env:
         FLUTTER_BUILD: true
       run: |
         echo "🔨 Construindo APK de produção..."
-        flutter build apk --release --verbose
+
+        # Build com retry em caso de falha
+        for i in {1..2}; do
+          if flutter build apk --release --verbose; then
+            echo "✅ APK construído com sucesso na tentativa $i"
+            break
+          else
+            echo "⚠️ Tentativa $i falhou, limpando cache..."
+            flutter clean
+            flutter pub get
+            if [ $i -eq 2 ]; then
+              echo "❌ Falha na construção do APK após 2 tentativas"
+              exit 1
+            fi
+          fi
+        done
 
         # Verificar se o APK foi gerado
         if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then

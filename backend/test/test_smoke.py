@@ -60,8 +60,17 @@ class TestApplicationStartup:
 class TestDatabaseConnectivity:
 
     def test_database_connection_possible(self, env_vars):
+        """Testa se a conexão com o banco de dados de TESTE é possível"""
         try:
             import psycopg2
+            import os
+
+            # Debug das configurações de conexão
+            print(f"🔧 Tentando conectar em: {env_vars['DB_HOST']}:{env_vars['DB_PORT']}")
+            print(f"   Database: {env_vars['DB_NAME']}")
+            print(f"   User: {env_vars['DB_USER']}")
+            print(f"   CI Mode: {os.getenv('CI', 'false')}")
+            print(f"   GitHub Actions: {os.getenv('GITHUB_ACTIONS', 'false')}")
 
             conn = psycopg2.connect(
                 host=env_vars['DB_HOST'],
@@ -77,6 +86,7 @@ class TestDatabaseConnectivity:
             result = cur.fetchone()
 
             assert result[0] == 1, "Query básica falhou"
+            print("✅ Conexão com banco de teste bem-sucedida!")
 
             cur.close()
             conn.close()
@@ -84,6 +94,9 @@ class TestDatabaseConnectivity:
         except ImportError:
             pytest.skip("psycopg2 não disponível")
         except Exception as e:
+            print(f"❌ ERRO: Tentativa de conexão com {env_vars['DB_HOST']}:{env_vars['DB_PORT']}")
+            print(f"   Database: {env_vars['DB_NAME']}")
+            print(f"   VERIFICAR: Este deve ser o banco LOCAL de teste, não o de produção!")
             pytest.fail(f"Erro de conectividade com banco: {e}")
 
     def test_database_basic_tables_exist(self, env_vars):

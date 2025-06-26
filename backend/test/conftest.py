@@ -22,6 +22,15 @@ logging.basicConfig(level=logging.INFO)
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
+# Validação de ambiente para debug
+if os.getenv('CI') or os.getenv('GITHUB_ACTIONS'):
+    print("🔧 EXECUTANDO EM AMBIENTE CI/CD")
+    print(f"   DB_HOST atual: {os.getenv('DB_HOST', 'NÃO DEFINIDO')}")
+    print(f"   DATABASE_URL atual: {os.getenv('DATABASE_URL', 'NÃO DEFINIDO')}")
+    print("   ✅ Forçando uso de banco local de teste")
+else:
+    print("🏠 EXECUTANDO EM AMBIENTE LOCAL")
+
 def get_test_env_var(key, local_default, ci_default):
     if os.getenv('CI') or os.getenv('GITHUB_ACTIONS') or os.getenv('GITLAB_CI'):
         return os.getenv(key, ci_default)
@@ -119,15 +128,28 @@ def client(app):
 
 @pytest.fixture
 def env_vars():
-    return {
-        'DB_HOST': os.getenv('DB_HOST', 'localhost'),
-        'DB_PORT': os.getenv('DB_PORT', '6543'),
-        'DB_NAME': os.getenv('DB_NAME', 'test_db'),
-        'DB_USER': os.getenv('DB_USER', 'postgres'),
-        'DB_PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-        'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', 'test_api_key'),
-        'FLASK_ENV': 'testing'
-    }
+    # Para CI/CD, sempre usar banco local de teste
+    if os.getenv('CI') or os.getenv('GITHUB_ACTIONS'):
+        return {
+            'DB_HOST': 'localhost',
+            'DB_PORT': '5432',
+            'DB_NAME': 'test_db',
+            'DB_USER': 'postgres',
+            'DB_PASSWORD': 'postgres',
+            'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', 'test_key_for_ci'),
+            'FLASK_ENV': 'testing'
+        }
+    else:
+        # Para desenvolvimento local
+        return {
+            'DB_HOST': os.getenv('DB_HOST', 'localhost'),
+            'DB_PORT': os.getenv('DB_PORT', '6543'),
+            'DB_NAME': os.getenv('DB_NAME', 'test_db'),
+            'DB_USER': os.getenv('DB_USER', 'postgres'),
+            'DB_PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+            'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', 'test_api_key'),
+            'FLASK_ENV': 'testing'
+        }
 
 def assert_json_response(response, expected_status=200):
     assert response.status_code == expected_status, f"Status esperado {expected_status}, recebido {response.status_code}"

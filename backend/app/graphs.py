@@ -84,10 +84,10 @@ def total_vendas_por_mes():
             COALESCE(SUM(valor), 0) AS total_vendas,
             COUNT(*) AS num_vendas
         FROM vendas
-        WHERE data_venda >= CURRENT_DATE - INTERVAL '12 months'
+        WHERE data_venda >= CURRENT_DATE - INTERVAL '24 months'
         GROUP BY TO_CHAR(data_venda, 'YYYY-MM')
         ORDER BY mes DESC
-        LIMIT 12;
+        LIMIT 24;
     """
     return executar_query_e_gerar_json(query, ['mes', 'total_vendas', 'num_vendas'])
 

@@ -20,7 +20,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Página Principal', style: AppTextStyles.title),
+        title: const Text('Sophos Kodiak', style: AppTextStyles.title),
         centerTitle: true,
         leading: canPop
             ? IconButton(
@@ -33,34 +33,23 @@ class HomePage extends StatelessWidget {
             : null,
         automaticallyImplyLeading: canPop,
       ),
-      body: _MenuContent(userName: finalUserName),
-    );
-  }
-}
-
-class _MenuContent extends StatelessWidget {
-  final String? userName;
-
-  const _MenuContent({this.userName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(AppDimensions.paddingLarge),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const _WelcomeSection(),
-            const SizedBox(height: AppDimensions.paddingLarge),
-            Expanded(child: _MenuGrid(userName: userName)),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _WelcomeSection(userName: finalUserName),
+                const SizedBox(height: AppDimensions.paddingLarge * 1.5),
+                _QuickStatsSection(),
+                const SizedBox(height: AppDimensions.paddingLarge * 1.5),
+                _MainFeaturesSection(userName: finalUserName),
+                const SizedBox(height: AppDimensions.paddingLarge),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -68,90 +57,81 @@ class _MenuContent extends StatelessWidget {
 }
 
 class _WelcomeSection extends StatelessWidget {
-  const _WelcomeSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Icon(Icons.dashboard, size: 80, color: AppColors.primary),
-        const SizedBox(height: AppDimensions.paddingMedium),
-        Text(
-          'Bem-vindo ao Kodiak',
-          style: AppTextStyles.title.copyWith(fontSize: 28),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppDimensions.paddingSmall),
-        const Text(
-          'Escolha uma das opções abaixo para continuar',
-          style: AppTextStyles.largeText,
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-}
-
-class _MenuGrid extends StatelessWidget {
   final String? userName;
 
-  const _MenuGrid({this.userName});
+  const _WelcomeSection({this.userName});
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: AppDimensions.paddingMedium,
-      mainAxisSpacing: AppDimensions.paddingMedium,
-      childAspectRatio: 1.1,
-      children: [
-        _MenuCard(
-          icon: Icons.smart_toy,
-          title: 'Chatbot IA',
-          subtitle: 'Assistente inteligente',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatbotPage(userName: userName),
-            ),
-          ),
-        ),
-        _MenuCard(
-          icon: Icons.bar_chart,
-          title: 'Relatórios',
-          subtitle: 'Gráficos e análises',
-          onTap: () => Navigator.pushNamed(context, '/charts'),
-        ),
-        _MenuCard(
-          icon: Icons.network_check,
-          title: 'Teste Rede',
-          subtitle: 'Diagnosticar conexão',
-          onTap: () => Navigator.pushNamed(context, '/network-test'),
-        ),
-        _MenuCard(
-          icon: Icons.settings,
-          title: 'Configurações',
-          subtitle: 'Ajustes do sistema',
-          onTap: () => _showFeatureDialog(context, 'Configurações'),
-        ),
-      ],
-    );
-  }
+    final currentHour = DateTime.now().hour;
+    String greeting;
 
-  void _showFeatureDialog(BuildContext context, String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(feature, style: AppTextStyles.title.copyWith(fontSize: 24)),
-        content: const Text(
-          'Esta funcionalidade está em desenvolvimento e será disponibilizada em breve.',
-          style: AppTextStyles.largeText,
+    if (currentHour < 12) {
+      greeting = 'Bom dia';
+    } else if (currentHour < 18) {
+      greeting = 'Boa tarde';
+    } else {
+      greeting = 'Boa noite';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.05),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.borderRadius,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.psychology,
+                  size: 32,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppDimensions.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting${userName != null ? ', $userName' : ''}!',
+                      style: AppTextStyles.title.copyWith(fontSize: 24),
+                    ),
+                    const SizedBox(height: AppDimensions.paddingSmall / 2),
+                    Text(
+                      'Seu assistente inteligente está pronto para ajudar',
+                      style: AppTextStyles.primaryText.copyWith(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -159,65 +139,216 @@ class _MenuGrid extends StatelessWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
+class _QuickStatsSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Status do Sistema',
+          style: AppTextStyles.title.copyWith(fontSize: 20),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.timeline,
+                label: 'Análises',
+                value: '42',
+                color: AppColors.success,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingMedium),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.cloud_done,
+                label: 'Online',
+                value: '99.9%',
+                color: AppColors.info,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingMedium),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.speed,
+                label: 'Performance',
+                value: 'Ótima',
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      decoration: BoxDecoration(
+        color: AppColors.elementsBackground,
+        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: AppDimensions.paddingSmall),
+          Text(
+            value,
+            style: AppTextStyles.primaryText.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: AppTextStyles.primaryText.copyWith(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MainFeaturesSection extends StatelessWidget {
+  final String? userName;
+
+  const _MainFeaturesSection({this.userName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Principais Recursos',
+          style: AppTextStyles.title.copyWith(fontSize: 20),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        _FeatureCard(
+          icon: Icons.chat_bubble_outline,
+          title: 'Assistente Virtual',
+          subtitle: 'Converse com nossa IA especializada em análise de dados',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatbotPage(userName: userName),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        _FeatureCard(
+          icon: Icons.analytics_outlined,
+          title: 'Análise de Dados',
+          subtitle: 'Visualize gráficos interativos e relatórios detalhados',
+          color: AppColors.info,
+          onTap: () => Navigator.pushNamed(context, '/charts'),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        _FeatureCard(
+          icon: Icons.settings_outlined,
+          title: 'Configurações',
+          subtitle: 'Personalize sua experiência e ajustes do sistema',
+          color: AppColors.textSecondary,
+          onTap: () => Navigator.pushNamed(context, '/settings'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color color;
   final VoidCallback onTap;
 
-  const _MenuCard({
+  const _FeatureCard({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Material(
       color: AppColors.elementsBackground,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-      ),
+      borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.paddingSmall),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+        child: Container(
+          padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+            border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+          ),
+          child: Row(
             children: [
-              Flexible(child: Icon(icon, size: 36, color: AppColors.primary)),
-              const SizedBox(height: 4),
-              Flexible(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Roboto',
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+              Container(
+                padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.borderRadius,
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: AppDimensions.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.primaryText.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.paddingSmall / 2),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.primaryText.copyWith(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Flexible(
-                child: Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontFamily: 'Roboto',
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: color.withValues(alpha: 0.6),
+                size: 16,
               ),
             ],
           ),

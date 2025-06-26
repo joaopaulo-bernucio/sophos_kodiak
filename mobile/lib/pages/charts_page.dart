@@ -111,7 +111,7 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         case null:
           return 'Erro de conexão. Verifique sua internet e tente novamente.';
         default:
-          return 'Erro inesperado: ${erro.message}';
+          return 'Erro no servidor (${erro.statusCode}). Tente novamente.';
       }
     }
     return 'Erro ao carregar dados: ${erro.toString()}';
@@ -199,7 +199,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
         children: [
           CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            strokeWidth: 3,
           ),
           SizedBox(height: 16),
           Text('Carregando dados...', style: AppTextStyles.primaryText),
@@ -237,19 +236,14 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 16),
             Text(
-              'Ops! Algo deu errado',
-              style: AppTextStyles.title.copyWith(
-                color: AppColors.error,
-                fontSize: 24,
-              ),
+              'Erro ao carregar dados',
+              style: AppTextStyles.title.copyWith(color: AppColors.error),
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage!,
+              _errorMessage ?? 'Erro desconhecido',
+              style: AppTextStyles.primaryText,
               textAlign: TextAlign.center,
-              style: AppTextStyles.primaryText.copyWith(
-                color: AppColors.textSecondary,
-              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -258,11 +252,7 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
               label: const Text('Tentar Novamente'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryDark,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                foregroundColor: AppColors.textPrimary,
               ),
             ),
           ],
@@ -296,11 +286,6 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
                 'Projetos: Status dos projetos e receita por cliente',
                 style: AppTextStyles.primaryText,
               ),
-              SizedBox(height: 16),
-              Text(
-                'Os dados são atualizados automaticamente e sincronizados com o sistema Kodiak.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
             ],
           ),
         ),
@@ -308,7 +293,7 @@ class _ChartsPageState extends State<ChartsPage> with TickerProviderStateMixin {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
-              'Entendi',
+              'Fechar',
               style: TextStyle(color: AppColors.primary),
             ),
           ),
@@ -431,8 +416,8 @@ class _FuncionariosTab extends StatelessWidget {
               Expanded(
                 child: _MetricCard(
                   title: 'Total de Funcionários',
-                  value: '$totalFuncionarios',
-                  change: '+5.0%',
+                  value: totalFuncionarios.toString(),
+                  change: '+5.2%',
                   isPositive: true,
                   icon: Icons.people,
                 ),
@@ -441,8 +426,8 @@ class _FuncionariosTab extends StatelessWidget {
               Expanded(
                 child: _MetricCard(
                   title: 'Departamentos',
-                  value: '${funcionariosData.length}',
-                  change: '0%',
+                  value: funcionariosData.length.toString(),
+                  change: 'Ativos',
                   isPositive: true,
                   icon: Icons.business,
                 ),
@@ -452,7 +437,6 @@ class _FuncionariosTab extends StatelessWidget {
           const SizedBox(height: 20),
           _ChartContainer(
             title: 'Funcionários por Departamento',
-            subtitle: 'Distribuição atual da equipe',
             child: _FuncionariosPieChart(dados: funcionariosData),
           ),
         ],
@@ -494,7 +478,7 @@ class _ProjetosTab extends StatelessWidget {
               Expanded(
                 child: _MetricCard(
                   title: 'Total de Projetos',
-                  value: '$totalProjetos',
+                  value: totalProjetos.toString(),
                   change: '+15.3%',
                   isPositive: true,
                   icon: Icons.work,
@@ -507,24 +491,22 @@ class _ProjetosTab extends StatelessWidget {
                   value: _formatarMoeda(receitaTotal),
                   change: '+22.1%',
                   isPositive: true,
-                  icon: Icons.monetization_on,
+                  icon: Icons.attach_money,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          if (projetosData.isNotEmpty) ...[
+          if (projetosData.isNotEmpty)
             _ChartContainer(
               title: 'Projetos por Status',
-              subtitle: 'Status atual dos projetos',
               child: _ProjetosBarChart(dados: projetosData),
             ),
+          if (projetosData.isNotEmpty && receitaData.isNotEmpty)
             const SizedBox(height: 20),
-          ],
           if (receitaData.isNotEmpty)
             _ChartContainer(
-              title: 'Top 5 Clientes por Receita',
-              subtitle: 'Principais fontes de receita',
+              title: 'Top Clientes por Receita',
               child: _ReceitaList(dados: receitaData),
             ),
         ],
@@ -574,41 +556,36 @@ class _MetricCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+              Icon(icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.primaryText.copyWith(fontSize: 12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Icon(
-                    isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                    color: isPositive ? AppColors.success : AppColors.error,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    change,
-                    style: TextStyle(
-                      color: isPositive ? AppColors.success : AppColors.error,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: AppTextStyles.title.copyWith(fontSize: 24)),
+          Text(value, style: AppTextStyles.title.copyWith(fontSize: 20)),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTextStyles.inputPlaceholder.copyWith(fontSize: 14),
+          Row(
+            children: [
+              Icon(
+                isPositive ? Icons.trending_up : Icons.trending_down,
+                color: isPositive ? AppColors.success : AppColors.error,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                change,
+                style: TextStyle(
+                  color: isPositive ? AppColors.success : AppColors.error,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -642,21 +619,12 @@ class _ChartContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.primaryText.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(title, style: AppTextStyles.title.copyWith(fontSize: 18)),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: AppTextStyles.inputPlaceholder.copyWith(fontSize: 14),
-            ),
+            Text(subtitle!, style: AppTextStyles.primaryText),
           ],
-          const SizedBox(height: AppDimensions.paddingLarge),
+          const SizedBox(height: 20),
           child,
         ],
       ),
@@ -798,7 +766,8 @@ class _VendasBarChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           barGroups: dados.asMap().entries.map((entry) {
             final index = entry.key;
-            final valor = (entry.value['total_vendas'] ?? 0).toDouble();
+            final item = entry.value;
+            final valor = (item['total_vendas'] ?? 0).toDouble();
 
             return BarChartGroupData(
               x: index,
@@ -806,14 +775,11 @@ class _VendasBarChart extends StatelessWidget {
                 BarChartRodData(
                   toY: valor,
                   color: AppColors.primary,
-                  width: 24,
+                  width: 20,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(6),
-                    topRight: Radius.circular(6),
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
                   ),
-                  rodStackItems: [
-                    BarChartRodStackItem(0, valor, AppColors.primary),
-                  ],
                 ),
               ],
             );
@@ -866,17 +832,13 @@ class _FuncionariosPieChart extends StatelessWidget {
             child: PieChart(
               PieChartData(
                 sections: _criarSecoes(),
-                centerSpaceRadius: 40,
-                sectionsSpace: 3,
-                startDegreeOffset: -90,
-                pieTouchData: PieTouchData(
-                  enabled: true,
-                  touchCallback: (FlTouchEvent event, pieTouchResponse) {},
-                ),
+                centerSpaceRadius: 60,
+                sectionsSpace: 2,
               ),
             ),
           ),
-          Expanded(flex: 1, child: _buildLegenda()),
+          const SizedBox(width: 20),
+          Expanded(child: _buildLegenda()),
         ],
       ),
     );
@@ -890,8 +852,6 @@ class _FuncionariosPieChart extends StatelessWidget {
         final index = entry.key;
         final item = entry.value;
         final cor = _getCor(index);
-        final departamento = item['departamento'].toString();
-        final quantidade = (item['quantidade'] ?? 0).toInt();
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -904,26 +864,13 @@ class _FuncionariosPieChart extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      departamento,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '$quantidade pessoas',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  item['departamento']?.toString() ?? 'N/A',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -953,9 +900,8 @@ class _FuncionariosPieChart extends StatelessWidget {
         titleStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppColors.textPrimary,
         ),
-        titlePositionPercentageOffset: 0.6,
       );
     }).toList();
   }
@@ -1025,7 +971,7 @@ class _ProjetosBarChart extends StatelessWidget {
                         _abreviarStatus(status),
                         style: const TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
                         textAlign: TextAlign.center,
@@ -1068,8 +1014,9 @@ class _ProjetosBarChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           barGroups: dados.asMap().entries.map((entry) {
             final index = entry.key;
-            final quantidade = (entry.value['quantidade'] ?? 0).toDouble();
-            final status = entry.value['status'].toString();
+            final item = entry.value;
+            final quantidade = (item['quantidade'] ?? 0).toDouble();
+            final status = item['status'].toString();
 
             return BarChartGroupData(
               x: index,
@@ -1077,10 +1024,10 @@ class _ProjetosBarChart extends StatelessWidget {
                 BarChartRodData(
                   toY: quantidade,
                   color: _getCorPorStatus(status),
-                  width: 24,
+                  width: 20,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(6),
-                    topRight: Radius.circular(6),
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
                   ),
                 ),
               ],
@@ -1113,7 +1060,7 @@ class _ProjetosBarChart extends StatelessWidget {
       case 'pausado':
         return 'Pausado';
       default:
-        return status.length > 8 ? status.substring(0, 8) : status;
+        return status.length > 10 ? status.substring(0, 10) : status;
     }
   }
 
@@ -1148,21 +1095,20 @@ class _ReceitaList extends StatelessWidget {
     return Column(
       children: topClientes.asMap().entries.map((entry) {
         final index = entry.key;
-        final item = entry.value;
-        final cliente = item['cliente'].toString();
-        final receita = (item['receita'] ?? 0).toDouble();
-        final isTop = index < 3;
+        final cliente = entry.value;
+        final receita = (cliente['receita'] ?? 0).toDouble();
+        final nomeCliente = cliente['cliente']?.toString() ?? 'Cliente N/A';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isTop
+            color: index == 0
                 ? AppColors.primary.withValues(alpha: 0.05)
                 : AppColors.background,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isTop
+              color: index == 0
                   ? AppColors.primary.withValues(alpha: 0.2)
                   : AppColors.textSecondary.withValues(alpha: 0.1),
               width: 1,
@@ -1194,21 +1140,17 @@ class _ReceitaList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      cliente,
+                      nomeCliente,
                       style: AppTextStyles.primaryText.copyWith(
-                        fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (isTop)
-                      Text(
-                        'Cliente ${_getRankingLabel(index)}',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _calcularPorcentagem(receita),
+                      style: AppTextStyles.primaryText.copyWith(fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -1220,17 +1162,19 @@ class _ReceitaList extends StatelessWidget {
                     style: AppTextStyles.primaryText.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
-                      fontSize: 16,
                     ),
                   ),
-                  if (isTop)
+                  if (index == 0) ...[
+                    const SizedBox(height: 4),
                     Text(
-                      _calcularPorcentagem(receita),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                      _getRankingLabel(index),
+                      style: TextStyle(
+                        color: _getCorRanking(index),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ],
                 ],
               ),
             ],
@@ -1243,13 +1187,13 @@ class _ReceitaList extends StatelessWidget {
   Color _getCorRanking(int index) {
     switch (index) {
       case 0:
-        return const Color(0xFFFFD700);
+        return const Color(0xFFFFD700); // Gold
       case 1:
-        return const Color(0xFFC0C0C0);
+        return const Color(0xFFC0C0C0); // Silver
       case 2:
-        return const Color(0xFFCD7F32);
+        return const Color(0xFFCD7F32); // Bronze
       default:
-        return AppColors.textSecondary;
+        return AppColors.primary;
     }
   }
 
@@ -1262,7 +1206,7 @@ class _ReceitaList extends StatelessWidget {
       case 2:
         return 'Silver';
       default:
-        return 'Regular';
+        return 'Cliente';
     }
   }
 

@@ -14,6 +14,9 @@ env:
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.32.4'
   POSTGRES_VERSION: '15.8'
+  # CI usa PostgreSQL local na porta 5432, produção usa Supabase na 6543
+  POSTGRES_PORT: '5432'
+  # Variáveis de produção (secrets)
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   DB_NAME: ${{ secrets.DB_NAME }}
@@ -22,6 +25,7 @@ env:
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
   JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
 jobs:
   # ===========================================
@@ -105,7 +109,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
+        GEMINI_API_KEY: ${{ env.GEMINI_API_KEY || 'test_key_for_ci' }}
         PYTHONPATH: ${{ github.workspace }}/backend
       run: pytest -m smoke -v --tb=short --maxfail=3
 
@@ -151,7 +155,7 @@ jobs:
   comprehensive-tests:
     name: 🧪 Comprehensive Backend Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     needs: smoke-tests
 
     services:
@@ -185,7 +189,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-cov pytest-html flake8
-        python -m spacy download pt_core_news_sm
+        # Instalar modelo spaCy apenas se não existir
+        python -c "import spacy; spacy.load('pt_core_news_sm')" 2>/dev/null || python -m spacy download pt_core_news_sm
       working-directory: ./backend
 
     - name: Setup comprehensive test database
@@ -285,13 +290,15 @@ jobs:
       run: |
         # Execute todos os testes principais com cobertura
         pytest \
-          tests/test_critical_infrastructure.py \
-          tests/test_data_quality.py \
-          tests/test_endpoints.py \
-          tests/test_infrastructure.py \
-          tests/test_real_scenarios.py \
-          tests/test_security.py \
-          tests/unit/ \
+          test/test_critical_infrastructure.py \
+          test/test_data_quality.py \
+          test/test_endpoints.py \
+          test/test_infrastructure.py \
+          test/test_real_scenarios.py \
+          test/test_security.py \
+          test/test_smoke.py \
+          test/unit/ \
+          test/performance/ \
           --cov=app \
           --cov-report=xml \
           --cov-report=html \
@@ -461,11 +468,11 @@ jobs:
       env:
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key' }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       run: |
         # Execute testes de segurança específicos
-        pytest tests/test_security.py -v --tb=short
+        pytest test/test_security.py -v --tb=short
 
         # Execute também testes marcados como security
         pytest -m security --tb=short -v
@@ -522,7 +529,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-benchmark psutil
-        python -m spacy download pt_core_news_sm
+        # Instalar modelo spaCy apenas se não existir
+        python -c "import spacy; spacy.load('pt_core_news_sm')" 2>/dev/null || python -m spacy download pt_core_news_sm
       working-directory: ./backend
 
     - name: Setup performance test database
@@ -561,10 +569,10 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key' }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
       run: |
         # Execute testes de performance simples para baseline em PRs
-        pytest tests/performance/test_simple_performance.py -v --tb=short --maxfail=3
+        pytest test/performance/test_simple_performance.py -v --tb=short --maxfail=3
 
         # Execute também testes marcados como performance
         pytest -m performance --tb=short -v --maxfail=3
@@ -576,20 +584,20 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         FLASK_ENV: testing
         PYTHONPATH: ${{ github.workspace }}/backend
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key' }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'test_key_for_ci' }}
       run: |
         # Execute todos os testes de performance específicos
         pytest \
-          tests/performance/test_benchmarks.py \
-          tests/performance/test_simple_performance.py \
-          tests/performance/test_performance_ci.py \
+          test/performance/test_benchmarks.py \
+          test/performance/test_simple_performance.py \
+          test/performance/test_performance_ci.py \
           --tb=short \
           -v \
           --durations=10
 
         # Execute também todos os testes do diretório performance
         pytest \
-          tests/performance/ \
+          test/performance/ \
           -m performance \
           --tb=short \
           -v \

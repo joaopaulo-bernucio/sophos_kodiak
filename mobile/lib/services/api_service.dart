@@ -93,7 +93,7 @@ class PerguntaResponse {
 
 class ApiService {
   static const String _baseUrl =
-      'http://sk-sk.cxbwajafbngqhhej.brazilsouth.azurecontainer.io:5000';
+      'http://sk20-beta.a2a3cbg5awgubnbq.brazilsouth.azurecontainer.io:5000';
   //'http://10.0.2.2:5000'
   static const Duration _timeout = Duration(seconds: 30);
 
@@ -201,19 +201,19 @@ class ApiService {
   }
 
   Future<List<Map<String, dynamic>>> buscarVendasPorMes() =>
-      _getList('/api/query/total_vendas_por_mes', 'Erro ao buscar vendas');
+      _getList('/api/graphs/total_vendas_por_mes', 'Erro ao buscar vendas');
 
   Future<List<Map<String, dynamic>>> buscarFuncionariosPorDepartamento() =>
       _getList(
-        '/api/query/funcionarios_por_departamento',
+        '/api/graphs/funcionarios_por_departamento',
         'Erro ao buscar funcionários',
       );
 
   Future<List<Map<String, dynamic>>> buscarProjetosPorStatus() =>
-      _getList('/api/query/projetos_por_status', 'Erro ao buscar projetos');
+      _getList('/api/graphs/projetos_por_status', 'Erro ao buscar projetos');
 
   Future<List<Map<String, dynamic>>> buscarReceitaPorCliente() =>
-      _getList('/api/query/receita_por_cliente', 'Erro ao buscar receita');
+      _getList('/api/graphs/receita_por_cliente', 'Erro ao buscar receita');
 
   Future<bool> verificarSaude() async {
     try {

@@ -187,15 +187,17 @@ class TestPerformanceImprovements:
 
         def make_single_request(request_id):
             try:
-                response = client.post('/pergunta',
-                                     json={'pergunta': f'Teste concorrência {request_id}'},
-                                     content_type='application/json')
-                return {
-                    'id': request_id,
-                    'status_code': response.status_code,
-                    'success': True,
-                    'response_time': time.time()
-                }
+                # Criar uma nova instância do cliente para cada thread
+                with client.application.test_client() as thread_client:
+                    response = thread_client.post('/pergunta',
+                                               json={'pergunta': f'Teste concorrência {request_id}'},
+                                               content_type='application/json')
+                    return {
+                        'id': request_id,
+                        'status_code': response.status_code,
+                        'success': True,
+                        'response_time': time.time()
+                    }
             except Exception as e:
                 return {
                     'id': request_id,

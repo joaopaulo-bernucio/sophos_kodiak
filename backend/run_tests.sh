@@ -37,7 +37,10 @@ load_ci_config() {
     if [[ "$CI" == "true" ]] || [[ -n "$GITHUB_ACTIONS" ]]; then
         print_status "🔧 Carregando configurações de CI..."
         if [[ -f ".env.ci" ]]; then
-            export $(grep -v '^#' .env.ci | grep -v '^$' | xargs)
+            # Carrega variáveis de forma mais segura
+            set -a
+            source .env.ci
+            set +a
             print_success "Configurações de CI carregadas de .env.ci"
 
             if [[ -z "$DATABASE_URL" ]]; then
@@ -59,7 +62,7 @@ load_ci_config() {
                 print_status "🎭 Modo padrão (com alguns mocks de segurança)"
             fi
 
-            print_status "✅ Configuração CI aplicada: FLASK_ENV=$FLASK_ENV, DB=$DB_NAME"
+            print_status "✅ Configuração CI aplicada: FLASK_ENV=$FLASK_ENV"
         else
             print_warning "Arquivo .env.ci não encontrado, usando configurações padrão do CI"
             export FLASK_ENV="testing"
@@ -72,7 +75,9 @@ load_ci_config() {
         # Carrega variáveis do .env se existir
         if [[ -f ".env" ]]; then
             print_status "Carregando variáveis do .env para testes locais"
-            export $(grep -v '^#' .env | grep -v '^$' | xargs)
+            set -a
+            source .env
+            set +a
             print_success "Variáveis do .env carregadas"
         fi
         if [[ "$ANALYZE_REAL_CODE" == "true" ]]; then
@@ -108,6 +113,7 @@ if ! command -v pytest &> /dev/null; then
     fi
 fi
 
+# Função para executar um conjunto de testes com controle de tempo e status
 run_tests() {
     local test_name="$1"
     local test_command="$2"
@@ -138,6 +144,7 @@ run_tests() {
     fi
 }
 
+# Função para validar se os testes de performance estão configurados corretamente
 validate_performance_tests() {
     print_status "🔍 Validando Testes de Performance"
 
@@ -155,7 +162,7 @@ validate_performance_tests() {
     fi
 
     local benchmark_tests
-    benchmark_tests=$(find tests/ -name "*benchmark*" -o -name "*performance*" | wc -l)
+    benchmark_tests=$(find test/ -name "*benchmark*" -o -name "*performance*" | wc -l)
     print_success "Encontrados $benchmark_tests arquivos de benchmark/performance"
 
     if grep -q "performance:" pytest.ini; then
@@ -170,6 +177,7 @@ validate_performance_tests() {
     return 0
 }
 
+# Função para executar testes de performance em ambiente local com validações detalhadas
 run_performance_local() {
     print_status "🏃 Executando Testes de Performance Localmente"
 
@@ -196,22 +204,22 @@ run_performance_local() {
     print_status "Executando Benchmarks Básicos"
 
     print_status "Testando performance simples..."
-    if ! pytest tests/performance/test_simple_performance.py::TestSimplePerformance::test_json_serialization_performance -v -s --tb=line; then
+    if ! pytest test/performance/test_simple_performance.py::TestSimplePerformance::test_json_serialization_performance -v -s --tb=line; then
         print_warning "Teste simples falhou"
     fi
 
     print_status "Testando benchmark JSON original..."
-    if ! pytest tests/performance/test_benchmarks.py::TestBenchmarks::test_benchmark_json_processing -v -s --tb=line; then
+    if ! pytest test/performance/test_benchmarks.py::TestBenchmarks::test_benchmark_json_processing -v -s --tb=line; then
         print_warning "Benchmark JSON falhou, tentando com medição manual"
     fi
 
     print_status "Testando benchmark manual..."
-    if ! pytest tests/performance/test_benchmarks.py::TestManualBenchmarks::test_manual_memory_usage -v -s --tb=line; then
+    if ! pytest test/performance/test_benchmarks.py::TestManualBenchmarks::test_manual_memory_usage -v -s --tb=line; then
         print_warning "Benchmark manual falhou"
     fi
 
     print_status "Testando performance de importação (sem módulos problemáticos)..."
-    if ! pytest tests/performance/test_performance_ci.py::TestSystemPerformance::test_import_time_performance -v -s --tb=line; then
+    if ! pytest test/performance/test_performance_ci.py::TestSystemPerformance::test_import_time_performance -v -s --tb=line; then
         print_warning "Teste de importação falhou"
     fi
 
@@ -223,7 +231,7 @@ try:
 except ImportError:
     print('ℹ️  pytest-benchmark não instalado (ok)')
 except Exception as e:
-    print('⚠️  Problema com pytest-benchmark:', e)
+    print('⚠️  Problema com pytest-benchmark:', str(e))
 "
 
     print_success "Configuração de performance validada"
@@ -423,8 +431,8 @@ case "$TESTS_TO_RUN" in
 
     unit)
         TOTAL_COUNT=2
-        run_tests "🧠 Testes Unitários - NLP" "pytest tests/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest tests/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🧠 Testes Unitários - NLP" "pytest test/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest test/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
         ;;
 
     performance)
@@ -457,9 +465,9 @@ case "$TESTS_TO_RUN" in
     performance_safe)
         TOTAL_COUNT=3
         print_status "Executando testes de performance seguros (evitando problemas conhecidos)"
-        run_tests "📊 Performance Simples" "pytest tests/performance/test_simple_performance.py $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
-        run_tests "🔧 Benchmarks Manuais" "pytest tests/performance/test_benchmarks.py::TestManualBenchmarks $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
-        run_tests "⚙️ Performance CI (sem importação)" "pytest tests/performance/test_performance_ci.py -k 'not test_import_time_performance and not test_burst_load_handling' $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
+        run_tests "📊 Performance Simples" "pytest test/performance/test_simple_performance.py $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
+        run_tests "🔧 Benchmarks Manuais" "pytest test/performance/test_benchmarks.py::TestManualBenchmarks $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
+        run_tests "⚙️ Performance CI (sem importação)" "pytest test/performance/test_performance_ci.py -k 'not test_import_time_performance and not test_burst_load_handling' $PYTEST_ARGS --tb=line" && ((SUCCESS_COUNT++))
         ;;
 
     real_analysis)
@@ -478,8 +486,8 @@ case "$TESTS_TO_RUN" in
         run_tests "🔥 Testes Críticos (Real)" "pytest -m critical $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "🏗️ Infraestrutura (Real)" "pytest -m infrastructure $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "🌐 Endpoints API (Real)" "pytest -m api $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🧠 Processamento NLP (Real)" "pytest tests/unit/test_nlp_processing.py $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🗺️ Query Mapping (Real)" "pytest tests/unit/test_query_mapping.py $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🧠 Processamento NLP (Real)" "pytest test/unit/test_nlp_processing.py $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🗺️ Query Mapping (Real)" "pytest test/unit/test_query_mapping.py $REAL_PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "📊 Qualidade dos Dados (Real)" "pytest -m data_quality $REAL_PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
         run_tests "🎭 Cenários Reais" "pytest -m real_scenarios $REAL_PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
         ;;
@@ -496,14 +504,14 @@ case "$TESTS_TO_RUN" in
         run_tests "🔥 Testes Críticos" "pytest -m critical $PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "🏗️ Infraestrutura" "pytest -m infrastructure $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
         run_tests "🌐 Endpoints API" "pytest -m api $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🧠 Testes Unitários - NLP" "pytest tests/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest tests/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🧠 Testes Unitários - NLP" "pytest test/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest test/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
         ;;
 
     auto_discover)
         print_status "🔍 Descobrindo todos os arquivos de teste..."
 
-        ALL_TEST_FILES=($(find tests/ -name "test_*.py" -type f | sort))
+        ALL_TEST_FILES=($(find test/ -name "test_*.py" -type f | sort))
 
         if [[ ${#ALL_TEST_FILES[@]} -eq 0 ]]; then
             print_error "Nenhum arquivo de teste encontrado"
@@ -525,18 +533,17 @@ case "$TESTS_TO_RUN" in
         ;;
 
     full)
-        TOTAL_COUNT=12
+        TOTAL_COUNT=11
         run_tests "🚀 Smoke Tests" "pytest -m smoke $PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "🔥 Testes Críticos" "pytest -m critical $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🏗️ Infraestrutura Básica" "pytest tests/test_infrastructure.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
-        run_tests "🔒 Infraestrutura Crítica" "pytest tests/test_critical_infrastructure.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "📊 Qualidade dos Dados" "pytest tests/test_data_quality.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
-        run_tests "🌐 Endpoints API" "pytest tests/test_endpoints.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🎭 Cenários Reais" "pytest tests/test_real_scenarios.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
-        run_tests "💨 Smoke Tests Específicos" "pytest tests/test_smoke.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🧠 Testes Unitários - NLP" "pytest tests/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest tests/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
-        run_tests "📂 Todos os Testes Unitários" "pytest tests/unit/ $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🏗️ Infraestrutura Básica" "pytest test/test_infrastructure.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
+        run_tests "🔒 Infraestrutura Crítica" "pytest test/test_critical_infrastructure.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "📊 Qualidade dos Dados" "pytest test/test_data_quality.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
+        run_tests "🌐 Endpoints API" "pytest test/test_endpoints.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🎭 Cenários Reais" "pytest test/test_real_scenarios.py $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
+        run_tests "🧠 Testes Unitários - NLP" "pytest test/unit/test_nlp_processing.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "🗺️ Testes Unitários - Query Mapping" "pytest test/unit/test_query_mapping.py $PYTEST_ARGS" && ((SUCCESS_COUNT++))
+        run_tests "📂 Todos os Testes Unitários" "pytest test/unit/ $PYTEST_ARGS" && ((SUCCESS_COUNT++))
         run_tests "⚡ Performance" "pytest -m performance $PYTEST_ARGS" "optional" && ((SUCCESS_COUNT++))
         ;;
 esac
@@ -545,14 +552,14 @@ echo ""
 print_status "🔍 Verificando cobertura de arquivos de teste..."
 
 TEST_FILES=(
-    "tests/test_smoke.py"
-    "tests/test_critical_infrastructure.py"
-    "tests/test_infrastructure.py"
-    "tests/test_data_quality.py"
-    "tests/test_endpoints.py"
-    "tests/test_real_scenarios.py"
-    "tests/unit/test_nlp_processing.py"
-    "tests/unit/test_query_mapping.py"
+    "test/test_smoke.py"
+    "test/test_critical_infrastructure.py"
+    "test/test_infrastructure.py"
+    "test/test_data_quality.py"
+    "test/test_endpoints.py"
+    "test/test_real_scenarios.py"
+    "test/unit/test_nlp_processing.py"
+    "test/unit/test_query_mapping.py"
 )
 
 MISSING_TESTS=""
@@ -564,27 +571,27 @@ for test_file in "${TEST_FILES[@]}"; do
 
         case "$TESTS_TO_RUN" in
             smoke)
-                if [[ "$test_file" != "tests/test_smoke.py" ]]; then
+                if [[ "$test_file" != "test/test_smoke.py" ]]; then
                     MISSING_TESTS="$MISSING_TESTS $test_file"
                 fi
                 ;;
             critical)
-                if [[ "$test_file" != "tests/test_critical_infrastructure.py" ]]; then
+                if [[ "$test_file" != "test/test_critical_infrastructure.py" ]]; then
                     MISSING_TESTS="$MISSING_TESTS $test_file"
                 fi
                 ;;
             unit)
-                if [[ "$test_file" != "tests/unit/test_nlp_processing.py" && "$test_file" != "tests/unit/test_query_mapping.py" ]]; then
+                if [[ "$test_file" != "test/unit/test_nlp_processing.py" && "$test_file" != "test/unit/test_query_mapping.py" ]]; then
                     MISSING_TESTS="$MISSING_TESTS $test_file"
                 fi
                 ;;
             quick)
-                if [[ "$test_file" != "tests/test_smoke.py" && "$test_file" != "tests/test_critical_infrastructure.py" ]]; then
+                if [[ "$test_file" != "test/test_smoke.py" && "$test_file" != "test/test_critical_infrastructure.py" ]]; then
                     MISSING_TESTS="$MISSING_TESTS $test_file"
                 fi
                 ;;
             default)
-                if [[ "$test_file" == "tests/test_data_quality.py" || "$test_file" == "tests/test_real_scenarios.py" ]]; then
+                if [[ "$test_file" == "test/test_data_quality.py" || "$test_file" == "test/test_real_scenarios.py" ]]; then
                     MISSING_TESTS="$MISSING_TESTS $test_file"
                 fi
                 ;;
@@ -611,13 +618,13 @@ else
     print_success "Todos os testes relevantes para o modo '$TESTS_TO_RUN' foram executados"
 fi
 
-UNCATALOGUED_TESTS=$(find tests/ -name "test_*.py" -type f | grep -v -E "($(echo "${TEST_FILES[@]}" | tr ' ' '|'))" || true)
+UNCATALOGUED_TESTS=$(find test/ -name "test_*.py" -type f 2>/dev/null | grep -v -E "($(echo "${TEST_FILES[@]}" | tr ' ' '|'))" || echo "")
 
 if [[ -n "$UNCATALOGUED_TESTS" ]]; then
     echo ""
     print_warning "Arquivos de teste encontrados que não estão no script:"
-    echo "$UNCATALOGUED_TESTS" | while read -r test_file; do
-        echo "  • $test_file"
+    echo "$UNCATALOGUED_TESTS" | while IFS= read -r test_file; do
+        [[ -n "$test_file" ]] && echo "  • $test_file"
     done
     print_status "💡 Considere adicionar estes testes ao script run_tests.sh"
 fi
@@ -674,7 +681,6 @@ elif [[ "$TESTS_TO_RUN" == "real_analysis" ]]; then
     echo "  • Para análise completa: $0 --full --real-analysis"
     echo "  • Execute script específico: ./run_real_tests.sh"
     echo "  • Revise relatório de cobertura: htmlcov/index.html"
-    echo "  • Analise logs detalhados dos testes executados"
 elif [[ "$TESTS_TO_RUN" == "quick" ]]; then
     echo "  • Execute suite completa: $0 --full"
     echo "  • Para testes unitários: $0 --unit"
@@ -700,7 +706,7 @@ else
 fi
 
 echo ""
-echo "📖 Documentação: tests/README.md"
+echo "📖 Documentação: test/README.md"
 echo "🔧 Configuração: pytest.ini"
 echo "⚙️ Configuração CI: .env.ci"
 echo "🎯 Modo usado: $TESTS_TO_RUN"

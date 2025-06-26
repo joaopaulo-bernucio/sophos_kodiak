@@ -6,8 +6,7 @@ from app.query_mapping import (
     QueryCategory,
     QueryMapping,
     QueryMappingManager,
-    query_manager,
-    query_mappings
+    query_manager
 )
 
 
@@ -49,7 +48,7 @@ class TestQueryCategory:
     def test_all_categories_exist(self):
         expected_categories = [
             "totais", "listagens", "detalhes",
-            "recentes", "estatisticas", "analises"
+            "recentes", "estatisticas"
         ]
 
         for category_value in expected_categories:
@@ -66,7 +65,6 @@ class TestQueryCategory:
         assert QueryCategory.DETAILS.value == "detalhes"
         assert QueryCategory.RECENT.value == "recentes"
         assert QueryCategory.STATISTICS.value == "estatisticas"
-        assert QueryCategory.ANALYTICS.value == "analises"
 
 
 class TestQueryMappingManager:
@@ -183,20 +181,23 @@ class TestGlobalQueryManager:
 
 class TestBackwardCompatibility:
 
-    def test_query_mappings_list_exists(self):
-        assert query_mappings is not None
-        assert isinstance(query_mappings, list)
-        assert len(query_mappings) > 0
+    def test_query_manager_mappings_exist(self):
+        """Testa se o query_manager tem mappings disponíveis"""
+        assert query_manager is not None
+        assert hasattr(query_manager, 'mappings')
+        assert isinstance(query_manager.mappings, list)
+        assert len(query_manager.mappings) > 0
 
-    def test_query_mappings_structure(self):
-        for mapping_tuple in query_mappings[:5]:
-            assert isinstance(mapping_tuple, tuple)
-            assert len(mapping_tuple) == 3
-
-            keywords, query_id, sql_query = mapping_tuple
-            assert isinstance(keywords, list)
-            assert isinstance(query_id, str)
-            assert isinstance(sql_query, str)
+    def test_query_manager_mappings_structure(self):
+        """Testa a estrutura dos mappings do query_manager"""
+        for mapping in query_manager.mappings[:5]:
+            assert isinstance(mapping, QueryMapping)
+            assert hasattr(mapping, 'keywords')
+            assert hasattr(mapping, 'query_id')
+            assert hasattr(mapping, 'sql_query')
+            assert isinstance(mapping.keywords, list)
+            assert isinstance(mapping.query_id, str)
+            assert isinstance(mapping.sql_query, str)
 
 
 class TestQueryValidation:

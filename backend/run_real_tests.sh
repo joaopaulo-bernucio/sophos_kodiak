@@ -1,8 +1,6 @@
 #!/bin/bash
 
-echo "🔍 TESTE DE ANÁLISE REAL DO CÓDIGO SOPHOS KODIAK"
-echo "================================================="
-echo ""
+set -e
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -70,6 +68,8 @@ print_status "Análise real: ${ANALYZE_REAL_CODE}"
 echo ""
 print_status "🧪 Executando testes para analisar código real..."
 
+# Desabilita exit imediato temporariamente para capturar o código de saída
+set +e
 pytest -v \
     --tb=short \
     -m "not external" \
@@ -78,9 +78,11 @@ pytest -v \
     --cov=app \
     --cov-report=html \
     --cov-report=term-missing \
-    tests/
+    test/
 
 RESULT=$?
+# Reabilita exit imediato
+set -e
 
 echo ""
 if [[ $RESULT -eq 0 ]]; then
@@ -103,6 +105,6 @@ echo ""
 echo "🎯 Próximos passos:"
 echo "  • Revise o relatório de cobertura"
 echo "  • Analise os logs dos testes para entender o comportamento"
-echo "  • Execute testes específicos com: pytest tests/specific_test.py -v -s"
+echo "  • Execute testes específicos com: pytest test/specific_test.py -v -s"
 
 exit $RESULT

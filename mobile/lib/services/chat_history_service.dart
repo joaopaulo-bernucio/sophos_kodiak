@@ -163,6 +163,16 @@ class ChatHistoryService {
       return false;
     }
   }
+
+  static Future<bool> hasCurrentSessionMessages() async {
+    try {
+      final messages = await getCurrentSessionMessages();
+      return messages.isNotEmpty;
+    } catch (e) {
+      _logger.e('Erro ao verificar mensagens da sessão atual: $e');
+      return false;
+    }
+  }
 }
 
 class ChatSession {

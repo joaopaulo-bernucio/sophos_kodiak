@@ -27,9 +27,10 @@ class TestConcurrentUsers:
                 pergunta = random.choice(perguntas_teste)
                 start_time = time.time()
 
-                response = client.post('/pergunta',
-                                     json={'pergunta': pergunta},
-                                     content_type='application/json')
+                with client.application.test_client() as thread_client:
+                    response = thread_client.post('/pergunta',
+                                                json={'pergunta': pergunta},
+                                                content_type='application/json')
 
                 response_time = time.time() - start_time
 
@@ -50,7 +51,6 @@ class TestConcurrentUsers:
                     'success': False
                 }
 
-        # Executar requisições em paralelo
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = []
 
@@ -59,7 +59,6 @@ class TestConcurrentUsers:
                     future = executor.submit(make_request, thread_id, request_id)
                     futures.append(future)
 
-            # Coletar resultados
             for future in as_completed(futures):
                 try:
                     result = future.result(timeout=30)
@@ -105,7 +104,8 @@ class TestConcurrentUsers:
         def test_endpoint(endpoint):
             try:
                 start_time = time.time()
-                response = client.get(endpoint)
+                with client.application.test_client() as thread_client:
+                    response = thread_client.get(endpoint)
                 response_time = time.time() - start_time
 
                 return {
@@ -166,45 +166,45 @@ class TestConcurrentUsers:
 
         def execute_workload():
             local_results = []
+            with client.application.test_client() as local_client:
+                for _ in range(num_requests // concurrent_users):
+                    rand = random.randint(1, 100)
+                    cumulative_weight = 0
+                    selected_workload = workloads[0]
 
-            for _ in range(num_requests // concurrent_users):
-                rand = random.randint(1, 100)
-                cumulative_weight = 0
-                selected_workload = workloads[0]
+                    for workload in workloads:
+                        cumulative_weight += workload['weight']
+                        if rand <= cumulative_weight:
+                            selected_workload = workload
+                            break
 
-                for workload in workloads:
-                    cumulative_weight += workload['weight']
-                    if rand <= cumulative_weight:
-                        selected_workload = workload
-                        break
+                    try:
+                        start_time = time.time()
 
-                try:
-                    start_time = time.time()
+                        if selected_workload['type'] == 'pergunta':
+                            response = local_client.post('/pergunta',
+                                                       json=selected_workload['data'],
+                                                       content_type='application/json')
+                        else:
+                            response = local_client.get(selected_workload['endpoint'])
 
-                    if selected_workload['type'] == 'pergunta':
-                        response = client.post('/pergunta',
-                                             json=selected_workload['data'],
-                                             content_type='application/json')
-                    else:
-                        response = client.get(selected_workload['endpoint'])
+                        response_time = time.time() - start_time
 
-                    response_time = time.time() - start_time
+                        local_results.append({
+                            'type': selected_workload['type'],
+                            'status_code': response.status_code,
+                            'response_time': response_time,
+                            'success': response.status_code in [200, 400, 404, 500]
+                        })
 
-                    local_results.append({
-                        'type': selected_workload['type'],
-                        'status_code': response.status_code,
-                        'response_time': response_time,
-                        'success': response.status_code in [200, 400, 404, 500]
-                    })
+                        time.sleep(0.1)
 
-                    time.sleep(0.1)
-
-                except Exception as e:
-                    local_results.append({
-                        'type': selected_workload['type'],
-                        'error': str(e),
-                        'success': False
-                    })
+                    except Exception as e:
+                        local_results.append({
+                            'type': selected_workload['type'],
+                            'error': str(e),
+                            'success': False
+                        })
 
             return local_results
 

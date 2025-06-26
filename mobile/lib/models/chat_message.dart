@@ -32,7 +32,7 @@ class ChatMessage {
       'text': text,
       'isUser': isUser,
       'timestamp': timestamp.toIso8601String(),
-      'isAnimating': isAnimating,
+      'isAnimating': false, // Sempre salvar como false
       'isError': isError,
     };
   }

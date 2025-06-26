@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -8,7 +8,6 @@ class QueryCategory(Enum):
     DETAILS = "detalhes"
     RECENT = "recentes"
     STATISTICS = "estatisticas"
-    ANALYTICS = "analises"
 
 @dataclass
 class QueryMapping:
@@ -479,9 +478,16 @@ class QueryMappingManager:
         """Adiciona um mapeamento e constrói o índice de palavras-chave."""
         self.mappings.append(mapping)
         for keyword in mapping.keywords:
-            self._keyword_index[keyword.lower()] = mapping
+            keyword_lower = keyword.lower()
+            if keyword_lower in self._keyword_index:
+                print(f"Aviso: palavra-chave '{keyword}' já existe no índice")
+            self._keyword_index[keyword_lower] = mapping
 
     def find_query(self, user_input: str) -> Optional[QueryMapping]:
+        """Encontra a query mais apropriada baseada na entrada do usuário."""
+        if not user_input or not user_input.strip():
+            return None
+
         user_input = user_input.lower().strip()
 
         if user_input in self._keyword_index:
@@ -491,8 +497,13 @@ class QueryMappingManager:
         best_score = 0
 
         for keyword, mapping in self._keyword_index.items():
-            if keyword in user_input or user_input in keyword:
-                score = len(keyword) if keyword in user_input else len(user_input)
+            if keyword in user_input:
+                score = len(keyword)
+                if score > best_score:
+                    best_score = score
+                    best_match = mapping
+            elif user_input in keyword and len(user_input) >= 3:
+                score = len(user_input)
                 if score > best_score:
                     best_score = score
                     best_match = mapping
@@ -506,5 +517,3 @@ class QueryMappingManager:
         return list(self._keyword_index.keys())
 
 query_manager = QueryMappingManager()
-query_mappings = [(mapping.keywords, mapping.query_id, mapping.sql_query)
-                 for mapping in query_manager.mappings]

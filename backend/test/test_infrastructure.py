@@ -111,7 +111,7 @@ class TestFileSystemAccess:
         backend_root = Path(__file__).parent.parent
         essential_dirs = [
             'app',
-            'tests'
+            'test'
         ]
         essential_files = [
             'app/app.py',

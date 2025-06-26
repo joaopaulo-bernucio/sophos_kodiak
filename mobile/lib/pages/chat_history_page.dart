@@ -3,6 +3,7 @@ import '../constants/app_constants.dart';
 import '../models/chat_message.dart';
 import '../services/chat_history_service.dart';
 import '../services/message_service.dart';
+import '../widgets/markdown_renderer.dart';
 
 class ChatHistoryPage extends StatefulWidget {
   const ChatHistoryPage({super.key});
@@ -86,7 +87,6 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             context,
             message: 'Histórico limpo com sucesso',
           );
-          // Notifica a página anterior que o histórico foi limpo
           Navigator.of(context).pop({'historyCleared': true});
         }
       } else {
@@ -419,13 +419,10 @@ class _MessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        child: Text(
-          message.text,
-          style: AppTextStyles.primaryText.copyWith(
-            color: message.isUser
-                ? AppColors.primaryDark
-                : AppColors.textPrimary,
-          ),
+        child: MarkdownRenderer(
+          text: message.text,
+          isUser: message.isUser,
+          selectable: true,
         ),
       ),
     );

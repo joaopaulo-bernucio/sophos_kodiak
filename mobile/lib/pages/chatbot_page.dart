@@ -36,8 +36,10 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
   bool _isDropdownVisible = false;
   bool _isWaitingResponse = false;
+  bool _isAnimatingResponse = false;
   String? _currentUserName;
   Completer<void>? _currentRequestCompleter;
+  Completer<void>? _currentAnimationCompleter;
 
   final List<Map<String, String>> _suggestions = [
     {'title': 'Quantos funcionários', 'subtitle': 'a empresa possui?'},
@@ -101,20 +103,22 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
   }
 
   Future<void> _loadCurrentSessionMessages() async {
-    _addWelcomeMessage();
-
     try {
-      final List<ChatMessage> currentMessages =
+      final List<ChatMessage> savedMessages =
           await ChatHistoryService.getCurrentSessionMessages();
 
-      if (currentMessages.isNotEmpty) {
+      if (savedMessages.isNotEmpty) {
         setState(() {
           _messages.clear();
-          _messages.addAll(currentMessages);
+          _messages.addAll(savedMessages);
         });
+        _scrollToBottom();
+      } else {
+        _addWelcomeMessage();
       }
     } catch (e) {
       debugPrint('Erro ao carregar mensagens da sessão atual: $e');
+      _addWelcomeMessage();
     }
   }
 
@@ -192,18 +196,30 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
           isAnimating: true,
         );
 
+        // Inicia o estado de animação da resposta
+        _currentAnimationCompleter = Completer<void>();
+
         setState(() {
           _messages.add(botMessage);
           _isWaitingResponse = false;
+          _isAnimatingResponse = true;
         });
-        _saveMessageToHistory(botMessage);
+
+        final finalBotMessage = botMessage.copyWith(isAnimating: false);
+        _saveMessageToHistory(finalBotMessage);
+
         _scrollToBottom();
+
+        // A animação será finalizada automaticamente pelo callback onComplete
+        // do TypewriterMarkdown, não precisamos mais do timer fixo
       }
     } on CancelRequestException {
       if (mounted) {
         setState(() {
           _isWaitingResponse = false;
+          _isAnimatingResponse = false;
         });
+        _currentAnimationCompleter?.complete();
       }
     } on ApiException catch (apiError) {
       if (mounted && !_currentRequestCompleter!.isCompleted) {
@@ -219,6 +235,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         setState(() {
           _messages.add(errorMessage);
           _isWaitingResponse = false;
+          _isAnimatingResponse = false;
         });
         _scrollToBottom();
       }
@@ -236,6 +253,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         setState(() {
           _messages.add(errorMessage);
           _isWaitingResponse = false;
+          _isAnimatingResponse = false;
         });
         _scrollToBottom();
       }
@@ -253,21 +271,72 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
   }
 
   void _cancelCurrentRequest() {
+    // Cancela a requisição da API se ainda estiver em andamento
     if (_currentRequestCompleter != null &&
         !_currentRequestCompleter!.isCompleted) {
       _currentRequestCompleter!.complete();
+    }
+
+    // Cancela a animação se ainda estiver em andamento
+    if (_currentAnimationCompleter != null &&
+        !_currentAnimationCompleter!.isCompleted) {
+      _currentAnimationCompleter!.complete();
+
+      // Interrompe a animação imediatamente finalizando as mensagens animadas
+      if (mounted) {
+        setState(() {
+          for (int i = 0; i < _messages.length; i++) {
+            if (_messages[i].isAnimating) {
+              _messages[i] = _messages[i].copyWith(isAnimating: false);
+            }
+          }
+          _isWaitingResponse = false;
+          _isAnimatingResponse = false;
+        });
+      }
+    } else {
+      // Se não há animação, apenas para o waiting response
       setState(() {
         _isWaitingResponse = false;
+        _isAnimatingResponse = false;
       });
+    }
+  }
+
+  void _onTypewriterComplete() {
+    // Chamado quando a animação do TypewriterMarkdown termina
+    if (mounted && _currentAnimationCompleter != null) {
+      if (!_currentAnimationCompleter!.isCompleted) {
+        _currentAnimationCompleter!.complete();
+      }
+
+      setState(() {
+        _isAnimatingResponse = false;
+        // Finaliza as mensagens animadas
+        for (int i = 0; i < _messages.length; i++) {
+          if (_messages[i].isAnimating) {
+            _messages[i] = _messages[i].copyWith(isAnimating: false);
+          }
+        }
+      });
+
+      _currentAnimationCompleter = null;
     }
   }
 
   Future<void> _startNewConversation() async {
     try {
+      // Cancela qualquer animação em andamento
+      if (_currentAnimationCompleter != null &&
+          !_currentAnimationCompleter!.isCompleted) {
+        _currentAnimationCompleter!.complete();
+      }
+
       ChatHistoryService.startNewSession();
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
+        _isAnimatingResponse = false;
       });
       _addWelcomeMessage();
       _scrollToBottom();
@@ -276,6 +345,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
+        _isAnimatingResponse = false;
       });
       _addWelcomeMessage();
     }
@@ -283,11 +353,18 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
   Future<void> _handleHistoryCleared() async {
     try {
+      // Cancela qualquer animação em andamento
+      if (_currentAnimationCompleter != null &&
+          !_currentAnimationCompleter!.isCompleted) {
+        _currentAnimationCompleter!.complete();
+      }
+
       ChatHistoryService.startNewSession();
 
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
+        _isAnimatingResponse = false;
       });
 
       _addWelcomeMessage();
@@ -304,6 +381,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
       setState(() {
         _messages.clear();
         _isWaitingResponse = false;
+        _isAnimatingResponse = false;
       });
       _addWelcomeMessage();
     }
@@ -623,7 +701,10 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
         if (index >= _messages.length && _isWaitingResponse) {
           return _buildTypingIndicator();
         }
-        return _MessageBubble(message: _messages[index]);
+        return _MessageBubble(
+          message: _messages[index],
+          onAnimationComplete: _onTypewriterComplete,
+        );
       },
     );
   }
@@ -730,7 +811,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
     final hasText = _messageController.text.trim().isNotEmpty;
 
     ButtonState buttonState;
-    if (_isWaitingResponse) {
+    if (_isWaitingResponse || _isAnimatingResponse) {
       buttonState = ButtonState.cancel;
     } else if (hasText) {
       buttonState = ButtonState.send;
@@ -778,7 +859,7 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
                     onTap: _scrollToBottom,
                     onSubmitted: (_) =>
                         buttonState == ButtonState.send ? _sendMessage() : null,
-                    enabled: !_isWaitingResponse,
+                    enabled: !_isWaitingResponse && !_isAnimatingResponse,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -834,8 +915,9 @@ class _ChatbotPageState extends State<ChatbotPage> with WidgetsBindingObserver {
 
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
+  final VoidCallback? onAnimationComplete;
 
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.onAnimationComplete});
 
   @override
   Widget build(BuildContext context) {
@@ -861,10 +943,17 @@ class _MessageBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
         ),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 1.0,
         ),
         child: message.isAnimating
-            ? TypewriterMarkdown(text: message.text, isUser: message.isUser)
+            ? TypewriterMarkdown(
+                text: message.text,
+                isUser: message.isUser,
+                speed: const Duration(
+                  milliseconds: 20,
+                ), // Velocidade configurável
+                onComplete: onAnimationComplete,
+              )
             : MarkdownRenderer(text: message.text, isUser: message.isUser),
       ),
     );
@@ -912,7 +1001,7 @@ class _MessageBubble extends StatelessWidget {
         border: Border.all(color: iconColor.withValues(alpha: 0.3), width: 1),
       ),
       constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.85,
+        maxWidth: MediaQuery.of(context).size.width * 1.0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -941,58 +1030,6 @@ class _MessageBubble extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class TypewriterText extends StatefulWidget {
-  final String text;
-  final TextStyle style;
-  final Duration speed;
-
-  const TypewriterText({
-    super.key,
-    required this.text,
-    this.style = AppTextStyles.largeText,
-    this.speed = const Duration(milliseconds: 30),
-  });
-
-  @override
-  State<TypewriterText> createState() => _TypewriterTextState();
-}
-
-class _TypewriterTextState extends State<TypewriterText> {
-  late String _displayText;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _displayText = '';
-    _startTyping();
-  }
-
-  void _startTyping() {
-    int index = 0;
-    _timer = Timer.periodic(widget.speed, (timer) {
-      if (index < widget.text.length) {
-        if (mounted) {
-          setState(() => _displayText += widget.text[index++]);
-        }
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(_displayText, style: widget.style);
   }
 }
 

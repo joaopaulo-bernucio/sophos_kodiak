@@ -3,10 +3,21 @@ import logging
 import os
 import time
 import hashlib
+import re
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from unittest.mock import Mock
+
+# Constantes da aplicação
+CACHE_DURATION = 3600
+GEMINI_TIMEOUT = 30
+GEMINI_MAX_RETRIES = 3
+GEMINI_RATE_LIMIT = 10
+GEMINI_RATE_WINDOW = 60
+MAX_INPUT_LENGTH = 1000
+DB_CONNECT_TIMEOUT = 10
+DB_STATEMENT_TIMEOUT = 30000
 
 try:
     import psycopg2
@@ -25,9 +36,9 @@ except ImportError:
         pass
 
 try:
-    from .query_mapping import query_mappings
+    from .query_mapping import query_manager
 except ImportError:
-    from query_mapping import query_mappings
+    from query_mapping import query_manager
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -37,7 +48,7 @@ missing = [v for v in required_vars if not os.getenv(v)]
 
 if missing and os.getenv('FLASK_ENV') != 'testing':
     logging.error(f"Variáveis de ambiente faltando: {', '.join(missing)}. Verifique o seu .env.")
-    exit(1)
+    raise RuntimeError("Variáveis de ambiente obrigatórias não encontradas")
 elif missing and os.getenv('FLASK_ENV') == 'testing':
     test_defaults = {
         'DB_HOST': 'localhost',
@@ -58,7 +69,7 @@ if spacy:
         if os.getenv('FLASK_ENV') != 'testing':
             logging.error("Não foi possível carregar o modelo spaCy 'pt_core_news_sm'. "
                           "Verifique se instalou com: python -m spacy download pt_core_news_sm")
-            exit(1)
+            raise RuntimeError("Modelo spaCy pt_core_news_sm não encontrado")
         else:
             logging.warning("Usando mock do spaCy para testes")
             nlp = Mock()
@@ -104,10 +115,10 @@ def create_app(config=None):
     return app_instance
 
 instrucoes_fixas = """
-# SISTEMA: Assistente Virtual Empresarial - Sophos
+# SISTEMA: Assistente Virtual Empresarial - Sophos Kodiak
 
 ## [IDENTIDADE E PERSONA]
-Você é **Sophos**, um assistente virtual inteligente e profissional especializado em análise de dados empresariais da Conttrotech, uma empresa de Planejamento de Recursos Empresariais. Sua personalidade é: confiável, precisa, educada e orientada a resultados.
+Você é **Sophos Kodiak**, um assistente virtual inteligente e profissional especializado em análise de dados e recursos empresariais. Sua personalidade é: confiável, precisa, educada e orientada a resultados.
 
 ## [CONTEXTO ORGANIZACIONAL]
 ### Estrutura da Empresa Conttrotech:
@@ -124,8 +135,8 @@ Você é **Sophos**, um assistente virtual inteligente e profissional especializ
 ## [DIRETRIZES DE COMPORTAMENTO]
 
 ### SEMPRE FAÇA:
-1. **Inicie respostas com**: "Olá! Sou o Sophos, assistente virtual da Conttrotech."
-2. **Priorize precisão** sobre velocidade - analise os dados completamente
+1. Nunca inicie respostas com uma saudação, seja direto e vá direto ao ponto, sem enrolações."
+2. **Priorize precisão** sobre velocidade: analise os dados completamente
 3. **Use formatação estruturada**: tabelas, listas, negrito para organizar informações
 4. **Traduza dados técnicos** em linguagem de negócios (evite IDs, códigos internos)
 5. **Forneça insights contextuais** quando relevante aos dados apresentados
@@ -140,15 +151,13 @@ Você é **Sophos**, um assistente virtual inteligente e profissional especializ
 
 ### Estrutura Padrão:
 ```
-[SAUDAÇÃO] Olá! Sou o Sophos, assistente virtual da Conttrotech.
+Com base nos dados disponíveis, [sua análise aqui]
 
-[ANÁLISE] Com base nos dados disponíveis, [sua análise aqui]
+[Apresente os dados em formato estruturado]
 
-[DADOS/TABELA] [Apresente os dados em formato estruturado]
+[Se aplicável, forneça insights ou conclusões relevantes]
 
-[INSIGHTS] [Se aplicável, forneça insights ou conclusões relevantes]
-
-[AÇÕES SUGERIDAS] [Se apropriado, sugira próximos passos ou consultas relacionadas]
+[Se apropriado, sugira próximos passos ou consultas relacionadas]
 ```
 
 ### Exemplo de Formatação de Tabela:
@@ -179,11 +188,11 @@ Você é **Sophos**, um assistente virtual inteligente e profissional especializ
 
 ## [MÉTRICAS DE QUALIDADE]
 Toda resposta deve atender aos critérios:
-- ✅ **Precisão**: Baseada em dados reais consultados
-- ✅ **Clareza**: Linguagem acessível e bem estruturada
-- ✅ **Completude**: Responde totalmente à pergunta ou explica limitações
-- ✅ **Utilidade**: Fornece valor de negócio e insights acionáveis
-- ✅ **Profissionalismo**: Tom adequado ao contexto empresarial
+- **Precisão**: Baseada em dados reais consultados
+- **Clareza**: Linguagem acessível e bem estruturada
+- **Completude**: Responde totalmente à pergunta ou explica limitações
+- **Utilidade**: Fornece valor de negócio e insights acionáveis
+- **Profissionalismo**: Tom adequado ao contexto empresarial
 
 ## [INSTRUÇÕES TÉCNICAS]
 - Processe apenas dados retornados pelas consultas ao banco
@@ -192,13 +201,13 @@ Toda resposta deve atender aos critérios:
 - Priorize informações mais recentes quando relevante
 
 ---
+
 **LEMBRE-SE**: Seu objetivo é transformar dados em insights valiosos para tomada de decisão empresarial, mantendo sempre alta qualidade, precisão e profissionalismo.
 """
 
 historico_conversa = []
 cache_dados = {}
 gemini_cache = {}
-CACHE_DURATION = 3600
 
 def get_db_connection():
     if not psycopg2:
@@ -211,8 +220,8 @@ def get_db_connection():
             'dbname': os.getenv('DB_NAME', 'postgres'),
             'user': os.getenv('DB_USER', 'postgres'),
             'password': os.getenv('DB_PASSWORD', 'postgres'),
-            'connect_timeout': 10,
-            'options': '-c statement_timeout=30000'
+            'connect_timeout': DB_CONNECT_TIMEOUT,
+            'options': f'-c statement_timeout={DB_STATEMENT_TIMEOUT}'
         }
         if os.getenv('FLASK_ENV') == 'testing' or os.getenv('DB_HOST') == 'localhost':
             connection_params['sslmode'] = 'prefer'
@@ -268,7 +277,7 @@ def verificar_banco():
         for tabela in tabelas_necessarias:
             if tabela not in tabelas_faltando:
                 try:
-                    cur.execute("SELECT COUNT(*) FROM %s" % tabela)
+                    cur.execute("SELECT COUNT(*) FROM %s", (tabela,))
                     count = cur.fetchone()[0]
                     if count == 0:
                         logging.warning(f"A tabela '{tabela}' está vazia. Nenhum registro encontrado.")
@@ -312,7 +321,6 @@ def verificar_banco():
             conn.close()
 
 def extrair_lemmas(texto):
-    import re
     if texto is None:
         return set()
     if not isinstance(texto, str):
@@ -341,15 +349,15 @@ def extrair_lemmas(texto):
 def selecionar_queries(pergunta):
     lemmas_pergunta = extrair_lemmas(pergunta)
     matches = []
-    for palavras, label, query in query_mappings:
+    for mapping in query_manager.mappings:
         chaves_lematizadas = set()
-        for frase in palavras:
+        for frase in mapping.keywords:
             doc_frase = nlp(frase.lower())
             for token in doc_frase:
                 if token.is_alpha and not token.is_stop:
                     chaves_lematizadas.add(token.lemma_)
         if chaves_lematizadas & lemmas_pergunta:
-            matches.append((label, query))
+            matches.append((mapping.query_id, mapping.sql_query))
     return matches
 
 def gerar_query_dinamica(pergunta):
@@ -449,8 +457,8 @@ def enviar_para_gemini(contexto):
         else:
             del gemini_cache[cache_key]
     recent_calls = getattr(enviar_para_gemini, 'recent_calls', [])
-    recent_calls = [t for t in recent_calls if current_time - t < 60]
-    if len(recent_calls) >= 10:
+    recent_calls = [t for t in recent_calls if current_time - t < GEMINI_RATE_WINDOW]
+    if len(recent_calls) >= GEMINI_RATE_LIMIT:
         logging.warning("Rate limit atingido para Gemini API")
         return "Desculpe, muitas consultas em pouco tempo. Tente novamente em alguns momentos."
     api_key = os.getenv('GEMINI_API_KEY')
@@ -479,13 +487,13 @@ def enviar_para_gemini(contexto):
     )
     headers = {'Content-Type': 'application/json'}
     payload = {'contents': [{'parts': [{'text': contexto}]}]}
-    max_retries = 3
+    max_retries = GEMINI_MAX_RETRIES
     base_delay = 1
     for attempt in range(max_retries):
         try:
             recent_calls.append(current_time)
             enviar_para_gemini.recent_calls = recent_calls
-            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            resp = requests.post(url, json=payload, headers=headers, timeout=GEMINI_TIMEOUT)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get('candidates', [])
@@ -569,7 +577,6 @@ def detectar_sql_injection(texto):
         r'\bsp_executesql\b',
         r'\bxp_cmdshell\b'
     ]
-    import re
     for padrao in padroes_perigosos:
         if re.search(padrao, texto_lower, re.IGNORECASE):
             return True
@@ -578,16 +585,12 @@ def detectar_sql_injection(texto):
 def sanitizar_entrada(texto):
     if not texto or not isinstance(texto, str):
         return texto
-    import re
     texto_limpo = re.sub(r'<[^>]*>', '', texto, flags=re.IGNORECASE)
     texto_limpo = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', texto_limpo)
     texto_limpo = re.sub(r'[^\w\sàáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ\.\?\!\,\-\(\)]', '', texto_limpo, flags=re.IGNORECASE)
-    if len(texto_limpo) > 1000:
-        texto_limpo = texto_limpo[:1000]
+    if len(texto_limpo) > MAX_INPUT_LENGTH:
+        texto_limpo = texto_limpo[:MAX_INPUT_LENGTH]
     return texto_limpo.strip()
-
-supabase_client = None
-gemini_client = None
 
 app = create_app()
 
@@ -595,15 +598,6 @@ if os.getenv('FLASK_ENV') != 'testing':
     banco_ok = verificar_banco()
     if not banco_ok:
         logging.warning("Problemas na verificação do banco - continuando com funcionalidade limitada")
-
-try:
-    CORS(app,
-         origins=["*"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization", "Accept"],
-         supports_credentials=True)
-except Exception as e:
-    logging.warning(f"Erro ao configurar CORS: {e}")
 
 @app.route('/pergunta', methods=['POST'])
 def responder_pergunta():
@@ -646,7 +640,7 @@ def responder_pergunta():
             'sucesso': False,
             'erro': 'Consulta bloqueada por medidas de segurança.'
         }), 400
-    pergunta_original = pergunta
+
     pergunta = sanitizar_entrada(pergunta)
     if not pergunta:
         return jsonify({
@@ -661,13 +655,7 @@ def responder_pergunta():
             'sucesso': False,
             'erro': 'Erro forçado de banco para teste'
         }), 500
-    if detectar_sql_injection(pergunta):
-        return jsonify({
-            'resposta': '',
-            'sucesso': False,
-            'erro': 'Pergunta contém padrões suspeitos e foi bloqueada por segurança.'
-        }), 400
-    pergunta = sanitizar_entrada(pergunta)
+
     try:
         historico_conversa.append(f"Usuário: {pergunta}")
         consultas = selecionar_queries(pergunta)

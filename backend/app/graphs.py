@@ -9,7 +9,21 @@ import decimal
 from app.app import app
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+def _converter_valor_para_json(valor):
+    """Converte valores do banco para tipos JSON compatíveis."""
+    if valor is None:
+        return None
+    elif isinstance(valor, decimal.Decimal):
+        return float(valor)
+    elif isinstance(valor, datetime):
+        return valor.isoformat()
+    elif isinstance(valor, (int, float)):
+        return valor
+    else:
+        return str(valor)
 
 def get_db_connection():
     try:
@@ -25,10 +39,10 @@ def get_db_connection():
         )
         return conn
     except psycopg2.OperationalError as e:
-        logging.error(f"Erro de conexão com o banco: {e}")
+        logger.error(f"Erro de conexão com o banco: {e}")
         return None
     except Exception as e:
-        logging.error(f"Erro inesperado ao conectar ao banco: {e}")
+        logger.error(f"Erro inesperado ao conectar ao banco: {e}")
         return None
 
 @app.route('/api/graphs/health', methods=['GET'])
@@ -54,7 +68,7 @@ def health_check():
                 "timestamp": datetime.now().isoformat()
             }), 503
     except Exception as e:
-        logging.error(f"Erro no health check: {e}")
+        logger.error(f"Erro no health check: {e}")
         return jsonify({
             "status": "unhealthy",
             "message": str(e),
@@ -145,7 +159,7 @@ def executar_query_e_gerar_json(query, colunas):
     conn = get_db_connection()
 
     if not conn:
-        logging.error("Falha na conexão com o banco de dados")
+        logger.error("Falha na conexão com o banco de dados")
         return jsonify({
             "error": "Falha na conexão com o banco de dados",
             "code": "DB_CONNECTION_ERROR"
@@ -161,22 +175,11 @@ def executar_query_e_gerar_json(query, colunas):
             registro = {}
             for i, col in enumerate(colunas):
                 valor = row[i] if i < len(row) else None
-
-                if valor is None:
-                    registro[col] = None
-                elif isinstance(valor, decimal.Decimal):
-                    registro[col] = float(valor)
-                elif isinstance(valor, (int, float)):
-                    registro[col] = float(valor) if isinstance(valor, int) and col in ['total_vendas', 'receita', 'valor_total', 'orcamento'] else valor
-                elif isinstance(valor, datetime):
-                    registro[col] = valor.isoformat()
-                else:
-                    registro[col] = str(valor)
-
+                registro[col] = _converter_valor_para_json(valor)
             dados.append(registro)
 
         execution_time = (datetime.now() - start_time).total_seconds()
-        logging.info(f"Query executada com sucesso em {execution_time:.3f}s - {len(dados)} registros retornados")
+        logger.info(f"Query executada com sucesso em {execution_time:.3f}s - {len(dados)} registros retornados")
 
         return jsonify({
             "data": dados,
@@ -186,14 +189,14 @@ def executar_query_e_gerar_json(query, colunas):
         })
 
     except psycopg2.Error as e:
-        logging.error(f"Erro PostgreSQL: {e}")
+        logger.error(f"Erro PostgreSQL: {e}")
         return jsonify({
             "error": "Erro na consulta ao banco de dados",
             "code": "DB_QUERY_ERROR",
             "details": str(e)
         }), 500
     except Exception as e:
-        logging.error(f"Erro inesperado ao executar query: {e}")
+        logger.error(f"Erro inesperado ao executar query: {e}")
         return jsonify({
             "error": "Erro interno do servidor",
             "code": "INTERNAL_ERROR",
@@ -201,9 +204,11 @@ def executar_query_e_gerar_json(query, colunas):
         }), 500
     finally:
         try:
-            cur.close()
-            conn.close()
-        except:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
+        except (psycopg2.Error, AttributeError):
             pass
 
 @app.errorhandler(404)

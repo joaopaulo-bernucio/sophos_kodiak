@@ -23,7 +23,6 @@ class MarkdownRenderer extends StatelessWidget {
       style: AppTextStyles.primaryText.copyWith(color: textColor, height: 1.5),
     );
 
-    // Se for selecionável, envolve com SelectionArea
     if (selectable && !isUser) {
       markdownWidget = SelectionArea(child: markdownWidget);
     }
@@ -36,9 +35,7 @@ class MarkdownRenderer extends StatelessWidget {
 
   ThemeData _buildCustomTheme(BuildContext context, Color textColor) {
     return Theme.of(context).copyWith(
-      // Personalização do tema para o Markdown
       textTheme: Theme.of(context).textTheme.copyWith(
-        // Títulos
         headlineLarge: AppTextStyles.title.copyWith(
           color: isUser ? AppColors.primaryDark : AppColors.primary,
           fontSize: 28,
@@ -69,7 +66,6 @@ class MarkdownRenderer extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        // Texto do corpo
         bodyLarge: AppTextStyles.primaryText.copyWith(
           color: textColor,
           fontSize: 16,
@@ -82,7 +78,6 @@ class MarkdownRenderer extends StatelessWidget {
           color: textColor,
           fontSize: 12,
         ),
-        // Código
         labelLarge: TextStyle(
           fontFamily: 'monospace',
           color: textColor,
@@ -92,21 +87,44 @@ class MarkdownRenderer extends StatelessWidget {
               : AppColors.background.withValues(alpha: 0.5),
         ),
       ),
-      // Cores para divisores e bordas
       dividerColor: textColor.withValues(alpha: 0.3),
       cardColor: isUser
           ? AppColors.primaryDark.withValues(alpha: 0.1)
           : AppColors.background.withValues(alpha: 0.5),
-      // Cores para links
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: WidgetStateProperty.all(
+          isUser
+              ? AppColors.primaryDark.withValues(alpha: 0.1)
+              : AppColors.background,
+        ),
+        dataRowColor: WidgetStateProperty.all(Colors.transparent),
+        headingTextStyle: AppTextStyles.primaryText.copyWith(
+          color: textColor,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        dataTextStyle: AppTextStyles.primaryText.copyWith(
+          color: textColor,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
       colorScheme: Theme.of(context).colorScheme.copyWith(
         primary: isUser ? AppColors.primaryDark : AppColors.primary,
         secondary: isUser ? AppColors.primaryDark : AppColors.primary,
+        surface: isUser
+            ? AppColors.primaryDark.withValues(alpha: 0.1)
+            : AppColors.background,
+        onSurface: textColor,
+        surfaceContainerHighest: isUser
+            ? AppColors.primaryDark.withValues(alpha: 0.1)
+            : AppColors.background,
+        onSurfaceVariant: textColor,
       ),
     );
   }
 }
 
-/// Widget customizado para renderização de código com syntax highlighting básico
 class CodeBlockWidget extends StatelessWidget {
   final String code;
   final String? language;
@@ -168,7 +186,6 @@ class CodeBlockWidget extends StatelessWidget {
   }
 }
 
-/// Widget customizado para tabelas com melhor apresentação
 class TableWidget extends StatelessWidget {
   final List<List<String>> rows;
   final bool isUser;
@@ -181,9 +198,10 @@ class TableWidget extends StatelessWidget {
 
     final textColor = isUser ? AppColors.primaryDark : AppColors.textPrimary;
     final borderColor = textColor.withValues(alpha: 0.3);
+    // Força sempre o fundo escuro do app para cabeçalhos de tabela em mensagens do bot
     final headerColor = isUser
         ? AppColors.primaryDark.withValues(alpha: 0.1)
-        : AppColors.background.withValues(alpha: 0.5);
+        : AppColors.background;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),

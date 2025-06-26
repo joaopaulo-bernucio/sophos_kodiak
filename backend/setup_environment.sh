@@ -3,12 +3,20 @@
 echo "=== Configuração do Ambiente Sophos Kodiak ==="
 echo
 
+# Verifica se está sendo executado no diretório correto
 if [ ! -f "run.py" ]; then
     echo "❌ Erro: Execute este script do diretório backend/"
     exit 1
 fi
 
 echo "📦 Verificando dependências Python..."
+
+# Verifica se Python3 está instalado
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Erro: Python3 não encontrado"
+    echo "💡 Instale o Python3 antes de continuar"
+    exit 1
+fi
 
 if [ -z "$VIRTUAL_ENV" ]; then
     echo "⚠️  Aviso: Nenhum ambiente virtual detectado"
@@ -17,7 +25,11 @@ if [ -z "$VIRTUAL_ENV" ]; then
 fi
 
 echo "📥 Instalando dependências..."
-pip install -r requirements.txt
+if ! pip install -r requirements.txt; then
+    echo "❌ Erro ao instalar dependências"
+    echo "💡 Verifique se o arquivo requirements.txt existe e está correto"
+    exit 1
+fi
 
 echo
 echo "🔧 Verificando arquivo .env..."
@@ -35,11 +47,18 @@ if [ ! -f ".env" ]; then
 fi
 
 echo "🔍 Verificando variáveis de ambiente..."
-python3 -c "
+
+# Função reutilizável para carregar variáveis de ambiente
+load_env_vars() {
+    python3 -c "
 from dotenv import load_dotenv
 import os
-
 load_dotenv()
+$1
+"
+}
+
+load_env_vars "
 required_vars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'GEMINI_API_KEY']
 missing = []
 
@@ -61,12 +80,8 @@ fi
 echo
 echo "🌐 Testando conectividade..."
 
-python3 -c "
+load_env_vars "
 import psycopg2
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 try:
     conn = psycopg2.connect(

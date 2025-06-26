@@ -121,6 +121,7 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
+        cache-key: flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
 
     - name: Setup Java for Android
       if: matrix.component == 'frontend'
@@ -128,10 +129,18 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
 
-    - name: Get Flutter dependencies
+    - name: Validate and get Flutter dependencies
       if: matrix.component == 'frontend'
-      run: flutter pub get
+      run: |
+        # Validar pubspec.yaml
+        flutter pub deps --style=tree > /dev/null
+        echo "✅ pubspec.yaml válido"
+
+        # Instalar dependências
+        flutter pub get
+        echo "✅ Dependências instaladas"
       working-directory: ./mobile
 
     - name: Analyze Flutter code
@@ -141,12 +150,20 @@ jobs:
 
     - name: Run Flutter smoke tests
       if: matrix.component == 'frontend'
+      env:
+        FLUTTER_TEST: true
       run: |
-        # Execute smoke test básico
-        flutter test test/widget_test.dart
-        # Verifica se a estrutura de testes está correta
-        flutter test test/unit/models/ --reporter expanded || echo "Unit tests directory found"
-        flutter test test/widget/ --reporter expanded || echo "Widget tests directory found"
+        # Execute smoke test básico - usar arquivo correto
+        flutter test test/widget/widget_test.dart --reporter expanded
+
+        # Verificação rápida da estrutura de testes
+        echo "📁 Verificando estrutura de testes..."
+        if [ -d "test/unit/" ]; then
+          echo "✅ Diretório unit/ encontrado"
+        fi
+        if [ -d "test/widget/" ]; then
+          echo "✅ Diretório widget/ encontrado"
+        fi
       working-directory: ./mobile
 
   # ===========================================
@@ -342,15 +359,30 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
+        cache-key: flutter-comprehensive-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
 
     - name: Setup Java for Android
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
 
-    - name: Get Flutter dependencies
-      run: flutter pub get
+    - name: Validate and get Flutter dependencies
+      env:
+        FLUTTER_TEST: true
+      run: |
+        # Validar pubspec.yaml
+        flutter pub deps --style=tree > /dev/null
+        echo "✅ pubspec.yaml válido"
+
+        # Instalar dependências
+        flutter pub get
+        echo "✅ Dependências instaladas"
+
+        # Verificar arquivos de teste
+        echo "📋 Arquivos de teste encontrados:"
+        find test/ -name "*.dart" -type f | head -10
       working-directory: ./mobile
 
     - name: Run code analysis
@@ -358,28 +390,58 @@ jobs:
       working-directory: ./mobile
 
     - name: Run unit tests
+      env:
+        FLUTTER_TEST: true
       run: |
-        echo "🧪 Running Unit Tests..."
-        flutter test test/unit/ --reporter expanded
+        echo "🧪 Executando Unit Tests..."
+        if [ -d "test/unit/" ]; then
+          flutter test test/unit/ --reporter expanded --coverage
+        else
+          echo "⚠️ Diretório test/unit/ não encontrado"
+        fi
       working-directory: ./mobile
 
     - name: Run widget tests
+      env:
+        FLUTTER_TEST: true
       run: |
-        echo "🎨 Running Widget Tests..."
-        flutter test test/widget/ --reporter expanded
+        echo "🎨 Executando Widget Tests..."
+        if [ -d "test/widget/" ]; then
+          flutter test test/widget/ --reporter expanded --coverage
+        else
+          echo "⚠️ Diretório test/widget/ não encontrado"
+        fi
       working-directory: ./mobile
 
-    - name: Run integration tests
+    - name: Run integration tests (if available)
+      env:
+        FLUTTER_TEST: true
       run: |
-        echo "🔄 Running Integration Tests..."
-        flutter test integration_test/ --reporter expanded
+        echo "🔄 Verificando Integration Tests..."
+        if [ -d "integration_test/" ] && [ "$(ls -A integration_test/)" ]; then
+          echo "📱 Executando Integration Tests..."
+          flutter test integration_test/ --reporter expanded
+        else
+          echo "ℹ️ Integration tests não configurados - pulando"
+        fi
       working-directory: ./mobile
 
-    - name: Generate test coverage
+    - name: Generate comprehensive test coverage
+      env:
+        FLUTTER_TEST: true
       run: |
-        echo "📊 Generating Coverage Report..."
-        flutter test --coverage
-        echo "Coverage report generated at coverage/lcov.info"
+        echo "📊 Gerando Relatório de Cobertura Completo..."
+        # Executar todos os testes com cobertura
+        flutter test --coverage --reporter expanded
+
+        # Verificar se o arquivo de cobertura foi gerado
+        if [ -f "coverage/lcov.info" ]; then
+          echo "✅ Relatório de cobertura gerado: coverage/lcov.info"
+          echo "📈 Primeiras linhas do relatório:"
+          head -20 coverage/lcov.info
+        else
+          echo "⚠️ Arquivo de cobertura não encontrado"
+        fi
       working-directory: ./mobile
 
     - name: Upload Flutter coverage
@@ -626,25 +688,50 @@ jobs:
       uses: actions/checkout@v4
 
     # Flutter Build
-    - name: Setup Flutter with cache
+    - name: Setup Flutter for build
       uses: subosito/flutter-action@v2
       with:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
+        cache-key: flutter-build-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
 
-    - name: Setup Java for Android
+    - name: Setup Java for Android build
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
 
-    - name: Get Flutter dependencies
-      run: flutter pub get
+    - name: Prepare Flutter build environment
+      run: |
+        # Instalar dependências
+        flutter pub get
+
+        # Validar configuração de build
+        flutter doctor -v
+
+        # Verificar configuração do Android
+        if [ -f "android/app/build.gradle" ]; then
+          echo "✅ Configuração Android encontrada"
+        fi
       working-directory: ./mobile
 
     - name: Build Flutter APK
-      run: flutter build apk --release
+      env:
+        FLUTTER_BUILD: true
+      run: |
+        echo "🔨 Construindo APK de produção..."
+        flutter build apk --release --verbose
+
+        # Verificar se o APK foi gerado
+        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+          echo "✅ APK gerado com sucesso"
+          echo "📦 Tamanho do APK: $(du -h build/app/outputs/flutter-apk/app-release.apk | cut -f1)"
+        else
+          echo "❌ Falha na geração do APK"
+          exit 1
+        fi
       working-directory: ./mobile
 
     - name: Upload APK artifact

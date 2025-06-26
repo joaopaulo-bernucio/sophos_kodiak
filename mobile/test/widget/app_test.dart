@@ -5,17 +5,18 @@ import 'package:sophos_kodiak/app.dart';
 import '../helpers/widget_test_helpers.dart';
 
 void main() {
-  group('App Widget', () {
+  group('App Widget - Configuração', () {
     setUpAll(() async {
-      // Configura SharedPreferences para todos os testes
       SharedPreferences.setMockInitialValues({});
     });
-    group('Configuração Inicial', () {
+
+    group('Inicialização', () {
       testWidgets('deve criar MaterialApp corretamente', (
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
         expect(find.byType(MaterialApp), findsOneWidget);
+
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
@@ -27,6 +28,7 @@ void main() {
         WidgetTester tester,
       ) async {
         await tester.pumpWidget(const App());
+
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
@@ -38,6 +40,7 @@ void main() {
       ) async {
         await tester.pumpWidget(const App());
         await WidgetTestHelpers.pumpAndSettle(tester);
+
         expect(find.text('SOPHOS KODIAK'), findsOneWidget);
       });
     });

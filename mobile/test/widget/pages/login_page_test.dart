@@ -52,9 +52,11 @@ void main() {
       testWidgets('should format CNPJ while typing', (tester) async {
         await tester.pumpWidget(const MaterialApp(home: LoginPage()));
         await tester.pumpAndSettle();
+
         final cnpjField = find.byType(TextField).first;
         await tester.enterText(cnpjField, '12345678000100');
         await tester.pump();
+
         final textField = tester.widget<TextField>(cnpjField);
         expect(textField.controller?.text, equals('12.345.678/0001-00'));
       });
@@ -64,6 +66,7 @@ void main() {
       testWidgets('should have essential UI components', (tester) async {
         await tester.pumpWidget(const MaterialApp(home: LoginPage()));
         await tester.pumpAndSettle();
+
         expect(find.text('CNPJ'), findsOneWidget);
         expect(find.text('Senha'), findsOneWidget);
         expect(find.text('ENTRAR'), findsOneWidget);
@@ -77,13 +80,17 @@ void main() {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         await tester.pumpWidget(const MaterialApp(home: LoginPage()));
         await tester.pumpAndSettle();
+
         final cnpjField = find.byType(TextField).first;
         final passwordField = find.byType(TextField).last;
+
         await tester.enterText(cnpjField, '12345678000190');
         await tester.enterText(passwordField, '123');
+
         final loginButton = find.byType(ElevatedButton).first;
         await tester.tap(loginButton, warnIfMissed: false);
         await tester.pumpAndSettle();
+
         expect(
           find.text('Senha deve ter no mínimo 8 caracteres'),
           findsOneWidget,
@@ -106,18 +113,24 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+
         final cnpjField = find.byType(TextField).first;
         final passwordField = find.byType(TextField).last;
+
         await tester.enterText(cnpjField, '12345678000190');
         await tester.enterText(passwordField, 'password123');
+
         final loginButton = find.byType(ElevatedButton).first;
         await tester.tap(loginButton, warnIfMissed: false);
         await tester.pumpAndSettle();
+
         expect(find.text('Nome Preferido'), findsOneWidget);
         expect(find.byType(AlertDialog), findsOneWidget);
+
         final okButton = find.text('OK');
         await tester.tap(okButton);
         await tester.pumpAndSettle();
+
         expect(find.text('Home Page'), findsOneWidget);
       });
     });

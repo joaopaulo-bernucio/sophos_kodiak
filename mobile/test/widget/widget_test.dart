@@ -5,13 +5,15 @@ import 'package:sophos_kodiak/app.dart';
 import '../helpers/widget_test_helpers.dart';
 
 void main() {
-  group('Smoke Tests', () {
+  group('Smoke Tests - Inicialização Básica', () {
     setUpAll(() async {
       SharedPreferences.setMockInitialValues({});
     });
+
     testWidgets('App deve inicializar sem erros', (WidgetTester tester) async {
       await tester.pumpWidget(const App());
       await WidgetTestHelpers.pumpAndSettle(tester);
+
       expect(find.byType(MaterialApp), findsOneWidget);
       expect(find.text('SOPHOS KODIAK'), findsOneWidget);
     });
@@ -20,6 +22,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const App());
+
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.title, equals('Sophos Kodiak'));
       expect(materialApp.debugShowCheckedModeBanner, isFalse);

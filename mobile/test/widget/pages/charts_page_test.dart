@@ -7,6 +7,7 @@ void main() {
   group('ChartsPage Tests', () {
     testWidgets('Deve renderizar a estrutura básica da página', (tester) async {
       await tester.pumpWidget(createTestApp(const ChartsPage()));
+
       expect(find.text('Relatórios e Gráficos'), findsOneWidget);
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
       expect(find.byIcon(Icons.refresh), findsOneWidget);
@@ -16,6 +17,7 @@ void main() {
     testWidgets('Deve mostrar as três abas principais', (tester) async {
       await tester.pumpWidget(createTestApp(const ChartsPage()));
       await tester.pump();
+
       expect(find.text('Vendas'), findsOneWidget);
       expect(find.text('Funcionários'), findsOneWidget);
       expect(find.text('Projetos'), findsOneWidget);
@@ -25,6 +27,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(createTestApp(const ChartsPage()));
+
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('Carregando dados...'), findsOneWidget);
     });
@@ -34,8 +37,10 @@ void main() {
       (tester) async {
         await tester.pumpWidget(createTestApp(const ChartsPage()));
         await tester.pump();
+
         await tester.tap(find.byIcon(Icons.info_outline));
         await tester.pumpAndSettle();
+
         expect(find.text('Sobre os Gráficos'), findsOneWidget);
         expect(
           find.text('Vendas: Mostra o total de vendas por mês'),

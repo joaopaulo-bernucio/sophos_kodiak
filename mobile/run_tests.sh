@@ -85,7 +85,7 @@ run_widget_tests() {
 run_integration_tests() {
     echo ""
     echo "🔄 Executando Testes de Integração..."
-    flutter test test/integration_test/ --reporter compact
+    flutter test integration_test/ --reporter compact
 }
 
 run_coverage_tests() {
@@ -170,3 +170,4 @@ echo "  ./run_tests.sh --coverage                        # Apenas cobertura"
 echo "  flutter test test/unit/models/user_test.dart      # Teste específico do modelo User"
 echo "  flutter test test/unit/models/chat_message_test.dart  # Teste específico do modelo ChatMessage"
 echo "  flutter test test/widget/pages/login_page_test.dart   # Teste específico da página de login"
+echo "  flutter test integration_test/authentication_flow_test.dart   # Teste específico de fluxo de autenticação"

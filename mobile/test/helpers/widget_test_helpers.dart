@@ -28,11 +28,6 @@ class WidgetTestHelpers {
     await UserStorageService.clearUserData();
   }
 
-  static Future<void> setupLoggedOutState() async {
-    SharedPreferences.setMockInitialValues({});
-    await UserStorageService.clearUserData();
-  }
-
   static Future<void> pumpAndSettle(
     WidgetTester tester, [
     Duration? duration,
@@ -104,7 +99,6 @@ class WidgetTestHelpers {
   }
 
   static Future<void> clearTestData() async {
-    SharedPreferences.setMockInitialValues({});
     await clearUserData();
     await Future.delayed(const Duration(milliseconds: 100));
   }

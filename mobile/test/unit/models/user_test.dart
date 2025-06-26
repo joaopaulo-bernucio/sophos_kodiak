@@ -305,10 +305,7 @@ void main() {
         expect(userString, contains('12345678000100'));
         expect(userString, contains('João Silva'));
         expect(userString, contains('2024-01-15'));
-        expect(
-          userString,
-          isNot(contains('password123')),
-        ); // Não deve mostrar senha
+        expect(userString, isNot(contains('password123')));
       });
 
       test('deve lidar com campos nulos no toString', () {

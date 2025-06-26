@@ -206,6 +206,7 @@ void main() {
 
       test('deve manter estado consistente após múltiplas operações', () async {
         final user = TestData.createValidUser();
+
         for (int i = 0; i < 3; i++) {
           await UserStorageService.saveUser(user, rememberMe: true);
           expect(await UserStorageService.hasUserData(), isTrue);
@@ -213,6 +214,7 @@ void main() {
           await UserStorageService.clearUserData();
           expect(await UserStorageService.hasUserData(), isFalse);
         }
+
         expect(await UserStorageService.getUser(), isNull);
         expect(await UserStorageService.hasUserData(), isFalse);
       });
@@ -233,13 +235,16 @@ void main() {
       test('deve preservar atomicidade em operações de atualização', () async {
         final user = TestData.createValidUser();
         await UserStorageService.saveUser(user, rememberMe: true);
+
         final futures = [
           UserStorageService.updatePreferredName('Nome 1'),
           UserStorageService.updatePreferredName('Nome 2'),
           UserStorageService.updatePreferredName('Nome 3'),
         ];
+
         final results = await Future.wait(futures);
         expect(results.every((r) => r == true), isTrue);
+
         final finalUser = await UserStorageService.getUser();
         expect(finalUser!.nomePreferido, isIn(['Nome 1', 'Nome 2', 'Nome 3']));
       });

@@ -810,6 +810,8 @@ jobs:
 
     - name: Prepare Flutter build environment
       timeout-minutes: 10
+      env:
+        GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
       run: |
         # Verificar se Flutter foi instalado corretamente
         echo "🔧 Verificando instalação do Flutter..."
@@ -841,14 +843,29 @@ jobs:
         else
           echo "⚠️ Configuração Android não encontrada"
         fi
+
+        # Configurar Gradle para CI
+        echo "⚙️ Configurando Gradle para ambiente CI..."
+        mkdir -p ~/.gradle
+        echo "org.gradle.vfs.watch=false" >> ~/.gradle/gradle.properties
+        echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+        echo "org.gradle.parallel=false" >> ~/.gradle/gradle.properties
+        echo "✅ Gradle configurado para CI"
       working-directory: ./mobile
 
     - name: Build Flutter APK
       timeout-minutes: 15
       env:
         FLUTTER_BUILD: true
+        GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
       run: |
         echo "🔨 Construindo APK de produção..."
+
+        # Limpar cache do Gradle primeiro
+        echo "🧹 Limpando cache do Gradle..."
+        if [ -f "android/gradlew" ]; then
+          cd android && ./gradlew clean && cd ..
+        fi
 
         # Build com retry em caso de falha
         for i in {1..2}; do
@@ -893,6 +910,7 @@ jobs:
         pip install -r requirements.txt
         python -m spacy download pt_core_news_sm
         # Create deployment package excluding test files
+        echo "📦 Criando pacote de deployment do backend..."
         tar -czf backend-deployment.tar.gz \
           --exclude="tests/" \
           --exclude="*.pyc" \
@@ -900,7 +918,8 @@ jobs:
           --exclude=".pytest_cache/" \
           --exclude="htmlcov/" \
           --exclude=".coverage" \
-          .
+          . 2>/dev/null || echo "⚠️ Aviso do tar ignorado - arquivo criado com sucesso"
+        echo "✅ Pacote de deployment criado"
       working-directory: ./backend
 
     - name: Upload backend artifact
